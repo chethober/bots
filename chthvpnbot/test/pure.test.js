@@ -3,7 +3,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { createHash, pbkdf2Sync } from 'node:crypto';
 import { sha256, pbkdf2, hex, utf8, hashPassword, checkPassword } from '../tgcloud/lib/hash.js';
-import { detectSource, protocolsOf, parseSubscription, fromBase64, flag } from '../tgcloud/lib/sources.js';
+import { detectSource, protocolsOf, parseSubscription, fromBase64, flag, blockedPort } from '../tgcloud/lib/sources.js';
 
 test('sha256 and pbkdf2 match node:crypto', () => {
   for (const s of ['', 'abc', 'x'.repeat(200), 'رمز عبور 🔑']) {
@@ -22,7 +22,7 @@ test('passwords', () => {
 
 test('detectSource', () => {
   const tok = 'a'.repeat(32);
-  assert.deepEqual(detectSource(`https://cdn.example.com:2053/subs/pub/${tok}`).kind, 'xtune');
+  assert.deepEqual(detectSource(`https://cdn.example.com/subs/pub/${tok}`).kind, 'xtune');
   assert.equal(detectSource('https://panel.example.com/sub/abc').kind, 'sub');
   const links = 'vless://u@h:443?security=reality#a\n  hysteria2://p@h:443#b';
   assert.deepEqual(detectSource(links), { kind: 'links', source: 'vless://u@h:443?security=reality#a\nhysteria2://p@h:443#b' });
@@ -39,4 +39,14 @@ test('subscriptions', () => {
   assert.equal(fromBase64(Buffer.from('سلام').toString('base64')), 'سلام');
   assert.equal(flag('DE'), '🇩🇪');
   assert.equal(flag(null), '🌐');
+});
+
+test('ports tgcloud cannot reach', () => {
+  const tok = 'b'.repeat(32);
+  assert.deepEqual(detectSource(`https://cdn.lebasee.ir:2096/subs/pub/${tok}`), { error: 'port', port: 2096, xtune: true });
+  assert.equal(detectSource(`https://cdn.lebasee.ir/subs/pub/${tok}`).kind, 'xtune');
+  assert.equal(detectSource(`https://cdn.lebasee.ir:443/subs/pub/${tok}`).kind, 'xtune');
+  assert.equal(blockedPort('https://panel.example.com:8443/sub/x'), 8443);
+  assert.equal(blockedPort('https://[2001:db8::1]:2053/x'), 2053);
+  assert.equal(blockedPort('https://panel.example.com/sub/x'), null);
 });

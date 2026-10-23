@@ -41,7 +41,8 @@ xtune public add community --quota 20 --days 30 --devices 2 --members 100
 # → connect link: https://cdn.example.com:2053/<path>/pub/<token>
 ```
 
-Send the connect link to ➕ Add VPN. When someone joins, the bot asks the server for a new user named
+Send the connect link to ➕ Add VPN. The bot can only reach ports 80 and 443 (tgcloud's limit), so xtune (v0.7.1 or
+later) also serves these links on 443 when it's free; a link with another port is refused with that explanation. When someone joins, the bot asks the server for a new user named
 `community-<random label>` with the pool's limits, and hands the member that user's own subscription link (with a QR
 code and xtune's usage page). As a result:
 

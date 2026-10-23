@@ -11,10 +11,18 @@ const LINK_RE = new RegExp(`^(${SCHEMES.filter((s) => !s.startsWith('http')).joi
 export const MAX_LINKS = 20;
 export const MAX_LINKS_CHARS = 3500; // leaves room for the header in one Telegram message
 
-// → { kind: 'xtune' | 'sub' | 'links', source } | { error: 'empty' | 'tooMany' | 'tooLong' | 'unknown' }
+// tgcloud's fetch only reaches ports 80 and 443 ("fetch: port is not allowed").
+export function blockedPort(url) {
+  const m = /^(https?):\/\/(?:\[[^\]]+\]|[^/:\s]+):(\d+)(?:\/|$)/.exec(url);
+  if (!m) return null;
+  return m[2] === '443' || m[2] === '80' ? null : Number(m[2]);
+}
+
+// → { kind: 'xtune' | 'sub' | 'links', source } | { error: 'empty' | 'tooMany' | 'tooLong' | 'unknown' | 'port', port }
 export function detectSource(text) {
   const t = String(text ?? '').trim();
   if (!t) return { error: 'empty' };
+  if (/^https?:\/\/\S+$/.test(t) && blockedPort(t)) return { error: 'port', port: blockedPort(t), xtune: /\/pub\/[0-9a-f]{32}$/.test(t) };
   if (XTUNE_RE.test(t)) return { kind: 'xtune', source: t };
   if (URL_RE.test(t) && !t.includes('\n')) return { kind: 'sub', source: t };
   const lines = t.split(/\s*\n\s*/).filter(Boolean);

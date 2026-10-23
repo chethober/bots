@@ -214,6 +214,10 @@ const en = {
   })[e],
   sourceKindChanged: (k) => `Send the same kind as before (${en.kinds[k]}).`,
   alreadyAdded: 'This one is already in the bot.',
+  portBlocked: (p, xtune) => `This link uses port ${p}, but the bot can only reach ports 443 and 80.` +
+    (xtune ? '\n\nUpdate xtune on the server (sudo xtune self-update, v0.7.1 or later), then get the link again: ' +
+      'xtune public link NAME or xtune manage link. The subscription server then also listens on 443 and the link has no port.'
+      : '\n\nUse an address on port 443.'),
   checking: '🔍 Checking…',
   sourceFailedKind: {
     xtune: 'Couldn\'t reach the xtune connect link.',
@@ -394,6 +398,10 @@ const fa = {
   })[e],
   sourceKindChanged: (k) => `همون نوع قبلی رو بفرست (${fa.kinds[k]}).`,
   alreadyAdded: 'این یکی قبلاً توی ربات هست.',
+  portBlocked: (p, xtune) => `این لینک از پورت ${p} استفاده می‌کنه، ولی ربات فقط به پورت‌های ۴۴۳ و ۸۰ دسترسی داره.` +
+    (xtune ? '\n\nروی سرور xtune رو به‌روز کن (sudo xtune self-update، نسخه‌ی 0.7.1 یا بالاتر)، بعد لینک رو دوباره بگیر: ' +
+      'xtune public link NAME یا xtune manage link. اون‌وقت سرور سابسکریپشن روی ۴۴۳ هم گوش می‌ده و لینک پورت نداره.'
+      : '\n\nیه آدرس روی پورت ۴۴۳ بفرست.'),
   checking: '🔍 دارم بررسی می‌کنم…',
   sourceFailedKind: {
     xtune: 'به لینک اتصال xtune دسترسی پیدا نکردم.',
@@ -571,6 +579,10 @@ const ar = {
   })[e],
   sourceKindChanged: (k) => `أرسل النوع نفسه كما من قبل (${ar.kinds[k]}).`,
   alreadyAdded: 'هذه موجودة في البوت بالفعل.',
+  portBlocked: (p, xtune) => `يستخدم هذا الرابط المنفذ ${p}، لكن البوت لا يصل إلا إلى المنفذين ٤٤٣ و٨٠.` +
+    (xtune ? '\n\nحدّث xtune على الخادم (sudo xtune self-update، الإصدار 0.7.1 أو أحدث)، ثم خذ الرابط مجدداً: ' +
+      'xtune public link NAME أو xtune manage link. سيستمع خادم الاشتراكات على ٤٤٣ أيضاً ويصبح الرابط بلا منفذ.'
+      : '\n\nاستخدم عنواناً على المنفذ ٤٤٣.'),
   checking: '🔍 جارٍ الفحص…',
   sourceFailedKind: {
     xtune: 'تعذّر الوصول إلى رابط اتصال xtune.',
@@ -750,6 +762,10 @@ const ru = {
   })[e],
   sourceKindChanged: (k) => `Отправьте то же, что и раньше (${ru.kinds[k]}).`,
   alreadyAdded: 'Этот уже есть в боте.',
+  portBlocked: (p, xtune) => `Ссылка использует порт ${p}, а бот может достучаться только до портов 443 и 80.` +
+    (xtune ? '\n\nОбновите xtune на сервере (sudo xtune self-update, версия 0.7.1 или новее) и получите ссылку заново: ' +
+      'xtune public link NAME или xtune manage link. Сервер подписок будет слушать и 443, а в ссылке не будет порта.'
+      : '\n\nИспользуйте адрес на порту 443.'),
   checking: '🔍 Проверяю…',
   sourceFailedKind: {
     xtune: 'Не удалось достучаться до ссылки подключения xtune.',
@@ -929,6 +945,10 @@ const es = {
   })[e],
   sourceKindChanged: (k) => `Envía el mismo tipo que antes (${es.kinds[k]}).`,
   alreadyAdded: 'Esta ya está en el bot.',
+  portBlocked: (p, xtune) => `Este enlace usa el puerto ${p}, pero el bot solo llega a los puertos 443 y 80.` +
+    (xtune ? '\n\nActualiza xtune en el servidor (sudo xtune self-update, v0.7.1 o posterior) y vuelve a obtener el enlace: ' +
+      'xtune public link NAME o xtune manage link. El servidor de suscripciones escuchará también en 443 y el enlace no llevará puerto.'
+      : '\n\nUsa una dirección en el puerto 443.'),
   checking: '🔍 Comprobando…',
   sourceFailedKind: {
     xtune: 'No se pudo llegar al enlace de conexión de xtune.',

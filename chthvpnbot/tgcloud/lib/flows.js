@@ -93,6 +93,7 @@ export async function startAdd(from, L) {
 // What the owner sent: recognised, checked, and kept in the draft. Errors keep the prompt open.
 async function readSource(msg, L, kind = null) {
   const found = detectSource(msg.text);
+  if (found.error === 'port') return { error: L.portBlocked(found.port, found.xtune) };
   if (found.error) return { error: L.sourceError(found.error) };
   if (kind && found.kind !== kind) return { error: L.sourceKindChanged(kind) };
   const dup = await findBySource(found.source);

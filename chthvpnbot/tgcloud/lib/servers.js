@@ -9,6 +9,7 @@ import { servers } from '../schema.js';
 import { cancelRow, showScreen } from './chats.js';
 import { utf8 } from './hash.js';
 import { qrPng } from './qr.js';
+import { blockedPort } from './sources.js';
 import { setState } from './store.js';
 import { now, safeApi } from './util.js';
 
@@ -58,6 +59,7 @@ export async function onAddServer(msg, L) {
   await safeApi('deleteMessage', { chat_id: chatId, message_id: msg.message_id }); // it's a secret link
   const link = String(msg.text ?? '').trim();
   if (!MANAGE_RE.test(link)) return showScreen(chatId, { text: L.srv.notALink, reply_markup: withCancel(L) });
+  if (blockedPort(link)) return showScreen(chatId, { text: L.portBlocked(blockedPort(link), true), reply_markup: withCancel(L) });
   const dup = await db.select().from(servers).where(and(eq(servers.ownerId, msg.from.id), eq(servers.link, link))).get();
   if (dup) {
     await setState(msg.from.id, 'idle');
