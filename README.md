@@ -2,9 +2,9 @@
 
 A collection of small, self-hosted Telegram bots by [@chethober](https://github.com/chethober).
 
-Most run on **[Telegram Serverless (tgcloud)](https://tgcloud.ai)** — you write JavaScript
+They run on **[Telegram Serverless (tgcloud)](https://tgcloud.ai)** — you write JavaScript
 modules (schema, shared libs, update handlers) and the platform runs them in a V8 isolate,
-no server to host. One (`chsbrbot`) runs on a **Cloudflare Worker**.
+no server to host.
 
 Each bot is a standalone project in its own folder with its own README, dependencies, and
 deploy instructions. Clone the repo, `cd` into the one you want, and follow its README.
@@ -18,7 +18,7 @@ deploy instructions. Clone the repo, `cd` into the one you want, and follow its 
 | [`chthgamesbot`](chthgamesbot) | Games | Casino, poker and party games — chat games, inline mode and a graphic Mini App. Play-money only | tgcloud |
 | [`chthgrambot`](chthgrambot) | Secretary | Telegram Business secretary assistant, powered by Cloudflare Workers AI | tgcloud |
 | [`chtht2sbot`](chtht2sbot) | t2s | Watches a forum's topics and files every posted track into a per-topic Spotify playlist | tgcloud |
-| [`chsbrbot`](chsbrbot) | CVE notifier | Fetches newly published CVEs and posts them to Telegram | Cloudflare Worker |
+| [`chsbrbot`](chsbrbot) | CVE alerts | Posts new High/Critical CVEs and trending ones (CISA KEV, GitHub PoCs, EPSS), with CVE search | tgcloud |
 
 ## How they work
 
@@ -32,13 +32,13 @@ The bots share one interface style:
 - **Clean chat.** Button taps are deleted and each screen replaces the previous one, so the chat
   keeps only real content (messages, games, alerts).
 
-The anonymous-link, secretary, games and t2s bots follow it fully; the multi-utility and CVE bots
-are being moved over.
+The anonymous-link, secretary, games, t2s and CVE bots follow it fully; the multi-utility bot is
+being moved over.
 
 ## Setup, in general
 
 Every bot keeps its secrets out of git. Before deploying one, copy its example config
-(`secrets.example.js`, `.env.example`, …) to the real filename and fill it in — each
+(`secrets.example.js`, …) to the real filename and fill it in — each
 README says which. Nothing in this repo contains live credentials.
 
 For the tgcloud bots the workflow is the same everywhere:
