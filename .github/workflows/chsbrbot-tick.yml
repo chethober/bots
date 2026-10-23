@@ -29,6 +29,15 @@ jobs:
           cache: npm
           cache-dependency-path: chsbrbot/package-lock.json
       - run: npm ci
+      # `tgcloud run` runs the checked-out modules, so the git-ignored secrets.js
+      # is written here from the optional repository secrets (empty is fine).
+      - run: |
+          node -e 'const s = (k) => JSON.stringify(process.env[k] ?? "");
+            require("fs").writeFileSync("tgcloud/lib/secrets.js",
+              `export const NVD_API_KEY = ${s("NVD_API_KEY")};\nexport const GITHUB_TOKEN = ${s("GH_POC_TOKEN")};\n`)'
+        env:
+          NVD_API_KEY: ${{ secrets.CHSBRBOT_NVD_API_KEY }}
+          GH_POC_TOKEN: ${{ secrets.CHSBRBOT_GITHUB_TOKEN }}
       - run: npx tgcloud run endpoints/tick '{}'
         env:
           TGCLOUD_TOKEN: ${{ secrets.CHSBRBOT_TGCLOUD_TOKEN }}

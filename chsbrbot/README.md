@@ -70,7 +70,8 @@ npx tgcloud run endpoints/tick '{}'            # first run: records what's alrea
 ```
 
 Then add the repository secret `CHSBRBOT_TGCLOUD_TOKEN` (the project's tgcloud token). The workflow runs
-from the default branch only.
+from the default branch only. `tgcloud run` uses the checked-out modules, so the workflow writes
+`secrets.js` itself, from the optional secrets `CHSBRBOT_NVD_API_KEY` and `CHSBRBOT_GITHUB_TOKEN`.
 
 ### Switching over from the Cloudflare Worker
 
