@@ -1,0 +1,22 @@
+name: chsbrbot test
+on:
+  push:
+    paths: ['chsbrbot/**', '.github/workflows/chsbrbot-test.yml']
+  pull_request:
+    paths: ['chsbrbot/**', '.github/workflows/chsbrbot-test.yml']
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: chsbrbot
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: chsbrbot/package-lock.json
+      - run: npm ci
+      - run: cp secrets.example.js tgcloud/lib/secrets.js
+      - run: npm test

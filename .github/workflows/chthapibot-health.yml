@@ -1,6 +1,6 @@
 # Daily API healthcheck from the platform; failures are sent to the admin chat
 # (set with: npx tgcloud run endpoints/setConfig '{ admin_chat_id: "<your id>" }').
-name: healthcheck
+name: chthapibot healthcheck
 
 on:
   schedule:
@@ -10,6 +10,9 @@ on:
 jobs:
   health:
     runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: chthapibot
     timeout-minutes: 5
     steps:
       - uses: actions/checkout@v5
@@ -17,8 +20,9 @@ jobs:
         with:
           node-version: 22
           cache: npm
+          cache-dependency-path: chthapibot/package-lock.json
       - run: npm ci
       - run: |
           npx tgcloud run endpoints/healthcheck '{ notify: true }'
         env:
-          TGCLOUD_TOKEN: ${{ secrets.TGCLOUD_TOKEN }}
+          TGCLOUD_TOKEN: ${{ secrets.CHTHAPIBOT_TGCLOUD_TOKEN }}

@@ -78,7 +78,7 @@ Design notes:
   kind what should fire. It records each send in the database before sending, so overlapping runs
   never send twice. When you follow a team, the first run only records what has already happened,
   so you don't get yesterday's results.
-- **The platform has no cron.** `.github/workflows/tick.yml` runs `tgcloud run endpoints/tick`
+- **The platform has no cron.** [`chthapibot-tick.yml`](../.github/workflows/chthapibot-tick.yml) runs `tgcloud run endpoints/tick`
   every 10 minutes, so all times are approximate.
 - **It stays within free tiers.** Upstream responses are cached in the `cache` table, and
   CoinGecko falls back to Coinlore and Binance. Some catalogues can't be filtered fully on free
@@ -120,9 +120,9 @@ npx tgcloud run endpoints/setConfig '{ admin_chat_id: "123456789" }'
 npx tgcloud run endpoints/setConfig '{}'
 ```
 
-**Scheduling:** push the repo to GitHub and add a repository secret `TGCLOUD_TOKEN` containing
-your project token. `tick.yml` then runs the scheduler every 10 minutes, and `health.yml` runs the
-API healthcheck daily. GitHub pauses scheduled workflows after 60 days without repository
+**Scheduling:** add a repository secret `CHTHAPIBOT_TGCLOUD_TOKEN` containing your project token.
+The workflows live at the repository root: `chthapibot-tick.yml` runs the scheduler every 10 minutes,
+and `chthapibot-health.yml` runs the API healthcheck daily, both from the default branch. GitHub pauses scheduled workflows after 60 days without repository
 activity. Any other timer works too, such as a crontab line that runs
 `npx tgcloud run endpoints/tick '{}'`.
 
