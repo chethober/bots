@@ -5,7 +5,7 @@
 import { GAMES, GROUPS, BY_KEY } from './games/index.js';
 import { GameError, btn, kb, esc, chips, BETS } from './ui.js';
 import { sendHtml, getPlayer, setPlayerLocale } from './engine.js';
-import { WEBAPP_URL, SOURCE_URL } from './config.js';
+import { WEBAPP_URL } from './config.js';
 import { t } from './strings.js';
 import { normalizeLocale, LOCALES, LOCALE_NAMES } from './i18n.js';
 
@@ -33,7 +33,6 @@ export function menuMarkup(chatType, locale = 'en') {
     }));
   }
   if (chatType === 'private') rows.unshift([{ text: '🎮 Open game hub', web_app: { url: WEBAPP_URL } }]);
-  rows.push([{ text: t(locale, 'source'), url: SOURCE_URL }]);
   return kb(...rows);
 }
 

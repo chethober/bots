@@ -13,13 +13,27 @@ import { T, invitation } from '../lib/texts.js';
 import {
   getOrCreateUser, getUser, getUserByCode, getState, setState, setPaused, setPrompt,
 } from '../lib/users.js';
-import { personalLink, safeApi, supportsInline } from '../lib/util.js';
-import { normalizeLocale, languageKeyboard } from '../lib/i18n.js';
+import { personalLink, safeApi } from '../lib/util.js';
+import { normalizeLocale, languageKeyboard, mainKeyboard, matchButton } from '../lib/i18n.js';
 import { t } from '../lib/strings.js';
 import { SOURCE_URL } from '../lib/config.js';
 
 // The owner's chosen locale, or auto-detect from their Telegram client.
 const localeOf = (from, user) => user?.locale || normalizeLocale(from?.language_code);
+
+// A tapped reply-keyboard button (⚙️ Settings · 🌐 Language · 🔗 Source code).
+async function handleButton(msg, button) {
+  const user = await getUser(msg.from.id);
+  const locale = localeOf(msg.from, user);
+  if (button === 'language') return reply(msg, t(locale, 'choose_language'), { reply_markup: languageKeyboard() });
+  if (button === 'source') {
+    return reply(msg, t(locale, 'source_here'), { reply_markup: { inline_keyboard: [[{ text: t(locale, 'source'), url: SOURCE_URL }]] } });
+  }
+  // ⚙️ Settings — minimal screen: language + source.
+  const rows = languageKeyboard().inline_keyboard.slice();
+  rows.push([{ text: t(locale, 'source'), url: SOURCE_URL }]);
+  return reply(msg, t(locale, 'settings_title'), { reply_markup: { inline_keyboard: rows } });
+}
 
 const reply = (msg, text, extra = {}) => safeApi('sendMessage', { chat_id: msg.chat.id, text, ...extra });
 
@@ -35,11 +49,8 @@ async function start(msg, code) {
     await setState(userId, 'idle');
     const user = await getOrCreateUser(msg.from);
     const locale = localeOf(msg.from, user);
-    const keyboard = [[{ text: t(locale, 'btnQr'), callback_data: 'q:me' }]];
-    if (await supportsInline()) keyboard.unshift([{ text: t(locale, 'btnShare'), switch_inline_query: '' }]);
-    keyboard.push([{ text: t(locale, 'source'), url: SOURCE_URL }]);
     const text = t(locale, 'welcome', { name: user.name, link: await personalLink(user.code), invitation: invitation(user) });
-    return reply(msg, text, { reply_markup: { inline_keyboard: keyboard } });
+    return reply(msg, text, { reply_markup: mainKeyboard() });
   }
   const owner = await getUserByCode(code);
   if (!owner) return reply(msg, T.invalidLink);
@@ -226,6 +237,9 @@ async function nativeReply(msg) {
 export default async function (msg, ctx) {
   if (msg.chat?.type !== 'private' || !msg.from || msg.from.is_bot) return;
   try {
+    const button = matchButton(msg.text);
+    if (button) return await handleButton(msg, button);
+
     const parsed = parseCommand(msg.text);
     if (parsed) {
       // Any command (except /start, which sets its own state) abandons a pending send/reply/edit.

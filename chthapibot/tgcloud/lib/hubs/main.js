@@ -12,7 +12,7 @@ import { btn, menu, show, send, notice, ask, requireManage, pagerRow, homeRow, n
 import { esc } from '../format.js';
 import { buildDaily, SECTIONS } from '../daily.js';
 import { t, SOURCE_URL } from '../strings.js';
-import { languageKeyboard, LOCALE_NAMES, normalizeLocale } from '../i18n.js';
+import { languageKeyboard, LOCALE_NAMES, normalizeLocale, mainKeyboard } from '../i18n.js';
 
 export const MENU_COMMANDS = [
   { command: 'crypto', description: '💰 Prices, watchlist, alerts, portfolio' },
@@ -21,8 +21,6 @@ export const MENU_COMMANDS = [
   { command: 'random', description: '🎲 Dice, picks, books, movies, fun' },
   { command: 'daily', description: '☀️ Your daily briefing' },
   { command: 'notifications', description: '🔔 Alerts, schedules, reminders' },
-  { command: 'settings', description: '⚙️ Time zone, quiet hours, mute' },
-  { command: 'language', description: '🌐 Change language' },
   { command: 'help', description: 'All commands' },
 ];
 
@@ -31,8 +29,7 @@ const homeKeyboard = (locale = 'en') => [
   [btn(t(locale, 'btn_crypto'), 'm:crypto'), btn(t(locale, 'btn_sports'), 'm:sports')],
   [btn(t(locale, 'btn_food'), 'm:food'), btn(t(locale, 'btn_random'), 'm:random')],
   [btn(t(locale, 'btn_daily'), 'm:daily'), btn(t(locale, 'btn_notifications'), 'n:l:*:0')],
-  [btn(t(locale, 'btn_settings'), 'st:home'), btn(t(locale, 'btn_hide'), 'kb:close')],
-  [{ text: t(locale, 'source'), url: SOURCE_URL }],
+  [btn(t(locale, 'btn_hide'), 'kb:close')],
 ];
 
 const HELP = `<b>Hubs</b> — tap through menus
@@ -68,7 +65,8 @@ const NOTIF_PAGE = 8;
 export const commands = {
   async start(ctx) {
     await api.setMyCommands({ commands: MENU_COMMANDS }).catch(() => {});
-    await home(ctx, t(ctx.locale, 'greeting'));
+    await api.sendMessage({ chat_id: ctx.chatId, text: t(ctx.locale, 'greeting'), reply_markup: mainKeyboard() });
+    await home(ctx);
   },
   menu: (ctx) => home(ctx),
   language: (ctx) => menu(ctx, { text: t(ctx.locale, 'choose_language'), keyboard: languageKeyboard().inline_keyboard }),

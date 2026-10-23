@@ -1,7 +1,7 @@
 // handlers/message.js — commands. Games themselves run on inline keyboards
 // (handlers/callback_query.js) and in the Mini App (endpoints/).
 
-import { db } from 'sdk';
+import { api, db } from 'sdk';
 import { desc } from 'sdk/db';
 import { players } from '../schema.js';
 import { ensurePlayer, claimDaily, sendHtml } from '../lib/engine.js';
@@ -11,7 +11,28 @@ import { adminCommand } from '../lib/admin.js';
 import { esc, chips, nameOf, parseBet } from '../lib/ui.js';
 import { BOT_USERNAME, WEBAPP_URL, DAILY_CHIPS, DAILY_COOLDOWN, START_CHIPS } from '../lib/config.js';
 import { t } from '../lib/strings.js';
-import { normalizeLocale, languageKeyboard } from '../lib/i18n.js';
+import { SOURCE_URL } from '../lib/config.js';
+import { normalizeLocale, languageKeyboard, mainKeyboard, matchButton } from '../lib/i18n.js';
+
+// Slash commands shown in the menu (bot-specific features; simple English).
+const GAME_COMMANDS = [
+  { command: 'games', description: 'List all games' },
+  { command: 'balance', description: 'Your chips and stats' },
+  { command: 'daily', description: 'Claim daily chips' },
+  { command: 'top', description: 'Richest players' },
+  { command: 'hub', description: 'Open the game hub' },
+];
+
+// A tapped reply-keyboard button (⚙️ Settings · 🌐 Language · 🔗 Source code).
+function handleButton(chatId, button, locale) {
+  if (button === 'language') return sendHtml(chatId, t(locale, 'choose_language'), languageKeyboard());
+  if (button === 'source') {
+    return sendHtml(chatId, t(locale, 'source_here'), { inline_keyboard: [[{ text: t(locale, 'source'), url: SOURCE_URL }]] });
+  }
+  const rows = languageKeyboard().inline_keyboard.slice();
+  rows.push([{ text: t(locale, 'source'), url: SOURCE_URL }]);
+  return sendHtml(chatId, t(locale, 'settings_title'), { inline_keyboard: rows });
+}
 
 // Never throws (see handlers/callback_query.js) — errors are logged.
 export default async function (message) {
@@ -24,7 +45,17 @@ export default async function (message) {
 
 async function handle(message) {
   const text = message.text ?? '';
-  if (!text.startsWith('/') || !message.from) return;
+  if (!message.from) return;
+
+  // Unified reply-keyboard buttons (non-slash text).
+  const button = matchButton(text);
+  if (button) {
+    const me = await ensurePlayer(message.from);
+    if (me.banned) return;
+    return handleButton(message.chat.id, button, me.locale || normalizeLocale(message.from.language_code));
+  }
+
+  if (!text.startsWith('/')) return;
 
   const [head, ...rest] = text.split(/\s+/);
   const [cmd, at] = head.slice(1).toLowerCase().split('@');
@@ -49,6 +80,11 @@ async function handle(message) {
         return sendHtml(chatId, "🎮 You're invited to a game room:", {
           inline_keyboard: [[{ text: '▶️ Open the room', web_app: { url: `${WEBAPP_URL}?room=${rest[0].slice(5)}` } }]],
         });
+      }
+      await api.setMyCommands({ commands: GAME_COMMANDS }).catch(() => {});
+      if (chatType === 'private') {
+        await sendHtml(chatId, welcome(me, locale), mainKeyboard());
+        return sendHtml(chatId, menuText(chatType, locale), menuMarkup(chatType, locale));
       }
       return sendHtml(chatId, welcome(me, locale), menuMarkup(chatType, locale));
     case 'help':

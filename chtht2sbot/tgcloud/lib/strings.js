@@ -94,6 +94,22 @@ const strings = {
     en: '✅ Language set to {name}.', fa: '✅ زبان به {name} تغییر کرد.', ar: '✅ تم ضبط اللغة على {name}.',
     ru: '✅ Язык изменён на {name}.', es: '✅ Idioma cambiado a {name}.',
   },
+  settings_title: {
+    en: '⚙️ Settings', fa: '⚙️ تنظیمات', ar: '⚙️ الإعدادات', ru: '⚙️ Настройки', es: '⚙️ Ajustes',
+  },
+  source_here: {
+    en: '📦 Source code:', fa: '📦 کد منبع:', ar: '📦 الكود المصدري:', ru: '📦 Исходный код:', es: '📦 Código fuente:',
+  },
+  reaction_on: {
+    en: '🔔 Reaction: on {emoji} — tap to turn off', fa: '🔔 واکنش: روشن {emoji} — برای خاموش کردن بزن',
+    ar: '🔔 التفاعل: مُفعّل {emoji} — اضغط للإيقاف', ru: '🔔 Реакция: вкл {emoji} — нажми, чтобы выключить',
+    es: '🔔 Reacción: activada {emoji} — toca para desactivar',
+  },
+  reaction_off: {
+    en: '🔕 Reaction: off — tap to turn on', fa: '🔕 واکنش: خاموش — برای روشن کردن بزن',
+    ar: '🔕 التفاعل: متوقف — اضغط للتفعيل', ru: '🔕 Реакция: выкл — нажми, чтобы включить',
+    es: '🔕 Reacción: desactivada — toca para activar',
+  },
   admins_only: {
     en: 'Only forum admins can use this command.',
     fa: 'فقط مدیران گروه می‌توانند از این دستور استفاده کنند.',

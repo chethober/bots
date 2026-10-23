@@ -2,7 +2,7 @@
 import { api } from 'sdk';
 import { PANEL_URL, isAllowed, SOURCE_URL } from '../lib/config.js';
 import { t } from '../lib/strings.js';
-import { normalizeLocale, languageKeyboard } from '../lib/i18n.js';
+import { normalizeLocale, languageKeyboard, mainKeyboard, matchButton } from '../lib/i18n.js';
 import { getSettings, patchSettings, loadSettingsRow, resolveCredentials, MOODS, EMOJI_STYLES } from '../lib/settings.js';
 import { getUserConnection, countRepliesToday, addSamples, countSamples, findRelayByOwnerMessage } from '../lib/store.js';
 import { previewReply } from '../lib/secretary.js';
@@ -26,6 +26,19 @@ export default async function (message) {
 
   const text = message.text ?? '';
   const cmd = text.startsWith('/') ? text.split(/[\s@]/)[0].toLowerCase() : null;
+
+  // Unified reply-keyboard buttons (⚙️ Settings · 🌐 Language · 🔗 Source code).
+  const button = matchButton(text);
+  if (button) {
+    const locale = await localeOf();
+    if (button === 'language') return send(t(locale, 'choose_language'), { reply_markup: languageKeyboard() });
+    if (button === 'source') {
+      return send(t(locale, 'source_here'), { reply_markup: { inline_keyboard: [[{ text: t(locale, 'source'), url: SOURCE_URL }]] } });
+    }
+    // ⚙️ Settings → the management panel (Mini App), or the language picker if no panel.
+    if (!PANEL_URL) return send(t(locale, 'choose_language'), { reply_markup: languageKeyboard() });
+    return send(t(locale, 'settings_title'), { reply_markup: panelKeyboard() });
+  }
 
   // A reply to a relayed contact message is the answer to send back to them.
   if (message.reply_to_message && !cmd) {
@@ -57,8 +70,9 @@ export default async function (message) {
       await setupChat(chat_id);
       const hasCreds = resolveCredentials(await loadSettingsRow(userId), userId);
       const locale = await localeOf();
-      const extra = [...(hasCreds ? [] : [[setupButton()]]), [{ text: t(locale, 'source'), url: SOURCE_URL }]];
-      return send(t(locale, 'help'), { reply_markup: panelKeyboard(extra) });
+      await send(t(locale, 'help'), { reply_markup: mainKeyboard() });
+      if (!hasCreds) await send('⚙️ Tap below to connect Cloudflare AI and finish setup.', { reply_markup: { inline_keyboard: [[setupButton()]] } });
+      return;
     }
 
     case '/language':

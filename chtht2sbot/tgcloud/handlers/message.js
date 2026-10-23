@@ -9,8 +9,31 @@ import {
   FORUM_ID, ADMIN_IDS, DELETE_DUPLICATES, ADDED_REACTION, PUBLIC_PLAYLISTS, playlistDescription, SOURCE_URL,
 } from '../lib/config.js';
 import { getSetting, saveSetting } from '../lib/settings.js';
-import { localeFor, languageKeyboard } from '../lib/i18n.js';
+import { localeFor, languageKeyboard, mainKeyboard, matchButton } from '../lib/i18n.js';
 import { t } from '../lib/strings.js';
+
+// ⚙️ Settings screen: language, the reaction toggle, and the source link.
+async function settingsScreen(message) {
+  const locale = await localeFor(message.from);
+  const { enabled, emoji } = await getReaction();
+  const rows = languageKeyboard().inline_keyboard.slice();
+  rows.push([{ text: enabled ? t(locale, 'reaction_on', { emoji }) : t(locale, 'reaction_off'), callback_data: 'react:toggle' }]);
+  rows.push([{ text: t(locale, 'source'), url: SOURCE_URL }]);
+  return reply(message, t(locale, 'settings_title'), { reply_markup: { inline_keyboard: rows } });
+}
+
+async function sendHelp(message) {
+  const locale = await localeFor(message.from);
+  const connected = await isConfigured();
+  await api.setMyCommands({ commands: [
+    { command: 'status', description: 'Playlists and track counts' },
+    { command: 'playlist', description: 'Link a topic to a playlist' },
+    { command: 'dedupe', description: 'Remove duplicate tracks' },
+    { command: 'spotify', description: 'Connect Spotify' },
+  ] }).catch(() => {});
+  return reply(message, `${t(locale, 'help')}\n\n${connected ? t(locale, 'spotify_connected') : t(locale, 'spotify_not')}`,
+    { reply_markup: mainKeyboard() });
+}
 import { extractTrackIds } from '../lib/music.js';
 import {
   SpotifyNotConfigured, saveCredentials, isConfigured, trackUri, addTracks,
@@ -221,9 +244,16 @@ async function handleAdminCommand(message, { cmd, args }) {
 }
 
 async function handlePrivate(message, command) {
-  if (command?.cmd === 'language' || command?.cmd === 'lang') {
+  // Unified reply-keyboard buttons.
+  const button = matchButton(message.text);
+  if (button === 'settings') return settingsScreen(message);
+  if (button === 'language' || command?.cmd === 'language' || command?.cmd === 'lang') {
     const locale = await localeFor(message.from);
     return reply(message, t(locale, 'choose_language'), { reply_markup: languageKeyboard() });
+  }
+  if (button === 'source') {
+    const locale = await localeFor(message.from);
+    return reply(message, t(locale, 'source_here'), { reply_markup: { inline_keyboard: [[{ text: t(locale, 'source'), url: SOURCE_URL }]] } });
   }
   if (command?.cmd === 'reaction') return handleReactionCommand(message, command.args);
   if (['status', 'playlist', 'dedupe'].includes(command?.cmd)) {
@@ -258,11 +288,7 @@ async function handlePrivate(message, command) {
     }
     return;
   }
-  const locale = await localeFor(message.from);
-  const connected = await isConfigured();
-  await reply(message, `${t(locale, 'help')}\n\n${connected ? t(locale, 'spotify_connected') : t(locale, 'spotify_not')}`, {
-    reply_markup: { inline_keyboard: [[{ text: t(locale, 'source'), url: SOURCE_URL }]] },
-  });
+  return sendHelp(message);
 }
 
 export default async function (message) {

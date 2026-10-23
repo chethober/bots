@@ -49,6 +49,8 @@ const I18N = {
     ru: '✅ Язык изменён на {name}.', es: '✅ Idioma cambiado a {name}.',
   },
   source: { en: '🔗 Source code', fa: '🔗 کد منبع', ar: '🔗 الكود المصدري', ru: '🔗 Исходный код', es: '🔗 Código fuente' },
+  source_here: { en: '📦 Source code:', fa: '📦 کد منبع:', ar: '📦 الكود المصدري:', ru: '📦 Исходный код:', es: '📦 Código fuente:' },
+  settings_title: { en: '⚙️ Settings', fa: '⚙️ تنظیمات', ar: '⚙️ الإعدادات', ru: '⚙️ Настройки', es: '⚙️ Ajustes' },
 };
 
 export function tr(locale, key, vars) {
@@ -368,21 +370,18 @@ export async function answerTelegramCallback(callbackQueryId, env, options = {})
 }
 
 // Reply Keyboard (Mobile-friendly main menu - collapsible via native Telegram keyboard icon)
-export function getMainMenuKeyboard(isAdmin = false) {
-  const keyboard = [
-    [{ text: '🔍 Search CVEs' }, { text: '🆕 Latest CVEs' }],
-    [{ text: '🔥 Trending Exploits' }, { text: '⚡ Quick Categories' }],
-    [{ text: '📊 My Status' }, { text: '📖 Help' }]
-  ];
-  if (isAdmin) {
-    keyboard.push([{ text: '👑 Admin Panel' }]);
-  }
+// Unified persistent keyboard: Settings · Language · Source. Bot features
+// (search, latest, trending, categories, status) are slash commands and the
+// inline dashboard shown on /start. Labels are English (matched by text).
+export function getMainMenuKeyboard() {
   return {
-    keyboard,
+    keyboard: [
+      [{ text: '⚙️ Settings' }, { text: '🌐 Language' }],
+      [{ text: '🔗 Source code' }]
+    ],
     resize_keyboard: true,
-    is_persistent: false, // Allows native Telegram keyboard icon to collapse/open
-    one_time_keyboard: false,
-    input_field_placeholder: '🔍 Search CVE or tap a button below...'
+    is_persistent: true,
+    input_field_placeholder: '🔍 Type a keyword or CVE ID to search...'
   };
 }
 
@@ -492,6 +491,9 @@ export async function syncBotProfileAndCommands(env) {
       scope: { type: 'default' },
       commands: [
         { command: 'start', description: 'Open the menu and subscribe' },
+        { command: 'latest', description: 'Latest CVEs' },
+        { command: 'trending', description: 'Trending exploited CVEs' },
+        { command: 'categories', description: 'Browse by category' },
         { command: 'help', description: 'How the bot works' },
         { command: 'language', description: 'Change language' },
       ],
@@ -3082,9 +3084,6 @@ export async function handleTelegramWebhook(request, env, ctx) {
           [
             { text: '📊 My Status', callback_data: 'sub:toggle' },
             { text: 'ℹ️ About Bot', callback_data: 'menu:about' }
-          ],
-          [
-            { text: tr(locale, 'source'), url: SOURCE_URL }
           ]
         ]
       };
@@ -3111,8 +3110,8 @@ export async function handleTelegramWebhook(request, env, ctx) {
       return new Response(JSON.stringify({ ok: true }), { status: 200 });
     }
 
-    // 3.3 /language — change the UI language
-    if (command === '/language' || command === '/lang') {
+    // 3.3 /language and the 🌐 Language button — change the UI language
+    if (command === '/language' || command === '/lang' || lowerText === '🌐 language') {
       const locale = await getUserLocale(chatId, env, message.from?.language_code);
       await sendTelegramMessage(chatId, tr(locale, 'choose_language'), env, {
         reply_markup: languageInlineKeyboard()
@@ -3120,8 +3119,26 @@ export async function handleTelegramWebhook(request, env, ctx) {
       return new Response(JSON.stringify({ ok: true }), { status: 200 });
     }
 
-    // 3.4 Tapping "🔍 Search CVEs"
-    if (lowerText === '🔍 search cves') {
+    // 3.3b ⚙️ Settings button — minimal screen (language + source)
+    if (lowerText === '⚙️ settings' || command === '/settings') {
+      const locale = await getUserLocale(chatId, env, message.from?.language_code);
+      const rows = languageInlineKeyboard().inline_keyboard.slice();
+      rows.push([{ text: tr(locale, 'source'), url: SOURCE_URL }]);
+      await sendTelegramMessage(chatId, tr(locale, 'settings_title'), env, { reply_markup: { inline_keyboard: rows } });
+      return new Response(JSON.stringify({ ok: true }), { status: 200 });
+    }
+
+    // 3.3c 🔗 Source code button
+    if (lowerText === '🔗 source code') {
+      const locale = await getUserLocale(chatId, env, message.from?.language_code);
+      await sendTelegramMessage(chatId, tr(locale, 'source_here'), env, {
+        reply_markup: { inline_keyboard: [[{ text: tr(locale, 'source'), url: SOURCE_URL }]] }
+      });
+      return new Response(JSON.stringify({ ok: true }), { status: 200 });
+    }
+
+    // 3.4 "🔍 Search CVEs" button or /search
+    if (lowerText === '🔍 search cves' || command === '/search') {
       const prompt = `🔍 <b>CVE Vulnerability Search</b>\n\nJust type a keyword to search vulnerabilities by name, software, vendor, or bug type — or send a CVE ID for full details.\n\n<i>Examples:</i>\n• <code>Ivanti</code>\n• <code>Apache</code>\n• <code>RCE</code>\n• <code>CVE-2024-3094</code>\n\nOr tap a category below:`;
       await sendTelegramMessage(chatId, prompt, env, {
         reply_markup: getQuickCategoriesKeyboard()
@@ -3130,19 +3147,19 @@ export async function handleTelegramWebhook(request, env, ctx) {
     }
 
     // 3.6 "🆕 Latest CVEs"
-    if (lowerText === '🆕 latest cves') {
+    if (lowerText === '🆕 latest cves' || command === '/latest') {
       await renderSearchResultsView(chatId, null, '', 0, env, false);
       return new Response(JSON.stringify({ ok: true }), { status: 200 });
     }
 
     // 3.7 "🔥 Trending Exploits"
-    if (lowerText === '🔥 trending exploits') {
+    if (lowerText === '🔥 trending exploits' || command === '/trending') {
       await renderSearchResultsView(chatId, null, 'KEV', 0, env, false);
       return new Response(JSON.stringify({ ok: true }), { status: 200 });
     }
 
     // 3.8 "⚡ Quick Categories"
-    if (lowerText === '⚡ quick categories') {
+    if (lowerText === '⚡ quick categories' || command === '/categories') {
       const text = `⚡ <b>Quick Threat Categories:</b>\n\nTap any security vulnerability category below to search active threats:`;
       await sendTelegramMessage(chatId, text, env, {
         reply_markup: getQuickCategoriesKeyboard()

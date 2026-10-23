@@ -30,6 +30,7 @@ const strings = {
   btn_settings: { en: '⚙️ Settings', fa: '⚙️ تنظیمات', ar: '⚙️ الإعدادات', ru: '⚙️ Настройки', es: '⚙️ Ajustes' },
   btn_hide: { en: '✖️ Hide menu', fa: '✖️ بستن منو', ar: '✖️ إخفاء القائمة', ru: '✖️ Скрыть меню', es: '✖️ Ocultar menú' },
   source: { en: '🔗 Source code', fa: '🔗 کد منبع', ar: '🔗 الكود المصدري', ru: '🔗 Исходный код', es: '🔗 Código fuente' },
+  source_here: { en: '📦 Source code:', fa: '📦 کد منبع:', ar: '📦 الكود المصدري:', ru: '📦 Исходный код:', es: '📦 Código fuente:' },
   choose_language: {
     en: '🌐 Choose your language:', fa: '🌐 زبان خود را انتخاب کنید:', ar: '🌐 اختر لغتك:',
     ru: '🌐 Выберите язык:', es: '🌐 Elige tu idioma:',

@@ -4,7 +4,8 @@ import { findCommand, runCallback, runInput, runFallbackText, saveLocation } fro
 import { takePending, getPrefs } from '../lib/store.js';
 import { notice, menuAction } from '../lib/ui.js';
 import { esc } from '../lib/format.js';
-import { normalizeLocale } from '../lib/i18n.js';
+import { normalizeLocale, matchButton } from '../lib/i18n.js';
+import { t, SOURCE_URL } from '../lib/strings.js';
 
 let botUsername = null;
 
@@ -29,6 +30,18 @@ export default async function (msg) {
 
     const text = msg.text?.trim();
     if (!text) return;
+
+    // Unified reply-keyboard buttons (⚙️ Settings · 🌐 Language · 🔗 Source code).
+    const button = matchButton(text);
+    if (button === 'source') {
+      await api.sendMessage({ chat_id: ctx.chatId, text: t(ctx.locale, 'source_here'),
+        reply_markup: { inline_keyboard: [[{ text: t(ctx.locale, 'source'), url: SOURCE_URL }]] } });
+      return;
+    }
+    if (button) {
+      await takePending(ctx.chatId, ctx.userId);
+      return await findCommand(button === 'settings' ? 'settings' : 'language')(ctx, []);
+    }
 
     if (text.startsWith('/')) {
       const [head, ...args] = text.split(/\s+/);
