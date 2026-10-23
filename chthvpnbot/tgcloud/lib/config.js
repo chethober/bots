@@ -2,7 +2,7 @@
 
 // Your bot's username, without the "@". Used to build invite links.
 // If left as the placeholder, the bot asks Telegram for its own username instead.
-export const BOT_USERNAME = 'YOUR_BOT_USERNAME';
+export const BOT_USERNAME = 'chthvpnbot';
 
 // Telegram user ids (numbers) of the bot's admins. Reports reach them with
 // Unlist / Delete / Ban owner / Dismiss buttons, and they get /admin and /reports.

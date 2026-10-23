@@ -7,7 +7,7 @@
 </p>
 
 <p align="center">
-  <a href="https://github.com/chethober/xtune">xtune</a> · <a href="LICENSE">MIT License</a>
+  <a href="https://t.me/chthvpnbot">Try it: @chthvpnbot</a> · <a href="https://github.com/chethober/xtune">xtune</a> · <a href="LICENSE">MIT License</a>
 </p>
 
 ---
@@ -107,7 +107,7 @@ npm install
 npx tgcloud login            # link the project to your bot
 ```
 
-1. Edit [`tgcloud/lib/config.js`](tgcloud/lib/config.js): `BOT_USERNAME` (or leave the placeholder to look it up),
+1. Edit [`tgcloud/lib/config.js`](tgcloud/lib/config.js): `BOT_USERNAME` (or `'YOUR_BOT_USERNAME'` to look it up),
    `ADMIN_IDS` (each admin must press Start in the bot first), and the limits (VPNs per owner, password lockout,
    health checks).
 2. Deploy, then create the database:
