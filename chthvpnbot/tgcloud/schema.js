@@ -94,7 +94,8 @@ export const chats = table('chats', {
 });
 
 // What the bot waits for next from a person, with its data (an add-VPN draft…).
-// mode: 'idle' | 'add_source' | 'add_name' | 'add_password' | 'password' | 'edit_name'
+// mode: 'idle' | 'add_source' | 'add_name' | 'add_password' | 'password' | 'edit_name' | 'add_server'
+//     | 'srv_add' | 'srv_limit' | 'srv_plan'
 //     | 'edit_desc' | 'edit_password' | 'edit_source' | 'announce'
 export const states = table('states', {
   userId:    integer('user_id').primaryKey(),
@@ -102,3 +103,16 @@ export const states = table('states', {
   data:      json('data'),
   updatedAt: integer('updated_at').notNull(),
 });
+
+// xtune servers managed through a management link (xtune manage link): users and
+// plans, for the server's admin or one of its resellers (role).
+export const servers = table('servers', {
+  id:        integer('id').primaryKey({ autoIncrement: true }),
+  ownerId:   integer('owner_id').notNull(),            // who sent the link
+  link:      text('link').notNull(),                   // the management link. Secret: never shown.
+  name:      text('name').notNull(),                   // the server's address, or the reseller's name
+  role:      text('role').notNull(),                   // 'admin' | 'reseller'
+  createdAt: integer('created_at').notNull(),
+}, (t) => ({
+  ownerIdx: index('idx_servers_owner').on(t.ownerId),
+}));

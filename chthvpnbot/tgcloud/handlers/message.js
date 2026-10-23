@@ -7,6 +7,7 @@ import { dashboardText, isAdmin, sendOpenReports } from '../lib/admin.js';
 import { drop, matchButton, showScreen, textsFor } from '../lib/chats.js';
 import { onAddName, onAddPassword, onAddSource, onEdit, onPassword, openVpn, startAdd } from '../lib/flows.js';
 import { languageKeyboard } from '../lib/i18n.js';
+import { onAddServer, onServerInput } from '../lib/servers.js';
 import { getState, getVpnByCode, setState } from '../lib/store.js';
 import { safeApi } from '../lib/util.js';
 import { aboutView, directoryView, joinedView, ownedView, sendHome } from '../lib/views.js';
@@ -67,8 +68,10 @@ export default async function (msg) {
         return await onAddName(msg.chat.id, msg.from.id, data, msg.text, L);
       case 'add_password': return await onAddPassword(msg, data, L);
       case 'password':     return await onPassword(msg, data, L);
+      case 'add_server':   return await onAddServer(msg, L);
     }
     if (mode.startsWith('edit_')) return await onEdit(msg, mode, data, L);
+    if (mode.startsWith('srv_')) return await onServerInput(msg, mode, data, L);
 
     await drop(msg.chat.id, msg.message_id);
     if (expired) {

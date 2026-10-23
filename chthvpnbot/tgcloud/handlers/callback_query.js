@@ -7,6 +7,9 @@
 //            country mc:<id> → mcs:<id>:<CC|none>, public/private mv:<id>, pause mp:<id>,
 //            remove password mpr:<id>, check now mk:<id>, new invite mn:<id> → mny:<id>,
 //            members mm:<id>:<page>, kick k:<mid> → ky:<mid>, delete md:<id> → mdy:<id>
+//   servers: add srvadd, panel s:<id>, users su:<id>:<page>, add user sa:<id>, plans sp:<id> → add spa:<id>,
+//            delete spd:<id>:<index>, remove from the bot sd:<id> → sdy:<id>; a user u:<id>:<name> and its
+//            actions ul/ue/ur/ut/uz/uk→ukk/us→uss/ux→uxx:<id>:<name>, renew with a plan urp:<id>:<index>:<name>
 //   admins:  under a report: unlist au:, delete ad:, ban owner ab:, dismiss ax:<reportId>
 
 import { db } from 'sdk';
@@ -19,6 +22,9 @@ import {
   createFromDraft, onAddCountry, onAddName, onAddVisibility, openVpn, requestJoin, startAdd, startEdit,
 } from '../lib/flows.js';
 import { LOCALE_NAMES } from '../lib/i18n.js';
+import {
+  deletePlan, deleteServer, getServer, plansView, renewWithPlan, serverView, startAddServer, userAction, usersView,
+} from '../lib/servers.js';
 import { join, notifyMembers, removeMember, sendDetails } from '../lib/members.js';
 import {
   addReport, banOwner, closeReports, deleteVpn, getMember, getReport, getState, getVpn, getVpnByCode, newCode,
@@ -193,12 +199,52 @@ async function onAdmin(q, op, report, L) {
   return {};
 }
 
+// --- managed servers ----------------------------------------------------------------------
+
+const SERVER_OPS = new Set(['s', 'su', 'sa', 'sp', 'spa', 'spd', 'sd', 'sdy']);
+const USER_OPS = new Set(['u', 'ul', 'ue', 'ur', 'urp', 'ut', 'uz', 'uk', 'ukk', 'us', 'uss', 'ux', 'uxx']);
+
+async function onServer(q, op, rest, L) {
+  const srv = await getServer(num(rest[0]));
+  if (!srv || srv.ownerId !== q.from.id) return { text: L.notYours };
+  const show = async (r) => {
+    if (r.screen) await openScreen(q, r.screen);
+    return r.toast ? { text: r.toast, show_alert: !!r.alert } : {};
+  };
+  if (USER_OPS.has(op)) {
+    if (op === 'urp') return show(await renewWithPlan(srv, Number(rest[1]), rest.slice(2).join(':'), L));
+    return show(await userAction(q, srv, op, rest.slice(1).join(':'), L));
+  }
+  switch (op) {
+    case 's':   return show({ screen: await serverView(srv, L) });
+    case 'su':  return show({ screen: await usersView(srv, num(rest[1]) ?? 0, L) });
+    case 'sa':
+      await setState(q.from.id, 'srv_add', { serverId: srv.id });
+      return show({ screen: { text: L.srv.addUserPrompt, reply_markup: { inline_keyboard: [[{ text: L.btnCancel, callback_data: 'c:x' }]] } } });
+    case 'sp':  return show({ screen: await plansView(srv, L) });
+    case 'spa':
+      await setState(q.from.id, 'srv_plan', { serverId: srv.id });
+      return show({ screen: { text: L.srv.planPrompt, reply_markup: { inline_keyboard: [[{ text: L.btnCancel, callback_data: 'c:x' }]] } } });
+    case 'spd': return show(await deletePlan(srv, num(rest[1]) ?? -1, L));
+    case 'sd':
+      return show({ screen: confirmView(L.srv.removeConfirm(srv), `sdy:${srv.id}`, `s:${srv.id}`, L) });
+    case 'sdy':
+      await deleteServer(srv.id);
+      return show({ screen: await ownedView(q.from.id, L), toast: L.srv.removed });
+  }
+  return {};
+}
+
 // --- routing ----------------------------------------------------------------------------
 
 async function route(q, L) {
   const [op, a, b] = (q.data ?? '').split(':');
   const userId = q.from.id;
+  if (SERVER_OPS.has(op) || USER_OPS.has(op)) return onServer(q, op, (q.data ?? '').split(':').slice(1), L);
   switch (op) {
+    case 'srvadd':
+      await startAddServer(q.from, L);
+      return {};
     case 'lang': {
       await setLocale(userId, a);
       const NL = await textsFor(q.from);

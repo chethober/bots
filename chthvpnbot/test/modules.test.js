@@ -16,12 +16,15 @@ test('every module loads', async () => {
 
 test('every text key exists in every language', () => {
   const used = new Set();
+  const usedSrv = new Set();
   for (const f of files) {
     for (const m of readFileSync(join(root, f), 'utf8').matchAll(/\b(?:L|ML|OL|NL)\.([a-zA-Z]+)/g)) used.add(m[1]);
+    for (const m of readFileSync(join(root, f), 'utf8').matchAll(/\bL\.srv\.([a-zA-Z]+)/g)) usedSrv.add(m[1]);
   }
   for (const loc of LOCALES) {
     const L = texts(loc);
     for (const k of used) assert.ok(L[k] !== undefined, `${loc}: missing ${k}`);
+    for (const k of usedSrv) assert.ok(L.srv[k] !== undefined, `${loc}: missing srv.${k}`);
     for (const k of Object.keys(L.kb)) assert.ok(L.kb[k], `${loc}: kb.${k}`);
   }
 });
@@ -47,6 +50,23 @@ test('composed screens render', () => {
       L.vpnDown(v, 'gone'), L.dirTitle(12, 1, 2)]) {
       assert.equal(typeof s, 'string');
       assert.ok(!s.includes('undefined'), `${loc}: ${s}`);
+    }
+  }
+});
+
+test('server management texts exist in every language and render', () => {
+  const keys = Object.keys(texts('en').srv).sort();
+  const s = { role: 'admin', addr: '1.2.3.4', xray: 'active (v26)', sub: 'cdn, active', users: 3, active: 2, online: 1,
+    traffic: 2 ** 33, version: 'v0.7.0', plans: ['basic'],
+    configs: [{ id: 'r-tcp', state: 'active', since: 1 }, { id: 'hy2', state: 'quiet', since: 1 }, { id: 'ss', state: 'idle' }] };
+  const u = { name: 'carol', status: 'active', used: 2 ** 30, quota: 50 * 2 ** 30, expires: Math.floor(Date.now() / 1000) + 86400 * 3,
+    devices: 2, online: 1, plan: 'basic', reset: 'monthly', daily: [1, 2], sub: 'https://x/subs/abc' };
+  for (const loc of LOCALES) {
+    const S = texts(loc).srv;
+    assert.deepEqual(Object.keys(S).sort(), keys, `${loc}: srv keys differ`);
+    for (const out of [S.status({ name: 'x' }, s), S.status({ name: 'x' }, { role: 'reseller', reseller: 'rex', users: 1, maxUsers: 5, assigned: 2 ** 31, quotaGB: 10, traffic: 0 }),
+      S.userCard(u), S.usersList({ name: 'x' }, [u], 1, 1, 1), S.plansList([{ name: 'basic', quotaGB: 50, days: 30 }]), S.subCaption(u)]) {
+      assert.ok(!out.includes('undefined'), `${loc}: ${out}`);
     }
   }
 });

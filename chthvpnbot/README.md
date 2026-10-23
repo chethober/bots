@@ -57,6 +57,28 @@ code and xtune's usage page). As a result:
 With shared subscriptions or links, everyone has the same credentials. Removing a member only takes them out of the
 bot, and they keep whatever they copied. To cut them off, the owner has to change the links.
 
+## Manage your xtune server
+
+xtune doesn't run a Telegram bot of its own any more (since v0.7.0). It prints a **management link** instead, and
+this bot is the phone UI for it:
+
+```sh
+xtune manage link                                   # on the server; send the link to 🛠 My servers → 🖥 Manage a server
+xtune manage reseller add rex --users 20 --quota 1000   # a link for a reseller: only the users they add
+```
+
+- **Status**: Xray and the subscription server, users (active, online), traffic, and each config's last use. A
+  config with no traffic for 2 hours while the others are used is probably blocked.
+- **Users**: the list with usage and expiry; each user's card with its links (QR code of the subscription link, then
+  every share link); ➕ Add user (`carol 50 30 2` or `dave basic`), ✏️ Limits (`100 30 -`), 🔄 Renew (same terms or
+  a plan), enable or disable, reset usage, new keys, new subscription link, delete.
+- **Plans** (admin): add and delete.
+- **Resellers** see only their users, within their user count and total quota. xtune enforces this, not the bot.
+
+The link works like the connect link: the bot deletes the message it arrived in and never shows it again, and
+`xtune manage token` makes a new one, so the old one stops working. Backups, keys, domains and the other settings stay
+on the command line.
+
 ## Features
 
 **For members**
@@ -88,7 +110,8 @@ bot, and they keep whatever they copied. To cut them off, the owner has to chang
 ## Privacy
 
 - The database holds Telegram ids, each person's language, the VPNs they added or joined, a random label per
-  membership, hashed passwords (PBKDF2-SHA256), reports and the bot's two live menu messages per chat.
+  membership, hashed passwords (PBKDF2-SHA256), reports, the management links of servers people manage here, and
+  the bot's two live menu messages per chat.
   [`tgcloud/schema.js`](tgcloud/schema.js) is the complete list.
 - **Owners see members only as labels.** Members see a VPN's card, never its owner. Callback data carries row ids,
   never Telegram ids.
@@ -135,7 +158,7 @@ up, and that every text key exists in all five languages.
 
 ```
 tgcloud/
-├── schema.js              tables: vpns, members, tries, reports, bans, chats, states
+├── schema.js              tables: vpns, members, tries, reports, bans, servers, chats, states
 ├── handlers/
 │   ├── message.js         keyboard buttons, /start (invites), prompts (add, edits, password, announce), admin commands
 │   └── callback_query.js  every inline button
@@ -146,6 +169,7 @@ tgcloud/
     ├── flows.js           invites, joining with a password, the add wizard, owner edits, announcements
     ├── members.js         join / connection details / leave / kick, notifying members
     ├── xtune.js           the xtune connect link's API: info, join, leave
+    ├── servers.js         🖥 Manage a server: the management link's API, its screens and prompts
     ├── check.js           health checks
     ├── sources.js         recognising connect links, subscriptions and share links; protocols; flags
     ├── hash.js            SHA-256 and PBKDF2 in plain JS
@@ -166,6 +190,11 @@ The xtune side is the `public` command and the `/<path>/pub/<token>` routes on x
 | `POST <connect link>/leave` `{"label"}` | removes that member's user |
 
 Labels are 4 to 16 lowercase letters and digits. A pool can only add and remove its own members.
+
+A management link (`/<path>/adm/<token>`, [`manage.go`](https://github.com/chethober/xtune/blob/main/manage.go)) takes
+`POST {"op": "status" | "users" | "user" | "add" | "limit" | "renew" | "enable" | "disable" | "resetUsage" |
+"rotate" | "resetSub" | "delete" | "plans" | "setPlan" | "delPlan", "name", "quotaGB", "days", "devices", "plan"}`.
+Validation errors come back as `422 {"error"}` and are shown as they are.
 
 See [`AGENTS.md`](AGENTS.md) for the platform's module rules and [`docs/tgcloud-sdk.md`](docs/tgcloud-sdk.md) for the SDK reference.
 

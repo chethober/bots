@@ -4,6 +4,7 @@
 import { DIR_PAGE, MEMBERS_PAGE, SOURCE_URL, XTUNE_URL } from './config.js';
 import { mainKeyboard, showHome } from './chats.js';
 import { COUNTRIES, flag } from './sources.js';
+import { ownedServers } from './servers.js';
 import { activeMembers, directory, joinedVpns, ownedVpns } from './store.js';
 import { inviteLink } from './util.js';
 import { poolInfo } from './xtune.js';
@@ -81,10 +82,12 @@ export function memberView(vpn, member, L) {
 // --- owners ------------------------------------------------------------------------
 
 export async function ownedView(ownerId, L) {
-  const list = await ownedVpns(ownerId);
+  const [list, srvs] = await Promise.all([ownedVpns(ownerId), ownedServers(ownerId)]);
   const kb = list.map((v) => [btn(`${v.status === 'down' ? '⚠️ ' : ''}${vpnLabel(v)}`, `m:${v.id}`)]);
-  kb.push([btn(L.btnAddVpn, 'add')]);
-  return { text: list.length ? L.ownedTitle(list.length) : L.ownedEmpty, reply_markup: { inline_keyboard: kb } };
+  kb.push(...srvs.map((s) => [btn(`🖥 ${s.name}${s.role === 'reseller' ? ` (${L.srv.reseller})` : ''}`, `s:${s.id}`)]));
+  kb.push([btn(L.btnAddVpn, 'add'), btn(L.srv.btnManage, 'srvadd')]);
+  const text = list.length || srvs.length ? L.ownedTitle(list.length) + (srvs.length ? `\n${L.srv.serversTitle(srvs.length)}` : '') : L.ownedEmpty;
+  return { text: `${text}\n\n${L.srv.manageHint}`, reply_markup: { inline_keyboard: kb } };
 }
 
 export async function manageView(vpn, L) {

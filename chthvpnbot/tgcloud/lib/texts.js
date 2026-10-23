@@ -31,6 +31,7 @@ function compose(locale, w) {
 
   return {
     ...w, num,
+    srv: composeSrv(locale, SRV[locale], num, ago),
 
     card: (v) => [
       title(v),
@@ -142,7 +143,7 @@ const en = {
     'gets their own account with its own limits, so one member can be removed without affecting anyone else:\n' +
     'xtune public add community --quota 20 --days 30 --members 100\nthen send the connect link to ➕ Add VPN.\n\n' +
     '🔒 Privacy: the bot keeps your Telegram id and language, the VPNs you joined or added, and a random label per ' +
-    'membership. Owners see only labels; an xtune server gets only the label. Passwords are stored hashed.\n\n' +
+    'membership. Owners see only labels; an xtune server gets only the label. Passwords are stored hashed. For a server you manage here, its management link is stored so the bot can reach it.\n\n' +
     '⚠️ The bot checks that servers answer, not that they work on your network. Use VPNs you trust: a server\'s owner ' +
     'can see traffic that isn\'t otherwise encrypted.',
   btnXtune: '⭐ xtune on GitHub', btnSourceCode: '🔗 Source code',
@@ -322,7 +323,7 @@ const fa = {
     'هر عضو حساب خودش رو با محدودیت‌های خودش می‌گیره؛ پس می‌شه یه عضو رو حذف کرد بدون اینکه بقیه اذیت بشن:\n' +
     'xtune public add community --quota 20 --days 30 --members 100\nبعد لینک اتصال رو توی «➕ افزودن وی‌پی‌ان» بفرست.\n\n' +
     '🔒 حریم خصوصی: ربات آیدی تلگرام و زبانت، وی‌پی‌ان‌هایی که عضو شدی یا گذاشتی و یه برچسب تصادفی برای هر عضویت رو نگه می‌داره. ' +
-    'صاحب سرور فقط برچسب رو می‌بینه و سرور xtune هم فقط برچسب رو می‌گیره. رمزها هش‌شده ذخیره می‌شن.\n\n' +
+    'صاحب سرور فقط برچسب رو می‌بینه و سرور xtune هم فقط برچسب رو می‌گیره. رمزها هش‌شده ذخیره می‌شن. برای سروری که اینجا مدیریتش می‌کنی، لینک مدیریتش ذخیره می‌شه تا ربات بتونه بهش وصل بشه.\n\n' +
     '⚠️ ربات فقط بررسی می‌کنه که سرور جواب بده، نه اینکه از شبکه‌ی تو کار کنه. فقط از وی‌پی‌ان‌هایی استفاده کن که بهشون اعتماد داری: ' +
     'صاحب سرور ترافیکی که جدا رمزنگاری نشده رو می‌بینه.',
   btnXtune: '⭐ xtune در گیت‌هاب', btnSourceCode: '🔗 کد منبع',
@@ -500,7 +501,7 @@ const ar = {
     'فيمكن إزالة عضو دون التأثير على الآخرين:\n' +
     'xtune public add community --quota 20 --days 30 --members 100\nثم أرسل رابط الاتصال إلى «➕ إضافة VPN».\n\n' +
     '🔒 الخصوصية: يحتفظ البوت بمعرّف تيليجرام ولغتك والشبكات التي انضممت إليها أو أضفتها ووسم عشوائي لكل عضوية. ' +
-    'يرى المالكون الوسوم فقط، ويحصل خادم xtune على الوسم فقط. كلمات المرور مخزنة مجزأة (hash).\n\n' +
+    'يرى المالكون الوسوم فقط، ويحصل خادم xtune على الوسم فقط. كلمات المرور مخزنة مجزأة (hash). وللخادم الذي تديره هنا يُحفظ رابط إدارته ليصل إليه البوت.\n\n' +
     '⚠️ يتحقق البوت من أن الخوادم تستجيب، لا من أنها تعمل على شبكتك. استخدم شبكات تثق بها: يرى مالك الخادم الحركة غير المشفرة.',
   btnXtune: '⭐ xtune على GitHub', btnSourceCode: '🔗 الشيفرة المصدرية',
 
@@ -678,7 +679,7 @@ const ru = {
     'получает свой аккаунт со своими лимитами, так что одного можно удалить, не задев остальных:\n' +
     'xtune public add community --quota 20 --days 30 --members 100\nзатем отправьте ссылку подключения в «➕ Добавить VPN».\n\n' +
     '🔒 Приватность: бот хранит ваш Telegram id и язык, VPN, в которые вы вступили или которые добавили, и случайную метку ' +
-    'для каждого членства. Владельцы видят только метки; сервер xtune получает только метку. Пароли хранятся в виде хэша.\n\n' +
+    'для каждого членства. Владельцы видят только метки; сервер xtune получает только метку. Пароли хранятся в виде хэша. Для сервера, которым вы управляете здесь, хранится его ссылка управления.\n\n' +
     '⚠️ Бот проверяет, что серверы отвечают, а не что они работают в вашей сети. Пользуйтесь VPN, которым доверяете: ' +
     'владелец сервера видит незашифрованный трафик.',
   btnXtune: '⭐ xtune на GitHub', btnSourceCode: '🔗 Исходный код',
@@ -857,7 +858,7 @@ const es = {
     'recibe su propia cuenta con sus propios límites, así que se puede quitar a uno sin afectar a los demás:\n' +
     'xtune public add community --quota 20 --days 30 --members 100\ny luego envía el enlace de conexión a «➕ Añadir VPN».\n\n' +
     '🔒 Privacidad: el bot guarda tu id de Telegram y tu idioma, las VPN a las que te uniste o que añadiste y una etiqueta ' +
-    'aleatoria por membresía. Los dueños solo ven etiquetas; un servidor xtune solo recibe la etiqueta. Las contraseñas se guardan con hash.\n\n' +
+    'aleatoria por membresía. Los dueños solo ven etiquetas; un servidor xtune solo recibe la etiqueta. Las contraseñas se guardan con hash. De un servidor que gestiones aquí se guarda su enlace de gestión para poder llegar a él.\n\n' +
     '⚠️ El bot comprueba que los servidores respondan, no que funcionen en tu red. Usa VPN en las que confíes: el dueño ' +
     'del servidor ve el tráfico que no va cifrado.',
   btnXtune: '⭐ xtune en GitHub', btnSourceCode: '🔗 Código fuente',
@@ -1008,6 +1009,245 @@ const es = {
   ownerBanned: '⛔ Tras varias denuncias, los administradores borraron tus VPN. Ya no puedes añadir más.',
 };
 
+// --------------------------------------------------------------- managed servers
+// 🖥 Manage a server (lib/servers.js): each language's words, composed in composeSrv().
+
+function composeSrv(locale, w, num, ago) {
+  const gb = (bytes) => num((bytes / (1 << 30)).toFixed(bytes < (1 << 30) * 10 ? 1 : 0));
+  const icon = (s) => ({ active: '🟢', disabled: '⚪️' })[s] ?? '🔴';
+  const expiry = (ts) => {
+    if (!ts) return w.never;
+    const d = Math.ceil((ts - Date.now() / 1000) / 86400);
+    return d <= 0 ? w.expired : w.daysLeft(num(d));
+  };
+  const quota = (u) => (u.quota > 0 ? `${gb(u.used)} / ${gb(u.quota)} GB` : `${gb(u.used)} GB · ${w.unlimited}`);
+  return {
+    ...w, icon,
+    status: (srv, s) => (s.role === 'reseller'
+      ? [
+        `🖥 ${s.reseller} (${w.reseller})`, '',
+        `👥 ${num(s.users)}${s.maxUsers ? ` / ${num(s.maxUsers)}` : ''} ${w.usersWord}`,
+        `📦 ${gb(s.assigned)}${s.quotaGB ? ` / ${num(s.quotaGB)}` : ''} GB ${w.assignedWord}`,
+        `📶 ${gb(s.traffic)} GB`,
+      ].join('\n')
+      : [
+        `🖥 ${s.addr}`, '',
+        `Xray: ${s.xray ?? '?'}`,
+        `${w.subWord}: ${s.sub ?? '?'}`,
+        `👥 ${w.usersLine(num(s.users), num(s.active), num(s.online))}`,
+        `📶 ${gb(s.traffic)} GB`, '',
+        w.configsWord,
+        ...(s.configs ?? []).map((c) => `• ${c.id}: ` + ({
+          active: `🟢 ${w.usedAgo(ago(c.since))}`,
+          quiet: `⚠️ ${w.quietSince(ago(c.since))}`,
+          follower: `↪️ ${c.server ?? ''}`,
+        }[c.state] ?? `▫️ ${w.idle}`)),
+        '', `xtune ${s.version}`,
+      ].join('\n')),
+    usersList: (srv, shown, total, page, pages) => [
+      `👥 ${srv.name}: ${num(total)}${pages > 1 ? ` (${num(page)}/${num(pages)})` : ''}`, '',
+      ...shown.map((u) => `${icon(u.status)} ${u.name} · ${quota(u)} · ${expiry(u.expires)}`),
+    ].join('\n'),
+    userCard: (u) => [
+      `${icon(u.status)} ${u.name} · ${w.statuses[u.status] ?? u.status}`, '',
+      `📦 ${quota(u)}`,
+      `⏳ ${expiry(u.expires)}`,
+      `📱 ${num(u.online)}${u.devices ? ` / ${num(u.devices)}` : ''} ${w.devicesWord}`,
+      u.plan ? `📋 ${u.plan}` : null,
+      u.reset ? `🔁 ${w.resets[u.reset] ?? u.reset}` : null,
+      u.pool ? `🌍 ${u.pool}` : null,
+      u.daily ? `📈 ${w.last30(gb(u.daily.reduce((a, b) => a + b, 0)))}` : null,
+    ].filter((l) => l !== null).join('\n'),
+    plansList: (plans) => (plans.length
+      ? [w.plansTitle, '', ...plans.map((p) =>
+        `📋 ${p.name}: ${p.quotaGB ? `${num(p.quotaGB)} GB` : w.unlimited}, ${p.days ? w.daysN(num(p.days)) : w.never}` +
+        (p.devices ? `, ${num(p.devices)} ${w.devicesWord}` : ''))].join('\n')
+      : w.noPlans),
+    subCaption: (u) => `🔗 ${u.name}\n\n${u.sub}\n\n📦 ${quota(u)} · ⏳ ${expiry(u.expires)}`,
+  };
+}
+
+const srvEn = {
+  btnManage: '🖥 Manage a server', reseller: 'reseller',
+  serversTitle: (n) => `🖥 Managed servers: ${n}`,
+  manageHint: '🖥 Manage a server: send an xtune management link (xtune manage link) to manage its users and plans here.',
+  addPrompt: '🖥 Send the management link: on your server run\nxtune manage link\n(or a reseller link from xtune manage reseller add NAME). Your message is deleted right away.',
+  notALink: 'That\'s not an xtune management link (https://…/adm/…). Try again.',
+  errors: { gone: 'The server doesn\'t know this link anymore (xtune manage token makes a new one).', unreachable: 'The server didn\'t answer. Try again later.' },
+  btnRefresh: '🔄 Refresh', btnRemove: '🗑 Remove from bot', btnUsers: '👥 Users', btnAddUser: '➕ Add user', btnPlans: '📋 Plans',
+  btnLinks: '🔗 Links', btnLimits: '✏️ Limits', btnRenew: '🔄 Renew', btnEnable: '▶️ Enable', btnDisable: '⏸ Disable',
+  btnResetUsage: '♻️ Reset usage', btnRotate: '🔑 New keys', btnResetSub: '🔁 New sub link', btnDelete: '🗑 Delete',
+  btnAddPlan: '➕ Add plan', btnRenewSame: '🔄 Same terms',
+  noUsers: 'No users yet.',
+  usersWord: 'users', assignedWord: 'assigned', subWord: 'Subscription', configsWord: 'Configs:', devicesWord: 'devices',
+  usersLine: (n, a, o) => `${n} users · ${a} active · ${o} online`,
+  usedAgo: (t) => `used ${t}`, quietSince: (t) => `no traffic since ${t}: probably blocked`, idle: 'no traffic yet',
+  never: 'never expires', expired: 'expired', daysLeft: (n) => `${n} days left`, daysN: (n) => `${n} days`, unlimited: 'unlimited',
+  statuses: { active: 'active', disabled: 'disabled', expired: 'expired', 'over quota': 'over quota' },
+  resets: { monthly: 'usage resets monthly', weekly: 'usage resets weekly' },
+  last30: (x) => `last 30 days: ${x} GB`,
+  plansTitle: '📋 Plans', noPlans: 'No plans yet. A plan is a named set of limits for adding and renewing users.',
+  linksHeader: (n) => `🔗 ${n}: share links`,
+  addUserPrompt: '➕ Send the new user:\nNAME [quota GB] [days] [devices]   e.g. carol 50 30 2\nor NAME PLAN   e.g. dave basic\n(0 = unlimited / never)',
+  limitPrompt: (n) => `✏️ New limits for ${n}:\nquota GB, days from today, devices; - keeps one\ne.g. 100 30 -   (0 = unlimited / never)`,
+  planPrompt: '➕ Send the plan:\nNAME quota GB days [devices]   e.g. basic 50 30 2',
+  renewWhich: (n) => `🔄 Renew ${n}: from their current expiry, with usage from zero.`,
+  renewed: '✅ Renewed.', enabled: '✅ Enabled.', disabled: '⏸ Disabled.', usageReset: '♻️ Usage starts from zero.',
+  rotateConfirm: (n) => `🔑 New keys for ${n}? Their current links stop working; their subscription updates by itself.`,
+  rotated: '🔑 New keys made.',
+  resetSubConfirm: (n) => `🔁 New subscription link for ${n}? The old link stops working; they need the new one.`,
+  subReset: '🔁 New subscription link made.',
+  deleteConfirm: (n) => `🗑 Delete ${n} from the server? This can't be undone.`,
+  deleted: (n) => `${n} deleted.`, planDeleted: (n) => `Plan ${n} deleted.`, added: (n) => `✅ ${n} added.`, limitsSaved: '✅ Limits saved.',
+  removeConfirm: (s) => `Remove ${s.name} from the bot? The link keeps working on the server until you run xtune manage token.`,
+  removed: 'Removed.',
+};
+
+const srvFa = {
+  btnManage: '🖥 مدیریت سرور', reseller: 'نماینده',
+  serversTitle: (n) => `🖥 سرورهای تحت مدیریت: ${n}`,
+  manageHint: '🖥 مدیریت سرور: لینک مدیریت xtune (xtune manage link) رو بفرست تا کاربرها و پلن‌هاش رو همین‌جا مدیریت کنی.',
+  addPrompt: '🖥 لینک مدیریت رو بفرست: روی سرورت اجرا کن\nxtune manage link\n(یا لینک نماینده از xtune manage reseller add NAME). پیامت فوراً پاک می‌شه.',
+  notALink: 'این لینک مدیریت xtune نیست (https://…/adm/…). دوباره امتحان کن.',
+  errors: { gone: 'سرور دیگه این لینک رو نمی‌شناسه (xtune manage token یه لینک جدید می‌سازه).', unreachable: 'سرور جواب نداد. بعداً امتحان کن.' },
+  btnRefresh: '🔄 به‌روزرسانی', btnRemove: '🗑 حذف از ربات', btnUsers: '👥 کاربرها', btnAddUser: '➕ کاربر جدید', btnPlans: '📋 پلن‌ها',
+  btnLinks: '🔗 لینک‌ها', btnLimits: '✏️ محدودیت‌ها', btnRenew: '🔄 تمدید', btnEnable: '▶️ فعال کن', btnDisable: '⏸ غیرفعال کن',
+  btnResetUsage: '♻️ صفر کردن مصرف', btnRotate: '🔑 کلید جدید', btnResetSub: '🔁 لینک سابسکریپشن جدید', btnDelete: '🗑 حذف',
+  btnAddPlan: '➕ پلن جدید', btnRenewSame: '🔄 با همون شرایط',
+  noUsers: 'هنوز کاربری نیست.',
+  usersWord: 'کاربر', assignedWord: 'تخصیص‌داده‌شده', subWord: 'سابسکریپشن', configsWord: 'کانفیگ‌ها:', devicesWord: 'دستگاه',
+  usersLine: (n, a, o) => `${n} کاربر · ${a} فعال · ${o} آنلاین`,
+  usedAgo: (t) => `استفاده: ${t}`, quietSince: (t) => `بی‌ترافیک از ${t}: احتمالاً مسدود شده`, idle: 'هنوز ترافیکی نداشته',
+  never: 'بدون انقضا', expired: 'منقضی شده', daysLeft: (n) => `${n} روز مونده`, daysN: (n) => `${n} روز`, unlimited: 'نامحدود',
+  statuses: { active: 'فعال', disabled: 'غیرفعال', expired: 'منقضی', 'over quota': 'حجم تموم شده' },
+  resets: { monthly: 'مصرف ماهانه صفر می‌شه', weekly: 'مصرف هفتگی صفر می‌شه' },
+  last30: (x) => `۳۰ روز اخیر: ${x} گیگ`,
+  plansTitle: '📋 پلن‌ها', noPlans: 'هنوز پلنی نیست. پلن یه مجموعه‌ی اسم‌دار از محدودیت‌هاست برای ساختن و تمدید کاربرها.',
+  linksHeader: (n) => `🔗 ${n}: لینک‌های اتصال`,
+  addUserPrompt: '➕ کاربر جدید رو بفرست:\nاسم [حجم گیگ] [روز] [دستگاه]   مثلاً carol 50 30 2\nیا اسم پلن   مثلاً dave basic\n(۰ = نامحدود / بدون انقضا)',
+  limitPrompt: (n) => `✏️ محدودیت‌های جدید ${n}:\nحجم گیگ، روز از امروز، دستگاه؛ - یعنی دست نزن\nمثلاً 100 30 -   (۰ = نامحدود / بدون انقضا)`,
+  planPrompt: '➕ پلن رو بفرست:\nاسم حجم‌گیگ روز [دستگاه]   مثلاً basic 50 30 2',
+  renewWhich: (n) => `🔄 تمدید ${n}: از تاریخ انقضای فعلی، با مصرف از صفر.`,
+  renewed: '✅ تمدید شد.', enabled: '✅ فعال شد.', disabled: '⏸ غیرفعال شد.', usageReset: '♻️ مصرف از صفر شروع می‌شه.',
+  rotateConfirm: (n) => `🔑 کلید جدید برای ${n}؟ لینک‌های فعلیش کار نمی‌کنن؛ سابسکریپشنش خودش به‌روز می‌شه.`,
+  rotated: '🔑 کلید جدید ساخته شد.',
+  resetSubConfirm: (n) => `🔁 لینک سابسکریپشن جدید برای ${n}؟ لینک قبلی کار نمی‌کنه و لینک جدید رو لازم داره.`,
+  subReset: '🔁 لینک سابسکریپشن جدید ساخته شد.',
+  deleteConfirm: (n) => `🗑 ${n} از سرور حذف بشه؟ برگشت‌پذیر نیست.`,
+  deleted: (n) => `${n} حذف شد.`, planDeleted: (n) => `پلن ${n} حذف شد.`, added: (n) => `✅ ${n} اضافه شد.`, limitsSaved: '✅ محدودیت‌ها ذخیره شد.',
+  removeConfirm: (s) => `${s.name} از ربات حذف بشه؟ لینک روی سرور کار می‌کنه تا وقتی xtune manage token رو اجرا کنی.`,
+  removed: 'حذف شد.',
+};
+
+const srvAr = {
+  btnManage: '🖥 إدارة خادم', reseller: 'موزّع',
+  serversTitle: (n) => `🖥 الخوادم المُدارة: ${n}`,
+  manageHint: '🖥 إدارة خادم: أرسل رابط إدارة xtune (xtune manage link) لإدارة مستخدميه وخططه من هنا.',
+  addPrompt: '🖥 أرسل رابط الإدارة: شغّل على خادمك\nxtune manage link\n(أو رابط موزّع من xtune manage reseller add NAME). تُحذف رسالتك فوراً.',
+  notALink: 'هذا ليس رابط إدارة xtune (https://…/adm/…). حاول مجدداً.',
+  errors: { gone: 'لم يعد الخادم يعرف هذا الرابط (xtune manage token ينشئ رابطاً جديداً).', unreachable: 'لم يستجب الخادم. حاول لاحقاً.' },
+  btnRefresh: '🔄 تحديث', btnRemove: '🗑 إزالة من البوت', btnUsers: '👥 المستخدمون', btnAddUser: '➕ مستخدم جديد', btnPlans: '📋 الخطط',
+  btnLinks: '🔗 الروابط', btnLimits: '✏️ الحدود', btnRenew: '🔄 تجديد', btnEnable: '▶️ تفعيل', btnDisable: '⏸ تعطيل',
+  btnResetUsage: '♻️ تصفير الاستهلاك', btnRotate: '🔑 مفاتيح جديدة', btnResetSub: '🔁 رابط اشتراك جديد', btnDelete: '🗑 حذف',
+  btnAddPlan: '➕ خطة جديدة', btnRenewSame: '🔄 بالشروط نفسها',
+  noUsers: 'لا يوجد مستخدمون بعد.',
+  usersWord: 'مستخدم', assignedWord: 'مخصّص', subWord: 'الاشتراك', configsWord: 'الإعدادات:', devicesWord: 'أجهزة',
+  usersLine: (n, a, o) => `${n} مستخدم · ${a} نشط · ${o} متصل`,
+  usedAgo: (t) => `استُخدم ${t}`, quietSince: (t) => `بلا حركة منذ ${t}: غالباً محجوب`, idle: 'لا حركة بعد',
+  never: 'بلا انتهاء', expired: 'منتهٍ', daysLeft: (n) => `بقي ${n} يوم`, daysN: (n) => `${n} يوم`, unlimited: 'غير محدود',
+  statuses: { active: 'نشط', disabled: 'معطّل', expired: 'منتهٍ', 'over quota': 'تجاوز الحصة' },
+  resets: { monthly: 'يُصفَّر الاستهلاك شهرياً', weekly: 'يُصفَّر الاستهلاك أسبوعياً' },
+  last30: (x) => `آخر ٣٠ يوماً: ${x} غيغابايت`,
+  plansTitle: '📋 الخطط', noPlans: 'لا توجد خطط بعد. الخطة مجموعة حدود باسم لإضافة المستخدمين وتجديدهم.',
+  linksHeader: (n) => `🔗 ${n}: روابط الاتصال`,
+  addUserPrompt: '➕ أرسل المستخدم الجديد:\nالاسم [الحصة GB] [الأيام] [الأجهزة]   مثال carol 50 30 2\nأو الاسم الخطة   مثال dave basic\n(٠ = غير محدود / بلا انتهاء)',
+  limitPrompt: (n) => `✏️ حدود جديدة لـ ${n}:\nالحصة GB، الأيام من اليوم، الأجهزة؛ - يُبقي القيمة\nمثال 100 30 -   (٠ = غير محدود / بلا انتهاء)`,
+  planPrompt: '➕ أرسل الخطة:\nالاسم الحصة‌GB الأيام [الأجهزة]   مثال basic 50 30 2',
+  renewWhich: (n) => `🔄 تجديد ${n}: من تاريخ الانتهاء الحالي، مع تصفير الاستهلاك.`,
+  renewed: '✅ جُدّد.', enabled: '✅ فُعّل.', disabled: '⏸ عُطّل.', usageReset: '♻️ يبدأ الاستهلاك من الصفر.',
+  rotateConfirm: (n) => `🔑 مفاتيح جديدة لـ ${n}؟ تتوقف روابطه الحالية؛ يتحدّث اشتراكه تلقائياً.`,
+  rotated: '🔑 أُنشئت مفاتيح جديدة.',
+  resetSubConfirm: (n) => `🔁 رابط اشتراك جديد لـ ${n}؟ يتوقف الرابط القديم ويحتاج الرابط الجديد.`,
+  subReset: '🔁 أُنشئ رابط اشتراك جديد.',
+  deleteConfirm: (n) => `🗑 حذف ${n} من الخادم؟ لا يمكن التراجع.`,
+  deleted: (n) => `حُذف ${n}.`, planDeleted: (n) => `حُذفت الخطة ${n}.`, added: (n) => `✅ أُضيف ${n}.`, limitsSaved: '✅ حُفظت الحدود.',
+  removeConfirm: (s) => `إزالة ${s.name} من البوت؟ يبقى الرابط صالحاً على الخادم حتى تشغّل xtune manage token.`,
+  removed: 'أُزيل.',
+};
+
+const srvRu = {
+  btnManage: '🖥 Управлять сервером', reseller: 'реселлер',
+  serversTitle: (n) => `🖥 Управляемые серверы: ${n}`,
+  manageHint: '🖥 Управлять сервером: отправьте ссылку управления xtune (xtune manage link), чтобы управлять пользователями и тарифами здесь.',
+  addPrompt: '🖥 Отправьте ссылку управления: на сервере выполните\nxtune manage link\n(или ссылку реселлера из xtune manage reseller add NAME). Сообщение сразу удаляется.',
+  notALink: 'Это не ссылка управления xtune (https://…/adm/…). Попробуйте ещё раз.',
+  errors: { gone: 'Сервер больше не знает эту ссылку (xtune manage token создаёт новую).', unreachable: 'Сервер не ответил. Попробуйте позже.' },
+  btnRefresh: '🔄 Обновить', btnRemove: '🗑 Убрать из бота', btnUsers: '👥 Пользователи', btnAddUser: '➕ Новый пользователь', btnPlans: '📋 Тарифы',
+  btnLinks: '🔗 Ссылки', btnLimits: '✏️ Лимиты', btnRenew: '🔄 Продлить', btnEnable: '▶️ Включить', btnDisable: '⏸ Отключить',
+  btnResetUsage: '♻️ Сбросить расход', btnRotate: '🔑 Новые ключи', btnResetSub: '🔁 Новая ссылка подписки', btnDelete: '🗑 Удалить',
+  btnAddPlan: '➕ Новый тариф', btnRenewSame: '🔄 На тех же условиях',
+  noUsers: 'Пользователей пока нет.',
+  usersWord: 'пользователей', assignedWord: 'выделено', subWord: 'Подписка', configsWord: 'Конфиги:', devicesWord: 'устройств',
+  usersLine: (n, a, o) => `${n} пользователей · ${a} активных · ${o} онлайн`,
+  usedAgo: (t) => `использовался ${t}`, quietSince: (t) => `нет трафика с ${t}: вероятно, заблокирован`, idle: 'трафика ещё не было',
+  never: 'бессрочно', expired: 'истёк', daysLeft: (n) => `осталось ${n} дн`, daysN: (n) => `${n} дн`, unlimited: 'без лимита',
+  statuses: { active: 'активен', disabled: 'отключён', expired: 'истёк', 'over quota': 'лимит исчерпан' },
+  resets: { monthly: 'расход сбрасывается ежемесячно', weekly: 'расход сбрасывается еженедельно' },
+  last30: (x) => `за 30 дней: ${x} ГБ`,
+  plansTitle: '📋 Тарифы', noPlans: 'Тарифов пока нет. Тариф — это именованный набор лимитов для добавления и продления.',
+  linksHeader: (n) => `🔗 ${n}: ссылки подключения`,
+  addUserPrompt: '➕ Отправьте нового пользователя:\nИМЯ [ГБ] [дней] [устройств]   например carol 50 30 2\nили ИМЯ ТАРИФ   например dave basic\n(0 = без лимита / бессрочно)',
+  limitPrompt: (n) => `✏️ Новые лимиты для ${n}:\nГБ, дней от сегодня, устройств; - оставляет как есть\nнапример 100 30 -   (0 = без лимита / бессрочно)`,
+  planPrompt: '➕ Отправьте тариф:\nИМЯ ГБ дней [устройств]   например basic 50 30 2',
+  renewWhich: (n) => `🔄 Продлить ${n}: от текущей даты окончания, расход с нуля.`,
+  renewed: '✅ Продлено.', enabled: '✅ Включён.', disabled: '⏸ Отключён.', usageReset: '♻️ Расход начинается с нуля.',
+  rotateConfirm: (n) => `🔑 Новые ключи для ${n}? Текущие ссылки перестанут работать; подписка обновится сама.`,
+  rotated: '🔑 Новые ключи созданы.',
+  resetSubConfirm: (n) => `🔁 Новая ссылка подписки для ${n}? Старая перестанет работать, нужна новая.`,
+  subReset: '🔁 Новая ссылка подписки создана.',
+  deleteConfirm: (n) => `🗑 Удалить ${n} с сервера? Это необратимо.`,
+  deleted: (n) => `${n} удалён.`, planDeleted: (n) => `Тариф ${n} удалён.`, added: (n) => `✅ ${n} добавлен.`, limitsSaved: '✅ Лимиты сохранены.',
+  removeConfirm: (s) => `Убрать ${s.name} из бота? Ссылка продолжит работать на сервере, пока вы не выполните xtune manage token.`,
+  removed: 'Убрано.',
+};
+
+const srvEs = {
+  btnManage: '🖥 Gestionar un servidor', reseller: 'revendedor',
+  serversTitle: (n) => `🖥 Servidores gestionados: ${n}`,
+  manageHint: '🖥 Gestionar un servidor: envía un enlace de gestión de xtune (xtune manage link) para gestionar aquí sus usuarios y planes.',
+  addPrompt: '🖥 Envía el enlace de gestión: en tu servidor ejecuta\nxtune manage link\n(o un enlace de revendedor de xtune manage reseller add NAME). Tu mensaje se borra al instante.',
+  notALink: 'Eso no es un enlace de gestión de xtune (https://…/adm/…). Inténtalo otra vez.',
+  errors: { gone: 'El servidor ya no reconoce este enlace (xtune manage token crea uno nuevo).', unreachable: 'El servidor no respondió. Inténtalo más tarde.' },
+  btnRefresh: '🔄 Actualizar', btnRemove: '🗑 Quitar del bot', btnUsers: '👥 Usuarios', btnAddUser: '➕ Nuevo usuario', btnPlans: '📋 Planes',
+  btnLinks: '🔗 Enlaces', btnLimits: '✏️ Límites', btnRenew: '🔄 Renovar', btnEnable: '▶️ Activar', btnDisable: '⏸ Desactivar',
+  btnResetUsage: '♻️ Reiniciar consumo', btnRotate: '🔑 Claves nuevas', btnResetSub: '🔁 Nuevo enlace de suscripción', btnDelete: '🗑 Borrar',
+  btnAddPlan: '➕ Nuevo plan', btnRenewSame: '🔄 Mismas condiciones',
+  noUsers: 'Aún no hay usuarios.',
+  usersWord: 'usuarios', assignedWord: 'asignados', subWord: 'Suscripción', configsWord: 'Configuraciones:', devicesWord: 'dispositivos',
+  usersLine: (n, a, o) => `${n} usuarios · ${a} activos · ${o} en línea`,
+  usedAgo: (t) => `usada ${t}`, quietSince: (t) => `sin tráfico desde ${t}: probablemente bloqueada`, idle: 'sin tráfico aún',
+  never: 'sin caducidad', expired: 'caducado', daysLeft: (n) => `quedan ${n} días`, daysN: (n) => `${n} días`, unlimited: 'ilimitado',
+  statuses: { active: 'activo', disabled: 'desactivado', expired: 'caducado', 'over quota': 'sin cuota' },
+  resets: { monthly: 'el consumo se reinicia cada mes', weekly: 'el consumo se reinicia cada semana' },
+  last30: (x) => `últimos 30 días: ${x} GB`,
+  plansTitle: '📋 Planes', noPlans: 'Aún no hay planes. Un plan es un conjunto de límites con nombre para añadir y renovar usuarios.',
+  linksHeader: (n) => `🔗 ${n}: enlaces de conexión`,
+  addUserPrompt: '➕ Envía el nuevo usuario:\nNOMBRE [GB] [días] [dispositivos]   p. ej. carol 50 30 2\no NOMBRE PLAN   p. ej. dave basic\n(0 = ilimitado / sin caducidad)',
+  limitPrompt: (n) => `✏️ Nuevos límites para ${n}:\nGB, días desde hoy, dispositivos; - deja uno igual\np. ej. 100 30 -   (0 = ilimitado / sin caducidad)`,
+  planPrompt: '➕ Envía el plan:\nNOMBRE GB días [dispositivos]   p. ej. basic 50 30 2',
+  renewWhich: (n) => `🔄 Renovar ${n}: desde su caducidad actual, con el consumo a cero.`,
+  renewed: '✅ Renovado.', enabled: '✅ Activado.', disabled: '⏸ Desactivado.', usageReset: '♻️ El consumo empieza de cero.',
+  rotateConfirm: (n) => `🔑 ¿Claves nuevas para ${n}? Sus enlaces actuales dejan de funcionar; su suscripción se actualiza sola.`,
+  rotated: '🔑 Claves nuevas creadas.',
+  resetSubConfirm: (n) => `🔁 ¿Nuevo enlace de suscripción para ${n}? El anterior deja de funcionar y necesita el nuevo.`,
+  subReset: '🔁 Nuevo enlace de suscripción creado.',
+  deleteConfirm: (n) => `🗑 ¿Borrar ${n} del servidor? No se puede deshacer.`,
+  deleted: (n) => `${n} borrado.`, planDeleted: (n) => `Plan ${n} borrado.`, added: (n) => `✅ ${n} añadido.`, limitsSaved: '✅ Límites guardados.',
+  removeConfirm: (s) => `¿Quitar ${s.name} del bot? El enlace sigue funcionando en el servidor hasta que ejecutes xtune manage token.`,
+  removed: 'Quitado.',
+};
+
+const SRV = { en: srvEn, fa: srvFa, ar: srvAr, ru: srvRu, es: srvEs };
 const TABLES = { en, fa, ar, ru, es };
 const cache = {};
 
