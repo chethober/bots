@@ -5,6 +5,8 @@ import { buildMessages, generate, decorate, describeAiError, analyzeStyle } from
 import { isAllowed } from './config.js';
 import * as store from './store.js';
 import { setupButton } from './ui.js';
+import { localeOf } from './screen.js';
+import { t } from './strings.js';
 import { relayToOwner } from './relay.js';
 
 const sleep = (ms) => (typeof setTimeout === 'function' && ms > 0
@@ -71,7 +73,8 @@ export async function handleBusinessMessage(msg) {
 
   const creds = resolveCredentials(row, ownerId);
   if (!creds) {
-    await notifyOwner(conn, row, 'I received a message but have no Cloudflare AI credentials yet. Tap below to connect them.', [[setupButton()]]);
+    const locale = await localeOf(ownerId);
+    await notifyOwner(conn, row, t(locale, 'no_creds_notice'), [[setupButton(locale)]]);
     return;
   }
 
@@ -105,7 +108,8 @@ export async function aiReply({ conn, row, s, creds, chat, contactName, replyToI
     reply = await generate(s, creds, buildMessages(s, history, ctx));
   } catch (e) {
     console.error('AI failed', e.kind, e.message);
-    await notifyOwner(conn, row, describeAiError(e), e.kind === 'auth' ? [[setupButton()]] : undefined);
+    const locale = await localeOf(ownerId);
+    await notifyOwner(conn, row, describeAiError(e, locale), e.kind === 'auth' ? [[setupButton(locale)]] : undefined);
     if (!s.fallbackText) return false;
     reply = s.fallbackText;
   }

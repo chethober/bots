@@ -1,6 +1,8 @@
 // Relays contacts' non-text messages to the owner and sends the owner's answers back.
 import { api } from 'sdk';
 import * as store from './store.js';
+import { localeOf, showScreen } from './screen.js';
+import { t } from './strings.js';
 
 // Kinds of content, checked in order (an animation also carries `document`).
 const KINDS = [
@@ -15,6 +17,7 @@ export function kindOf(m) {
   return KINDS.find(([k]) => m[k])?.[0] ?? 'unknown';
 }
 
+// English kind names, for the AI's chat history and send errors.
 export const kindLabel = (k) => KINDS.find(([key]) => key === k)?.[1] ?? 'message';
 
 // Re-sends message `m` (any type) to `target` ({ chat_id, business_connection_id?, reply_parameters? })
@@ -53,10 +56,10 @@ export async function resend(m, target, { caption: extraCaption, fallback = true
   return api.sendMessage({ ...t, text: [extraCaption, desc, m.caption].filter(Boolean).join('\n\n') });
 }
 
-const relayButtons = (id) => ({
+const relayButtons = (id, locale) => ({
   inline_keyboard: [
-    [{ text: '✍️ Reply', callback_data: `r:ans:${id}` }, { text: '🤖 Let AI answer', callback_data: `r:ai:${id}` }],
-    [{ text: '🙈 Ignore', callback_data: `r:ign:${id}` }],
+    [{ text: t(locale, 'btn_reply'), callback_data: `r:ans:${id}` }, { text: t(locale, 'btn_let_ai'), callback_data: `r:ai:${id}` }],
+    [{ text: t(locale, 'btn_ignore'), callback_data: `r:ign:${id}` }],
   ],
 });
 
@@ -70,31 +73,33 @@ export async function relayToOwner(conn, msg, contactName) {
     ownerId: conn.userId, connectionId: conn.id, chatId: msg.chat.id, contactMsgId: msg.message_id,
     contactName, kind,
   });
+  const locale = await localeOf(conn.userId);
   const media = await resend(msg, { chat_id: conn.userChatId });
   const header = await api.sendMessage({
     chat_id: conn.userChatId,
-    text: `📩 ${who} sent a ${kindLabel(kind)}.\n\nReply to this message with anything (text, photo, voice…) and I'll send it to them from your account.`,
+    text: t(locale, 'relay_header', { who, kind: t(locale, `kind_${kind}`) }),
     reply_parameters: { message_id: media.message_id },
-    reply_markup: relayButtons(relay.id),
+    reply_markup: relayButtons(relay.id, locale),
   });
   await store.updateRelay(relay.id, { mediaMsgId: media.message_id, headerMsgId: header.message_id });
   if (Math.random() < 0.05) await store.pruneRelays();
 }
 
 // "✍️ Reply" button: ask for the answer with a force-reply prompt.
-export async function promptAnswer(relay, ownerChatId) {
-  const prompt = await api.sendMessage({
-    chat_id: ownerChatId,
-    text: `✍️ Your answer to ${relay.contactName || 'them'}:`,
-    reply_parameters: { message_id: relay.headerMsgId },
-    reply_markup: { force_reply: true, input_field_placeholder: 'Type or send anything…' },
+export async function promptAnswer(relay, ownerChatId, locale) {
+  const prompt = await showScreen(ownerChatId, {
+    text: t(locale, 'answer_prompt', { name: relay.contactName || t(locale, 'them') }),
+    reply_parameters: { message_id: relay.headerMsgId, allow_sending_without_reply: true },
+    reply_markup: { force_reply: true, input_field_placeholder: t(locale, 'answer_placeholder') },
   });
   await store.updateRelay(relay.id, { promptMsgId: prompt.message_id });
 }
 
-// Sends the owner's message (any type) to the contact as an answer.
-export async function deliverAnswer(relay, ownerMsg) {
+// Sends the owner's message (any type) to the contact as an answer; the outcome
+// replaces the open screen (the answer prompt).
+export async function deliverAnswer(relay, ownerMsg, locale) {
   const ownerChatId = ownerMsg.chat.id;
+  const reply_parameters = { message_id: ownerMsg.message_id, allow_sending_without_reply: true };
   try {
     await resend(ownerMsg, {
       chat_id: relay.chatId,
@@ -103,25 +108,23 @@ export async function deliverAnswer(relay, ownerMsg) {
     }, { fallback: false });
   } catch (e) {
     const why = /24|expired|not found|PEER|BUSINESS/i.test(e.description ?? '')
-      ? 'Telegram only allows replies in chats with a message from them in the last 24 hours.'
+      ? t(locale, 'cant_send_24h')
       : (e.description ?? e.message);
-    await api.sendMessage({ chat_id: ownerChatId, text: `❌ Couldn't send: ${why}`, reply_parameters: { message_id: ownerMsg.message_id } });
+    await showScreen(ownerChatId, { text: t(locale, 'cant_send', { why }), reply_parameters });
     return;
   }
   const text = ownerMsg.text ?? (ownerMsg.caption ? `[sent a ${kindLabel(kindOf(ownerMsg))}] ${ownerMsg.caption}` : `[sent a ${kindLabel(kindOf(ownerMsg))}]`);
   await store.addMessage(relay.ownerId, relay.chatId, 'owner', text);
-  await markRelay(relay, 'answered', ownerChatId);
-  await api.sendMessage({
-    chat_id: ownerChatId, text: `✅ Sent to ${relay.contactName || 'them'}.`, reply_parameters: { message_id: ownerMsg.message_id },
-  }).catch(() => {});
+  await markRelay(relay, 'answered', ownerChatId, locale);
+  await showScreen(ownerChatId, { text: t(locale, 'sent_to', { name: relay.contactName || t(locale, 'them') }), reply_parameters })
+    .catch(() => {});
 }
 
-export async function markRelay(relay, status, ownerChatId) {
+export async function markRelay(relay, status, ownerChatId, locale) {
   await store.updateRelay(relay.id, { status });
-  const label = { answered: '✅ Answered', ai: '🤖 AI answered', ignored: '🙈 Ignored' }[status];
   if (relay.headerMsgId) {
     await api.editMessageReplyMarkup({
-      chat_id: ownerChatId, message_id: relay.headerMsgId, reply_markup: doneButton(label),
+      chat_id: ownerChatId, message_id: relay.headerMsgId, reply_markup: doneButton(t(locale, `relay_${status}`)),
     }).catch(() => {});
   }
 }

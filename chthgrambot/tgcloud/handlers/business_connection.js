@@ -4,27 +4,28 @@ import { upsertConnection } from '../lib/store.js';
 import { isAllowed } from '../lib/config.js';
 import { panelKeyboard, setupButton } from '../lib/ui.js';
 import { loadSettingsRow, resolveCredentials } from '../lib/settings.js';
+import { localeOf } from '../lib/screen.js';
+import { t } from '../lib/strings.js';
 
 export default async function (bc) {
   const conn = await upsertConnection(bc);
   const chat_id = conn.userChatId;
+  const locale = await localeOf(conn.userId, bc.user);
 
   if (!isAllowed(conn.userId)) {
-    await api.sendMessage({ chat_id, text: 'Sorry, this secretary bot is private.' }).catch(() => {});
+    await api.sendMessage({ chat_id, text: t(locale, 'private') }).catch(() => {});
     return;
   }
   if (!conn.isEnabled) {
-    await api.sendMessage({ chat_id, text: '👋 Disconnected. I will no longer answer your chats.' }).catch(() => {});
+    await api.sendMessage({ chat_id, text: t(locale, 'bc_disconnected') }).catch(() => {});
     return;
   }
-  const lines = ['✅ Connected as your Telegram Business secretary.'];
-  if (!conn.canReply) {
-    lines.push('', '⚠️ I don\'t have permission to reply. Enable "Reply to messages" in Settings → Telegram Business → Chatbots.');
-  }
+  const lines = [t(locale, 'bc_connected')];
+  if (!conn.canReply) lines.push('', t(locale, 'bc_no_reply'));
   const hasCreds = resolveCredentials(await loadSettingsRow(conn.userId), conn.userId);
-  if (!hasCreds) lines.push('', '🔑 One more step: connect a free Cloudflare AI key so I can write replies.');
-  lines.push('', 'Open the panel to tune my mood, emoji style, creativity and more.');
+  if (!hasCreds) lines.push('', t(locale, 'bc_need_key'));
+  lines.push('', t(locale, 'bc_tune'));
   await api.sendMessage({
-    chat_id, text: lines.join('\n'), reply_markup: panelKeyboard(hasCreds ? [] : [[setupButton()]]),
+    chat_id, text: lines.join('\n'), reply_markup: panelKeyboard(locale, hasCreds ? [] : [[setupButton(locale)]]),
   }).catch(() => {});
 }

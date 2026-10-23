@@ -1,5 +1,6 @@
 import { fetch } from 'sdk';
 import { MOODS, EMOJI_STYLES, LENGTHS, FORMALITY } from './settings.js';
+import { t } from './strings.js';
 
 export class AiError extends Error {
   constructor(message, kind) {
@@ -165,14 +166,8 @@ export function decorate(s, text) {
   return parts.map((p) => p.slice(0, 4096));
 }
 
-export function describeAiError(e) {
-  switch (e?.kind) {
-    case 'nocreds': return 'No Cloudflare AI credentials yet. Send /setup and I\'ll walk you through it (free, about 2 minutes).';
-    case 'auth': return `Cloudflare rejected the request (${e.message}). If other models work, this model may be unavailable on your account; otherwise send /setup to re-enter the key (it needs "Workers AI: Read").`;
-    case 'quota': return 'The Cloudflare Workers AI free daily limit (10,000 neurons) is used up. Replies resume when it resets at 00:00 UTC — or pick a cheaper model in the panel.';
-    case 'few_samples': return 'I need at least 5 samples of your writing first. Write in your chats, forward me your messages, or paste examples in the panel.';
-    case 'network': return 'Could not reach Cloudflare. It will retry on the next message.';
-    case 'model': return `Cloudflare AI error: ${e.message}`;
-    default: return `AI error: ${e?.message ?? e}`;
-  }
+// A user-facing explanation of an AI failure, in `locale` (the panel gets English).
+export function describeAiError(e, locale = 'en') {
+  const known = ['nocreds', 'auth', 'quota', 'few_samples', 'network', 'model'];
+  return t(locale, known.includes(e?.kind) ? `err_${e.kind}` : 'err_other', { error: e?.message ?? String(e) });
 }

@@ -24,7 +24,7 @@ tune mood, emoji style, temperature, length, language, knowledge, schedule and m
 4. **Configure.** Put the printed Mini App URL (`https://app<id>.tgcloud.ai/`) in
    `PANEL_URL` in `tgcloud/lib/config.js`. Add your Telegram user ID to `ALLOWED_USER_IDS`
    to keep the bot private. Then run `npx tgcloud push` again.
-5. **Connect Cloudflare AI.** Send `/start` to your bot, then `/setup`. The bot walks you through
+5. **Connect Cloudflare AI.** Send `/start` to your bot, then tap **🔑 Connect AI**. The bot walks you through
    it with links: open the [Workers AI dashboard](https://dash.cloudflare.com/?to=/:account/ai/workers-ai)
    → **Use REST API** → paste the **Account ID** → **Create a Workers AI API Token** → paste the token.
    It deletes the token message, tests the key and saves it. The panel's *AI provider* section has the
@@ -42,10 +42,16 @@ tune mood, emoji style, temperature, length, language, knowledge, schedule and m
 | Behavior | context memory, reply delay (with typing indicator and burst merging), stepping back after you reply yourself, quoting, marking as read, reply-hours window and time zone |
 | Chats | mute single chats, resume paused chats, clear stored context |
 
-## Bot commands (in your private chat with the bot)
+## In your private chat with the bot
 
-`/setup`, `/cancel`, `/panel`, `/status`, `/pause`, `/resume`, `/help`. Any other text gets a **preview** of
-how the secretary would answer.
+Everything is a button, in English, Persian, Arabic, Russian or Spanish (your Telegram language, or
+🌐 Language): **📊 Status** (with pause/resume), **⚙️ Settings** (one-tap settings and the panel),
+**🪞 Teach my style**, **🔑 Connect AI**, **🌐 Language**, **ℹ️ Help** and **🔗 Source code**. `/start`
+is the only command. Button taps are deleted and each screen replaces the previous one, so the chat
+keeps only relayed messages and previews. Any other text gets a **preview** of how the secretary would
+answer. The panel itself is in English.
+
+After updating, run `npx tgcloud migrate` (the `ui` table holds each chat's language and live screens).
 
 ## Speak as me: learning from chat exports
 

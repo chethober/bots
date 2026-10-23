@@ -26,6 +26,16 @@ export const settings = table('settings', {
   updatedAt:     integer('updated_at').default(sql`(unixepoch())`),
 });
 
+// Per owner, about their chat with the bot: the language Telegram reports (used
+// while the UI language is 'auto') and the bot's two live menu messages, so stale
+// ones can be deleted (clean chat).
+export const ui = table('ui', {
+  userId:    integer('user_id').primaryKey(),
+  lang:      text('lang'),
+  homeMsg:   integer('home_msg'),                      // the help message carrying the reply keyboard
+  screenMsg: integer('screen_msg'),                    // the screen a button opened last
+});
+
 // Chats the secretary has seen, per owner. Lets the owner mute single chats.
 export const chats = table('chats', {
   id:          integer('id').primaryKey({ autoIncrement: true }),

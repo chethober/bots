@@ -1,6 +1,6 @@
-// Minimal i18n layer (English + Persian, Arabic, Russian, Spanish).
-// Pure helpers — locale storage lives with the users table (see users.js).
-// Anything without a translation falls back to English, then Persian.
+// Minimal i18n layer (English + Persian, Arabic, Russian, Spanish). Pure helpers:
+// the strings are in strings.js; each owner's language is their uiLocale setting,
+// or (when 'auto') the language Telegram reports, kept in the ui table (screen.js).
 
 export const LOCALES = ['en', 'fa', 'ar', 'ru', 'es'];
 export const RTL = new Set(['fa', 'ar']);
@@ -31,26 +31,4 @@ export function languageKeyboard() {
   return {
     inline_keyboard: LOCALES.map((c) => [{ text: `${LOCALE_FLAGS[c]} ${LOCALE_NAMES[c]}`, callback_data: `lang:${c}` }]),
   };
-}
-
-// --- Unified interface: the persistent reply keyboard shown on /start -------
-// Labels are kept in English on purpose (reply-keyboard taps are matched by
-// their text, and a single English label keeps matching simple).
-export const BTN = { settings: '⚙️ Settings', language: '🌐 Language', source: '🔗 Source code' };
-
-export function mainKeyboard() {
-  return {
-    keyboard: [[{ text: BTN.settings }, { text: BTN.language }], [{ text: BTN.source }]],
-    resize_keyboard: true,
-    is_persistent: true,
-  };
-}
-
-// Map a tapped reply-keyboard label to an action, or null for anything else.
-export function matchButton(text) {
-  const t = (text || '').trim();
-  if (t === BTN.settings) return 'settings';
-  if (t === BTN.language) return 'language';
-  if (t === BTN.source) return 'source';
-  return null;
 }
