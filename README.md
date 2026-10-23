@@ -32,8 +32,8 @@ The bots share one interface style:
 - **Clean chat.** Button taps are deleted and each screen replaces the previous one, so the chat
   keeps only real content (messages, games, alerts).
 
-The anonymous-link, secretary, games, t2s and CVE bots follow it fully; the multi-utility bot is
-being moved over.
+Every bot follows it. The multi-utility bot also keeps its slash commands as typed shortcuts (and
+a command menu in groups), and its hub screens are in English; some admin screens are English too.
 
 ## Setup, in general
 

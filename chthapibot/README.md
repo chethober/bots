@@ -13,13 +13,20 @@ the Telegram Serverless runtime itself. See [API sources](#api-sources).
 ## Features
 
 Features are grouped into four hubs. Each hub has ♥ **saved items**, ⭐ **follows** where they
-make sense, and 🔔 **notifications**: alerts, scheduled pushes and reminders. In private chats,
-the main menu, hub menus and sub-menus appear as keyboard buttons under the text field. Content
-arrives as cards with buttons attached for that item: ♥ Save · 🔄 Another · Follow · ⬅️ Back.
-The keyboard can be collapsed with the ⌨️ toggle or removed with **✖️ Hide menu**; `/menu`
-brings it back.
-Groups use buttons attached to messages throughout, because with privacy mode on, Telegram
-doesn't deliver keyboard taps from groups to the bot.
+make sense, and 🔔 **notifications**: alerts, scheduled pushes and reminders.
+
+In private chats the bot follows the [shared interface](../README.md#how-they-work). A persistent
+keyboard under the text field opens 💰 Crypto, 🏆 Sports, 🍽 Food & drinks, 🎲 Random, ☀️ Daily
+briefing, 🔔 Notifications, ⚙️ Settings, 🌐 Language and 🔗 Source code, labelled in the chat's
+language. Each opens a screen with buttons attached, and those buttons change the screen in place.
+Questions (a coin to search, a reminder, quiet hours…) appear on the screen with a ✖️ Cancel
+button, and you answer by sending a message. Your taps and answers are deleted and each screen
+replaces the previous one (clean chat). Content still arrives as cards with buttons for that item
+(♥ Save · 🔄 Another · Follow · ⬅️ Back), and those stay in the chat. Slash commands keep working as
+shortcuts, but private chats have no command menu.
+
+Groups use buttons attached to messages throughout, and keep the command menu, because with
+privacy mode on, Telegram doesn't deliver keyboard taps from groups to the bot.
 
 | Hub | What's in it |
 |---|---|
@@ -100,11 +107,12 @@ Design notes:
 You need a bot linked to Telegram Serverless, and Node.js 20 or later.
 
 ```sh
-git clone https://github.com/chethober/chthapibot && cd chthapibot
+git clone https://github.com/chethober/bots && cd bots/chthapibot
 npm install                     # installs the tgcloud CLI
 npx tgcloud login               # link this folder to your bot (or export TGCLOUD_TOKEN)
 npx tgcloud push                # deploy the modules
 npx tgcloud migrate             # create the tables
+npx tgcloud run endpoints/setup '{}'          # descriptions in five languages, command menus
 npx tgcloud run endpoints/healthcheck '{}'    # check every API from the platform
 ```
 
