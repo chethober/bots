@@ -18,6 +18,7 @@ deploy instructions. Clone the repo, `cd` into the one you want, and follow its 
 | [`chthgamesbot`](chthgamesbot) | Games | Casino, poker and party games — chat games, inline mode and a graphic Mini App. Play-money only | tgcloud |
 | [`chthgrambot`](chthgrambot) | Secretary | Telegram Business secretary assistant, powered by Cloudflare Workers AI | tgcloud |
 | [`chtht2sbot`](chtht2sbot) | t2s | Watches a forum's topics and files every posted track into a per-topic Spotify playlist | tgcloud |
+| [`chthvpnbot`](chthvpnbot) | Community VPN | A directory of VPNs shared by their owners: public listings, private invites with passwords, anonymous memberships. Works best with [xtune](https://github.com/chethober/xtune) public profiles (an account per member) | tgcloud |
 | [`chsbrbot`](chsbrbot) | CVE alerts | Posts new High/Critical CVEs and trending ones (CISA KEV, GitHub PoCs, EPSS), with CVE search | tgcloud |
 
 ## How they work

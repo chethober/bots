@@ -1,0 +1,18 @@
+name: chthvpnbot test
+on:
+  push:
+    paths: ['chthvpnbot/**', '.github/workflows/chthvpnbot-test.yml']
+  pull_request:
+    paths: ['chthvpnbot/**', '.github/workflows/chthvpnbot-test.yml']
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: chthvpnbot
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 22
+      - run: npm test

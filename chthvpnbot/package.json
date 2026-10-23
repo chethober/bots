@@ -1,0 +1,30 @@
+{
+  "name": "community-vpn",
+  "version": "1.0.0",
+  "description": "Community VPN directory bot for Telegram: share VPNs publicly or by private invite. Works best with xtune. Runs serverless on tgcloud",
+  "license": "MIT",
+  "private": true,
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/chethober/bots.git",
+    "directory": "chthvpnbot"
+  },
+  "keywords": [
+    "telegram",
+    "telegram-bot",
+    "vpn",
+    "xray",
+    "xtune",
+    "tgcloud"
+  ],
+  "type": "module",
+  "devDependencies": {
+    "@tgcloud/cli": "^0.2.0"
+  },
+  "scripts": {
+    "deploy": "tgcloud push",
+    "status": "tgcloud status",
+    "run": "tgcloud run",
+    "test": "node --import ./test/register.js --test test/*.test.js"
+  }
+}
