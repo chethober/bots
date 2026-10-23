@@ -1,11 +1,36 @@
-// The ⚙️ Settings screen: forum-wide settings, so only forum admins see or change them.
-// Stored in the `settings` table; config.js holds the defaults.
+// The private-chat home message, and the /settings screen: forum-wide
+// settings, so only forum admins see or change them. Stored in the `settings`
+// table; config.js holds the defaults.
 
 import { api } from 'sdk';
 import { FORUM_ID, ADMIN_IDS, DELETE_DUPLICATES, ADDED_REACTION } from './config.js';
 import { getSetting, saveSetting } from './settings.js';
 import { isConfigured } from './spotify.js';
 import { t } from './strings.js';
+import { localeFor, mainKeyboard } from './i18n.js';
+import { showHome } from './screen.js';
+
+const ADMIN_COMMANDS = [
+  { command: 'status', description: 'Playlists and track counts' },
+  { command: 'playlist', description: 'Link a topic to a playlist' },
+  { command: 'dedupe', description: 'Remove duplicate tracks' },
+  { command: 'reaction', description: 'Reaction on added posts' },
+  { command: 'settings', description: 'Reaction and repost settings' },
+  { command: 'spotify', description: 'Connect Spotify' },
+];
+
+// Home: what the bot does and the reply keyboard; admins also get their
+// commands (in the text and in this chat's command menu).
+export async function sendHome(from) {
+  const locale = await localeFor(from);
+  let text = `${t(locale, 'welcome', { name: from.first_name ?? '' })}\n\n${t(locale, 'about')}`;
+  if (await isAdminId(from.id)) {
+    const connected = await isConfigured();
+    text += `\n\n${t(locale, 'admin_help')}\n\n${t(locale, connected ? 'spotify_connected' : 'spotify_not')}`;
+    await api.setMyCommands({ commands: ADMIN_COMMANDS, scope: { type: 'chat', chat_id: from.id } }).catch(() => {});
+  }
+  return showHome(from.id, { text, reply_markup: mainKeyboard(locale) });
+}
 
 // The reaction is stored as `reaction_emoji` + `reaction_enabled` ('1'/'0').
 export async function getReaction() {

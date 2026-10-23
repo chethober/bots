@@ -2,7 +2,7 @@
 // Russian and Spanish; anything missing falls back to English.
 //
 // Users are auto-detected from their Telegram `language_code` and can override
-// with /language. The chosen locale is stored per user in the settings table
+// with the 🌐 Language button. The chosen locale is stored per user in the settings table
 // under the key `lang:<userId>`.
 
 import { getSetting, saveSetting } from './settings.js';
@@ -50,24 +50,30 @@ export function languageKeyboard() {
   };
 }
 
-// --- Unified interface: the persistent reply keyboard shown on /start -------
-// Labels are kept in English on purpose (reply-keyboard taps are matched by
-// their text, and a single English label keeps matching simple).
-export const BTN = { settings: '⚙️ Settings', language: '🌐 Language', source: '🔗 Source code' };
+// --- Unified interface: the persistent reply keyboard ------------------------
+// Labels are translated; a tap is matched against every locale's label, so a
+// keyboard sent before a language change still works.
+export const BUTTONS = {
+  about:    { en: 'ℹ️ About', fa: 'ℹ️ درباره', ar: 'ℹ️ حول البوت', ru: 'ℹ️ О боте', es: 'ℹ️ Acerca de' },
+  language: { en: '🌐 Language', fa: '🌐 زبان', ar: '🌐 اللغة', ru: '🌐 Язык', es: '🌐 Idioma' },
+  source:   { en: '🔗 Source code', fa: '🔗 کد منبع', ar: '🔗 الكود المصدري', ru: '🔗 Исходный код', es: '🔗 Código fuente' },
+};
 
-export function mainKeyboard() {
+const label = (key, locale) => BUTTONS[key][locale] ?? BUTTONS[key].en;
+
+export function mainKeyboard(locale) {
   return {
-    keyboard: [[{ text: BTN.settings }, { text: BTN.language }], [{ text: BTN.source }]],
+    keyboard: [[{ text: label('about', locale) }, { text: label('language', locale) }], [{ text: label('source', locale) }]],
     resize_keyboard: true,
     is_persistent: true,
   };
 }
 
-// Map a tapped reply-keyboard label to an action, or null for anything else.
+// Map a tapped reply-keyboard label (in any locale) to its key, or null.
 export function matchButton(text) {
   const t = (text || '').trim();
-  if (t === BTN.settings) return 'settings';
-  if (t === BTN.language) return 'language';
-  if (t === BTN.source) return 'source';
+  for (const [key, labels] of Object.entries(BUTTONS)) {
+    if (Object.values(labels).includes(t)) return key;
+  }
   return null;
 }

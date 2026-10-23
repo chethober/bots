@@ -7,11 +7,12 @@ import { and, eq, inArray } from 'sdk/db';
 import { topics, tracks } from '../schema.js';
 import { FORUM_ID, PUBLIC_PLAYLISTS, playlistDescription, SOURCE_URL } from '../lib/config.js';
 import { saveSetting } from '../lib/settings.js';
-import { getReaction, getDeleteDuplicates, isAdminId, settingsView } from '../lib/panel.js';
-import { localeFor, languageKeyboard, mainKeyboard, matchButton } from '../lib/i18n.js';
+import { getReaction, getDeleteDuplicates, isAdminId, sendHome, settingsView } from '../lib/panel.js';
+import { localeFor, languageKeyboard, matchButton } from '../lib/i18n.js';
+import { drop, showScreen } from '../lib/screen.js';
 import { t } from '../lib/strings.js';
 
-// ⚙️ Settings screen (forum admins only): reaction, repost deletion, Spotify status.
+// /settings (forum admins only): reaction, repost deletion, Spotify status.
 async function settingsScreen(message) {
   const locale = await localeFor(message.from);
   if (!(await isForumAdmin(message))) return reply(message, t(locale, 'admins_only'));
@@ -19,22 +20,9 @@ async function settingsScreen(message) {
   return reply(message, text, { reply_markup });
 }
 
-async function sendHelp(message) {
-  const locale = await localeFor(message.from);
-  const connected = await isConfigured();
-  await api.setMyCommands({ commands: [
-    { command: 'status', description: 'Playlists and track counts' },
-    { command: 'playlist', description: 'Link a topic to a playlist' },
-    { command: 'dedupe', description: 'Remove duplicate tracks' },
-    { command: 'spotify', description: 'Connect Spotify' },
-    { command: 'settings', description: 'Reaction and repost settings' },
-  ] }).catch(() => {});
-  return reply(message, `${t(locale, 'help')}\n\n${connected ? t(locale, 'spotify_connected') : t(locale, 'spotify_not')}`,
-    { reply_markup: mainKeyboard() });
-}
 import { extractTrackIds } from '../lib/music.js';
 import {
-  SpotifyNotConfigured, saveCredentials, isConfigured, trackUri, addTracks,
+  SpotifyNotConfigured, saveCredentials, trackUri, addTracks,
   me, getPlaylist, findPlaylistByName, createPlaylist, setPlaylistDescription, playlistTrackUris, dedupePlaylist,
 } from '../lib/spotify.js';
 
@@ -171,11 +159,12 @@ export async function handleMusic(message, { backfill = false } = {}) {
     }
     throw e;
   }
-  const who = message.from ? message.from.first_name : 'someone';
+  const locale = await localeFor(message.from);
+  const who = message.from ? message.from.first_name : t(locale, 'someone');
   await api.sendMessage({
     chat_id: message.chat.id,
     message_thread_id: threadId,
-    text: `🔁 Removed a repost by ${who}: ${ids.length > 1 ? 'these tracks are' : 'this track is'} already in the playlist.`,
+    text: t(locale, 'repost_removed', { who }),
     reply_parameters: original?.messageId
       ? { message_id: original.messageId, allow_sending_without_reply: true }
       : undefined,
@@ -228,18 +217,19 @@ async function handleAdminCommand(message, { cmd, args }) {
   }
 }
 
+// Private chat. Everyone gets the reply keyboard (ℹ️ About · 🌐 Language ·
+// 🔗 Source code); the only slash commands are the admin ones.
 async function handlePrivate(message, command) {
-  // Unified reply-keyboard buttons.
+  const chatId = message.chat.id;
   const button = matchButton(message.text);
-  if (button === 'settings' || command?.cmd === 'settings') return settingsScreen(message);
-  if (button === 'language' || command?.cmd === 'language' || command?.cmd === 'lang') {
+  if (button) {
+    await drop(chatId, message.message_id);
     const locale = await localeFor(message.from);
-    return reply(message, t(locale, 'choose_language'), { reply_markup: languageKeyboard() });
+    if (button === 'about') return showScreen(chatId, { text: t(locale, 'about') });
+    if (button === 'language') return showScreen(chatId, { text: t(locale, 'choose_language'), reply_markup: languageKeyboard() });
+    return showScreen(chatId, { text: t(locale, 'source_here'), reply_markup: { inline_keyboard: [[{ text: t(locale, 'source'), url: SOURCE_URL }]] } });
   }
-  if (button === 'source') {
-    const locale = await localeFor(message.from);
-    return reply(message, t(locale, 'source_here'), { reply_markup: { inline_keyboard: [[{ text: t(locale, 'source'), url: SOURCE_URL }]] } });
-  }
+  if (command?.cmd === 'settings') return settingsScreen(message);
   if (command?.cmd === 'reaction') return handleReactionCommand(message, command.args);
   if (['status', 'playlist', 'dedupe'].includes(command?.cmd)) {
     if (!(await isForumAdmin(message))) return reply(message, t(await localeFor(message.from), 'admins_only'));
@@ -273,7 +263,9 @@ async function handlePrivate(message, command) {
     }
     return;
   }
-  return sendHelp(message);
+  // /start, an unknown command or stray text: tidy up and show home again.
+  await drop(chatId, message.message_id);
+  return sendHome(message.from);
 }
 
 export default async function (message) {
@@ -306,10 +298,10 @@ export default async function (message) {
     await handleMusic(message);
   } catch (e) {
     if (e instanceof SpotifyNotConfigured) {
-      await reply(message, '⚠️ Spotify isn\'t connected yet — an admin should send me /spotify in private.');
+      await reply(message, t(await localeFor(message.from), 'spotify_missing_group'));
       return;
     }
     console.error(e);
-    await reply(message, `⚠️ ${e.message}`).catch(() => {});
+    await reply(message, t(await localeFor(message.from), 'failed', { error: e.message })).catch(() => {});
   }
 }
