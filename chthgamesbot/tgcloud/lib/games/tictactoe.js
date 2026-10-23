@@ -1,6 +1,7 @@
 import { boardGame, statusLine } from './board.js';
 import { GameError, btn, kb } from '../ui.js';
 import { winLine } from '../game.js';
+import { tr } from '../i18n.js';
 
 const MARKS = ['❌', '⭕'];
 
@@ -26,6 +27,6 @@ export default boardGame({
       return btn(face, s.over ? 'tt:noop' : `tt:m:${i}`);
     };
     const rows = [0, 3, 6].map((r) => [cell(r), cell(r + 1), cell(r + 2)]);
-    return { text: `<b>❌⭕ Tic-tac-toe</b>\n${statusLine(s, MARKS)}`, markup: kb(...rows) };
+    return { text: `<b>${tr(s.lang, '❌⭕ Tic-tac-toe')}</b>\n${statusLine(s, MARKS)}`, markup: kb(...rows) };
   },
 });

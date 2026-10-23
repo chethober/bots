@@ -5,6 +5,7 @@
 import assert from 'node:assert/strict';
 import { GAMES, BY_KEY } from '../tgcloud/lib/games/index.js';
 import { GameError } from '../tgcloud/lib/ui.js';
+import { tr } from '../tgcloud/lib/i18n.js';
 import * as slots from '../tgcloud/lib/games/slots.js';
 import * as dice from '../tgcloud/lib/games/dice.js';
 import { BETS_TABLE } from '../tgcloud/lib/games/roulette.js';
@@ -59,6 +60,7 @@ function world() {
       let answered = null;
       const ctx = {
         user, key, inline: false, chatType: 'group', views,
+        locale: 'en', t: (s, v) => tr('en', s, v), localeOf: async () => 'en',
         session: async () => sessions.get(key) ?? null,
         create: async (kind, state) => {
           if (sessions.has(key)) return null;

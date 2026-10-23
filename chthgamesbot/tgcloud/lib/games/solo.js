@@ -3,23 +3,26 @@
 // A game that ends sets `st.payout` (total returned, 0 on a loss); it's paid exactly once.
 
 import { GameError, btn, kb, esc, chips, lobbySig, lobbyBtn, parseLobby } from '../ui.js';
+import { tr } from '../i18n.js';
 
+// `render(st)` writes in `st.lang` (the owner's language, set when dealt).
 export function soloGame({ key, cmd, title, about, intro, variants = [['', 'Deal']], deal, render, act, extraStake, view: viewFor }) {
-  async function lobby({ creator, bet }) {
+  async function lobby({ creator, bet, locale }) {
     const s = await lobbySig(key, creator.id, bet);
     return {
-      text: `<b>${title}</b>\n${intro}\n\n${esc(creator.name)} · stake <b>${chips(bet)}</b>`,
-      markup: kb(variants.map(([v, label]) => lobbyBtn(label, key, `d${v}`, creator.id, bet, s))),
+      text: `<b>${tr(locale, title)}</b>\n${typeof intro === 'function' ? intro(locale) : tr(locale, intro)}\n\n${esc(creator.name)} · ${tr(locale, 'stake')} <b>${chips(bet)}</b>`,
+      markup: kb(variants.map(([v, label]) => lobbyBtn(tr(locale, label), key, `d${v}`, creator.id, bet, s))),
     };
   }
 
-  const again = (st) => kb([btn(`🔁 Again (${st.bet})`, `${key}:g`)]);
+  const again = (st) => kb([btn(tr(st.lang, '🔁 Again ({n})', { n: st.bet }), `${key}:g`)]);
 
   function view(st) {
     const v = render(st);
     if (st.phase !== 'done') return v;
     const net = st.payout - st.stake;
-    const tail = net > 0 ? `✅ Won <b>${chips(net)}</b>` : net === 0 ? '↩️ Stake returned' : `❌ Lost ${chips(-net)}`;
+    const tail = net > 0 ? tr(st.lang, '✅ Won <b>{chips}</b>', { chips: chips(net) })
+      : net === 0 ? tr(st.lang, '↩️ Stake returned') : tr(st.lang, '❌ Lost {chips}', { chips: chips(-net) });
     const rows = v.markup?.inline_keyboard ?? [];
     return { text: `${v.text}\n\n${tail}`, markup: kb(...rows, ...again(st).inline_keyboard) };
   }
@@ -32,7 +35,7 @@ export function soloGame({ key, cmd, title, about, intro, variants = [['', 'Deal
 
   async function show(ctx, st, note) {
     const after = st.phase === 'done' ? await ctx.getPlayer(st.owner.id) : null;
-    await ctx.answer(note ?? (after ? `Balance: ${chips(after.chips)}` : ''));
+    await ctx.answer(note ?? (after ? ctx.t('Balance: {chips}', { chips: chips(after.chips) }) : ''));
     const v = view(st);
     await ctx.edit(v.text, v.markup);
   }
@@ -55,14 +58,14 @@ export function soloGame({ key, cmd, title, about, intro, variants = [['', 'Deal
         if (ctx.user.id !== lob.creatorId) throw new GameError("This table is someone else's — start your own!");
         const variant = a.slice(1);
         if (!variants.some(([v]) => v === variant)) throw new GameError('Unknown option.');
-        if (!(await ctx.debit(ctx.user.id, lob.bet))) throw new GameError(`You need ${lob.bet} chips. Try /daily.`);
-        let st = deal({ owner: ctx.user, bet: lob.bet, variant });
+        if (!(await ctx.debit(ctx.user.id, lob.bet))) throw new GameError('You need {n} chips — claim 🎁 Daily chips in my chat.', { n: lob.bet });
+        let st = { ...deal({ owner: ctx.user, bet: lob.bet, variant }), lang: ctx.locale };
         if (!(await ctx.create(key, st))) {
           // Same table, new stake (the Mini App reuses one table per player).
           try {
             ({ state: st } = await ctx.mutate((s) => {
               if (s.owner.id !== ctx.user.id || s.phase !== 'done') throw new GameError('Already dealt — use the buttons on the game.');
-              return deal({ owner: ctx.user, bet: lob.bet, variant });
+              return { ...deal({ owner: ctx.user, bet: lob.bet, variant }), lang: ctx.locale };
             }));
           } catch (e) {
             await ctx.refund(ctx.user.id, lob.bet);
@@ -78,7 +81,7 @@ export function soloGame({ key, cmd, title, about, intro, variants = [['', 'Deal
         if (!cur) throw new GameError('This game has expired.');
         if (cur.state.owner.id !== ctx.user.id) throw new GameError("Not your game — start your own!");
         const bet = cur.state.bet;
-        if (!(await ctx.debit(ctx.user.id, bet))) throw new GameError(`You need ${bet} chips. Try /daily.`);
+        if (!(await ctx.debit(ctx.user.id, bet))) throw new GameError('You need {n} chips — claim 🎁 Daily chips in my chat.', { n: bet });
         let st;
         try {
           ({ state: st } = await ctx.mutate((s) => {
@@ -98,7 +101,7 @@ export function soloGame({ key, cmd, title, about, intro, variants = [['', 'Deal
       if (!cur) throw new GameError('This game has expired.');
       if (cur.state.owner.id !== ctx.user.id) throw new GameError("Not your game — start your own!");
       const extra = extraStake?.(cur.state, args) ?? 0;
-      if (extra && !(await ctx.debit(ctx.user.id, extra))) throw new GameError(`You need ${extra} more chips.`);
+      if (extra && !(await ctx.debit(ctx.user.id, extra))) throw new GameError('You need {n} more chips.', { n: extra });
       let res;
       try {
         res = await ctx.mutate((s) => {

@@ -1,6 +1,7 @@
 import { soloGame } from './solo.js';
 import { GameError, btn, kb, chips } from '../ui.js';
 import { randomCard, rankOf, cardStr } from './cards.js';
+import { tr } from '../i18n.js';
 
 export const EDGE = 0.97;
 const MAX_MULT = 1000;
@@ -41,17 +42,17 @@ export default soloGame({
   render(s) {
     const r = rankOf(s.card);
     const text = [
-      `<b>📈 Hi-Lo</b> · stake ${chips(s.stake)} · <b>${s.mult}×</b>`,
+      `<b>${tr(s.lang, '📈 Hi-Lo')}</b> · ${tr(s.lang, 'stake')} ${chips(s.stake)} · <b>${s.mult}×</b>`,
       '',
       ...s.trail.slice(-6),
       '',
-      `Current card: <b>${cardStr(s.card)}</b>`,
+      tr(s.lang, 'Current card: <b>{card}</b>', { card: cardStr(s.card) }),
     ].join('\n');
     if (s.phase !== 'play') return { text, markup: null };
     const hi = Math.floor(s.mult * step(pHigh(r)) * 100) / 100;
     const lo = Math.floor(s.mult * step(pLow(r)) * 100) / 100;
-    const rows = [[btn(`⬆️ Higher/same → ${hi}×`, 'hl:h'), btn(`⬇️ Lower/same → ${lo}×`, 'hl:l')]];
-    if (s.trail.length) rows.push([btn(`💰 Cash out ${Math.floor(s.stake * s.mult)}`, 'hl:o')]);
+    const rows = [[btn(tr(s.lang, '⬆️ Higher/same → {mult}×', { mult: hi }), 'hl:h'), btn(tr(s.lang, '⬇️ Lower/same → {mult}×', { mult: lo }), 'hl:l')]];
+    if (s.trail.length) rows.push([btn(tr(s.lang, '💰 Cash out {n}', { n: Math.floor(s.stake * s.mult) }), 'hl:o')]);
     return { text, markup: kb(...rows) };
   },
 });

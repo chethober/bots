@@ -31,14 +31,14 @@ Try it: [@chthgamesbot](https://t.me/chthgamesbot)
 
 ## Games
 
-| Group | Games | Chat command |
+| Group | Games | Inline mode (`@yourbot …`) |
 |---|---|---|
-| 🎰 Casino tables: one shared message anyone can play | Slots, Roulette, Coinflip, Over/Under 7 | `/slots` `/roulette` `/coinflip` `/dice` |
-| 🃏 Solo vs the house | Blackjack, Video Poker (Jacks or Better), Mines, Hi-Lo | `/blackjack` `/videopoker` `/mines` `/hilo` `[stake]` |
-| ♠️ Poker | Texas Hold'em, no-limit cash table, 2–8 players | `/poker [buy-in]` |
-| ⚔️ Bet with friends | Coinflip Duel, Dice Duel, Rock-Paper-Scissors, Jackpot, Russian Roulette | `/flipduel` `/diceduel` `/rps` `/jackpot` `/roulette6` `[stake]` |
-| 🎉 Party (free) | Tic-tac-toe, Connect Four, Trivia, Hangman | `/tictactoe` `/connect4` `/trivia` `/hangman` |
-| 📱 Mini App only | Crash, Plinko | `/hub` or the 🎮 Play menu button |
+| 🎰 Casino tables: one shared message anyone can play | Slots, Roulette, Coinflip, Over/Under 7 | `slots` `roulette` `coinflip` `dice` |
+| 🃏 Solo vs the house | Blackjack, Video Poker (Jacks or Better), Mines, Hi-Lo | `blackjack` `videopoker` `mines` `hilo` `[stake]` |
+| ♠️ Poker | Texas Hold'em, no-limit cash table, 2–8 players | `poker [buy-in]` |
+| ⚔️ Bet with friends | Coinflip Duel, Dice Duel, Rock-Paper-Scissors, Jackpot, Russian Roulette | `flipduel` `diceduel` `rps` `jackpot` `roulette6` `[stake]` |
+| 🎉 Party (free) | Tic-tac-toe, Connect Four, Trivia, Hangman | `tictactoe` `connect4` `trivia` `hangman` |
+| 📱 Mini App only | Crash, Plinko | 🕹 Game hub button or the 🎮 Play menu button |
 
 **Mini App and inline mode:**
 - Every game is also in the Mini App with real graphics: cards, dice, a spinning wheel,
@@ -46,7 +46,13 @@ Try it: [@chthgamesbot](https://t.me/chthgamesbot)
 - Multiplayer games in the app use rooms that you share with an invite link.
 - In any chat, type `@yourbot [game] [stake]` to drop a game lobby in.
 
-**Wallet commands:** `/balance`, `/daily` (a free bonus every 20 hours) and `/top`.
+**In the private chat everything is a button**, in English, Persian, Arabic, Russian or Spanish
+(the player's Telegram language, or 🌐 Language): 🎮 Games · 🕹 Game hub · 💰 Balance ·
+🎁 Daily chips (a free bonus every 20 hours) · 🏆 Top players · 🌐 Language · 🔗 Source code.
+Button taps are deleted and each menu replaces the previous one; game messages stay. In groups,
+send `/start@yourbot` (or add the bot) for the games menu, or use inline mode. `/start` and the
+admin commands are the only slash commands. Game messages are written in the language of whoever
+started them; the Mini App is English. After updating, run `npm run migrate` (new player columns).
 
 **Fairness.** Every house game returns less than 100%, and `npm test` checks this exactly:
 

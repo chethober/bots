@@ -26,7 +26,10 @@ export const games = table('games', {
 export const players = table('players', {
   id:        integer('id').primaryKey(),                  // Telegram user id
   name:      text('name').notNull(),
-  locale:    text('locale'),                              // chosen UI language (/language); null = auto from Telegram
+  locale:    text('locale'),                              // chosen with 🌐 Language; null = lang
+  lang:      text('lang'),                                // from Telegram's language_code, refreshed on use
+  homeMsg:   integer('home_msg'),                         // private chat: the message carrying the reply keyboard
+  screenMsg: integer('screen_msg'),                       // private chat: the screen a button opened last
   chips:     integer('chips').notNull().default(1000),
   lastDaily: integer('last_daily').notNull().default(0),
   played:    integer('played').notNull().default(0),

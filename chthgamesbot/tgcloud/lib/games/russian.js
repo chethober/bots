@@ -4,22 +4,25 @@
 import { potGame, settle } from './pot.js';
 import { randInt } from '../rng.js';
 import { GameError, btn, kb, esc, chips, idle } from '../ui.js';
+import { tr } from '../i18n.js';
 
 const KEY = 'rr';
 
 function renderGame(st) {
-  const lines = ['<b>🔫 Russian Roulette</b>', `${st.players.length} players · ${chips(st.bet)} each · ${st.chambers} chambers left`, ''];
+  const L = (text, vars) => tr(st.lang, text, vars);
+  const lines = [`<b>${L('🔫 Russian Roulette')}</b>`,
+    L('{n} players · {chips} each · {left} chambers left', { n: st.players.length, chips: chips(st.bet), left: st.chambers }), ''];
   lines.push(...st.log);
   if (st.phase === 'playing') {
     const p = st.players[st.turn];
-    lines.push('', `👉 <b>${esc(p.name)}</b>, your turn.`);
+    lines.push('', L('👉 <b>{name}</b>, your turn.', { name: esc(p.name) }));
     return {
       text: lines.join('\n'),
-      markup: kb([btn('🔫 Pull the trigger', `${KEY}:p:${st.version}`)], [btn('⏰ Skip AFK player (10 min)', `${KEY}:t:${st.version}`)]),
+      markup: kb([btn(L('🔫 Pull the trigger'), `${KEY}:p:${st.version}`)], [btn(L('⏰ Skip AFK player (10 min)'), `${KEY}:t:${st.version}`)]),
     };
   }
   const share = Object.values(st.payouts)[0];
-  lines.push('', `Survivors split the pot: <b>${chips(share)}</b> each.`);
+  lines.push('', L('Survivors split the pot: <b>{chips}</b> each.', { chips: chips(share) }));
   return { text: lines.join('\n'), markup: null };
 }
 
@@ -29,11 +32,11 @@ export default potGame({
   maxPlayers: 6,
   startLabel: '🔄 Spin & start',
   intro: (st) => [
-    '<b>🔫 Russian Roulette</b>',
-    `One bullet, six chambers, 2–6 players at ${chips(st.bet)} each.`,
-    'Take turns pulling the trigger. Whoever hits the bullet loses; survivors split the pot.',
+    `<b>${tr(st.lang, '🔫 Russian Roulette')}</b>`,
+    tr(st.lang, 'One bullet, six chambers, 2–6 players at {chips} each.', { chips: chips(st.bet) }),
+    tr(st.lang, 'Take turns pulling the trigger. Whoever hits the bullet loses; survivors split the pot.'),
     '',
-    `Host: ${esc(st.creator.name)}`,
+    tr(st.lang, 'Host: {name}', { name: esc(st.creator.name) }),
     ...st.players.map((p) => `• ${esc(p.name)}`),
   ].join('\n'),
   start(st) {
@@ -58,20 +61,20 @@ export default potGame({
       const afk = a === 't';
       if (afk) {
         if (!s.players.some((x) => x.id === ctx.user.id)) throw new GameError("You're not in this game.");
-        if (!idle(s)) throw new GameError(`${p.name} still has time — wait 10 min.`);
+        if (!idle(s)) throw new GameError('{name} still has time — wait 10 min.', { name: p.name });
       } else if (p.id !== ctx.user.id) {
-        throw new GameError(`It's ${p.name}'s turn.`);
+        throw new GameError("It's {name}'s turn.", { name: p.name });
       }
       s.version++;
       s.touched = Date.now();
       if (afk || s.bullet === 0) {
-        s.log.push(afk ? `⏰ <b>${esc(p.name)}</b> walked away — forfeits.` : `💥 <b>${esc(p.name)}</b> — BANG!`);
+        s.log.push(tr(s.lang, afk ? '⏰ <b>{name}</b> walked away — forfeits.' : '💥 <b>{name}</b> — BANG!', { name: esc(p.name) }));
         s.phase = 'done';
         const survivors = s.players.filter((x) => x.id !== p.id);
         const share = Math.floor((s.bet * s.players.length) / survivors.length);
         s.payouts = Object.fromEntries(survivors.map((x) => [x.id, share]));
       } else {
-        s.log.push(`😮‍💨 ${esc(p.name)} — click.`);
+        s.log.push(tr(s.lang, '😮‍💨 {name} — click.', { name: esc(p.name) }));
         s.bullet--;
         s.chambers--;
         s.turn = (s.turn + 1) % s.players.length;
@@ -79,7 +82,7 @@ export default potGame({
       return s;
     });
     if (st.phase === 'done' && prev.phase === 'playing') await settle(ctx, st);
-    await ctx.answer(st.phase === 'done' && st.payouts[ctx.user.id] == null ? '💥' : 'click…');
+    await ctx.answer(st.phase === 'done' && st.payouts[ctx.user.id] == null ? '💥' : ctx.t('click…'));
     const view = renderGame(st);
     await ctx.edit(view.text, view.markup);
   },

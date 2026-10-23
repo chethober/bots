@@ -2,11 +2,12 @@ import { soloGame } from './solo.js';
 import { GameError, btn, kb, chips } from '../ui.js';
 import { deck, cardStr } from './cards.js';
 import { videoPokerPays, VP_PAYS } from '../poker.js';
+import { tr } from '../i18n.js';
 
 export default soloGame({
   key: 'vp', cmd: 'videopoker', title: '🂡 Video Poker', about: 'Jacks or Better — hold, draw, royal flush pays 800×',
-  intro: 'Five cards. Tap the ones to keep, then draw once. Pair of jacks or better pays.\n'
-    + VP_PAYS.map(([n, m]) => `${n} ${m}×`).join(' · '),
+  intro: (lang) => `${tr(lang, 'Five cards. Tap the ones to keep, then draw once. Pair of jacks or better pays.')}\n`
+    + VP_PAYS.map(([n, m]) => `${tr(lang, n)} ${m}×`).join(' · '),
   deal: ({ owner, bet }) => {
     const d = deck();
     return { owner, bet, stake: bet, deck: d, hand: d.splice(0, 5), held: [false, false, false, false, false], phase: 'play', payout: 0 };
@@ -28,17 +29,17 @@ export default soloGame({
   },
   render(s) {
     const text = [
-      `<b>🂡 Video Poker</b> · stake ${chips(s.stake)}`,
+      `<b>${tr(s.lang, '🂡 Video Poker')}</b> · ${tr(s.lang, 'stake')} ${chips(s.stake)}`,
       '',
       s.hand.map(cardStr).join('  '),
-      s.result ? `\n<b>${s.result}</b>` : '\nTap cards to hold, then draw.',
+      s.result ? `\n<b>${tr(s.lang, s.result)}</b>` : `\n${tr(s.lang, 'Tap cards to hold, then draw.')}`,
     ].join('\n');
     if (s.phase !== 'play') return { text, markup: null };
     return {
       text,
       markup: kb(
         s.hand.map((c, k) => btn(s.held[k] ? `🔒${cardStr(c)}` : cardStr(c), `vp:h:${k}`)),
-        [btn('🃏 Draw', 'vp:x')],
+        [btn(tr(s.lang, '🃏 Draw'), 'vp:x')],
       ),
     };
   },

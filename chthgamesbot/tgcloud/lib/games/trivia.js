@@ -4,6 +4,7 @@
 import { GameError, btn, kb, esc } from '../ui.js';
 import { shuffle } from '../rng.js';
 import QUESTIONS from '../data/trivia.js';
+import { tr } from '../i18n.js';
 
 const KEY = 'tv';
 const ROUND = 5;
@@ -23,27 +24,29 @@ function newRound() {
 
 function scoreboard(st) {
   const rows = Object.values(st.scores).sort((a, b) => b.pts - a.pts);
-  if (!rows.length) return '<i>Nobody scored.</i>';
+  if (!rows.length) return `<i>${tr(st.lang, 'Nobody scored.')}</i>`;
   const medals = ['🥇', '🥈', '🥉'];
   return rows.map((r, i) => `${medals[i] ?? '•'} ${esc(r.name)} — ${r.pts}`).join('\n');
 }
 
+// Writes in `st.lang`; the questions themselves are English.
 function render(st) {
-  const lines = ['<b>🧠 Trivia</b>'];
+  const L = (text, vars) => tr(st.lang, text, vars);
+  const lines = [`<b>${L('🧠 Trivia')}</b>`];
   if (st.log.length) lines.push('', ...st.log.slice(-2));
   if (st.over) {
-    lines.push('', '<b>Final scores</b>', scoreboard(st));
-    return { text: lines.join('\n'), markup: kb([btn('🔁 New round', `${KEY}:s`)]) };
+    lines.push('', `<b>${L('Final scores')}</b>`, scoreboard(st));
+    return { text: lines.join('\n'), markup: kb([btn(L('🔁 New round'), `${KEY}:s`)]) };
   }
   const q = st.qs[st.i];
-  lines.push('', `<b>Q${st.i + 1}/${ROUND}.</b> ${esc(q.q)}`, '');
+  lines.push('', `<b>${L('Q{n}/{total}.', { n: st.i + 1, total: ROUND })}</b> ${esc(q.q)}`, '');
   lines.push(...q.opts.map((o, k) => `${LETTERS[k]}. ${esc(o)}`));
-  if (st.out.length) lines.push('', `❌ ${st.out.length} wrong so far`);
+  if (st.out.length) lines.push('', L('❌ {n} wrong so far', { n: st.out.length }));
   return {
     text: lines.join('\n'),
     markup: kb(
       q.opts.map((_, k) => btn(LETTERS[k], `${KEY}:a:${st.i}:${k}`)),
-      [btn('⏭ Skip question', `${KEY}:k:${st.i}`)],
+      [btn(L('⏭ Skip question'), `${KEY}:k:${st.i}`)],
     ),
   };
 }
@@ -63,10 +66,10 @@ export default {
     q: st.over ? null : { q: st.qs[st.i].q, opts: st.qs[st.i].opts },
   }),
 
-  async lobby() {
+  async lobby({ locale } = {}) {
     return {
-      text: '<b>🧠 Trivia</b>\nFive questions. First correct answer scores — a wrong answer locks you out of that question.',
-      markup: kb([btn('▶️ Start', `${KEY}:s`)]),
+      text: `<b>${tr(locale, '🧠 Trivia')}</b>\n${tr(locale, 'Five questions. First correct answer scores — a wrong answer locks you out of that question.')}`,
+      markup: kb([btn(tr(locale, '▶️ Start'), `${KEY}:s`)]),
     };
   },
 
@@ -81,14 +84,14 @@ export default {
       } else {
         st = (await ctx.session()).state;
       }
-      await ctx.answer('Go!');
+      await ctx.answer(ctx.t('Go!'));
     } else if (act === 'a' || act === 'k') {
       let verdict = '';
       ({ state: st } = await ctx.mutate((s) => {
         if (s.over || String(s.i) !== qi) throw new GameError('That question is done.');
         const q = s.qs[s.i];
         if (act === 'k') {
-          s.log.push(`⏭ Skipped — answer: <b>${esc(q.opts[q.ans])}</b>`);
+          s.log.push(tr(s.lang, '⏭ Skipped — answer: <b>{answer}</b>', { answer: esc(q.opts[q.ans]) }));
           advance(s);
           return s;
         }
@@ -97,11 +100,11 @@ export default {
           const me = (s.scores[ctx.user.id] ??= { name: ctx.user.name, pts: 0 });
           me.pts++;
           s.log.push(`✅ <b>${esc(ctx.user.name)}</b>: ${esc(q.opts[q.ans])}`);
-          verdict = 'Correct! +1';
+          verdict = ctx.t('Correct! +1');
           advance(s);
         } else {
           s.out.push(ctx.user.id);
-          verdict = 'Wrong — locked out of this question.';
+          verdict = ctx.t('Wrong — locked out of this question.');
         }
         return s;
       }));

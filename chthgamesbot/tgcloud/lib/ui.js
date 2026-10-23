@@ -2,7 +2,14 @@
 
 import { BUTTON_SECRET, BETS, MAX_BET } from './config.js';
 
-export class GameError extends Error {} // a refusal shown to the user as an alert
+// A refusal shown to the user as an alert. `message` is English with {placeholders}
+// (filled from `vars`); it's translated into the presser's language when shown.
+export class GameError extends Error {
+  constructor(message, vars) {
+    super(message);
+    this.vars = vars;
+  }
+}
 
 // After this long without a move, any participant may call a chip game off so an AFK
 // player can't lock everyone's stake forever. There are no timers: it's checked on press.

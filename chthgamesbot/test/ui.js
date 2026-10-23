@@ -10,6 +10,7 @@ import assert from 'node:assert/strict';
 import { chromium } from 'playwright-core';
 import { BY_KEY } from '../tgcloud/lib/games/index.js';
 import { GameError, nameOf, BETS } from '../tgcloud/lib/ui.js';
+import { tr } from '../tgcloud/lib/i18n.js';
 import { drop, TABLES } from '../tgcloud/lib/plinko.js';
 import { crashPoint, evaluate, publicView, multAt } from '../tgcloud/lib/crash.js';
 
@@ -28,6 +29,7 @@ const player = (u) => {
 function gameCtx(user, key, kind, out) {
   return {
     user: { id: user.id, name: nameOf(user) }, key, inline: false, chatType: 'app',
+    locale: 'en', t: (s, v) => tr('en', s, v), localeOf: async () => 'en',
     session: async () => { const r = sessions.get(key); return r && r.kind === kind ? r : null; },
     create: async (k, state) => { if (sessions.has(key)) return null; const r = { kind: k, state: structuredClone(state), version: 0 }; sessions.set(key, r); return r; },
     mutate: async (fn) => {

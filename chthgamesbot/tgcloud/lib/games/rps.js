@@ -1,28 +1,31 @@
 // Rock-paper-scissors for chips: both pick in secret, the message reveals when both are in.
 
 import { GameError, btn, kb, esc, chips, lobbySig, lobbyBtn, parseLobby, idle } from '../ui.js';
+import { tr } from '../i18n.js';
 
 const KEY = 'rp';
 const TITLE = '✂️ Rock Paper Scissors';
 const MOVES = { r: '🪨 Rock', p: '📄 Paper', s: '✂️ Scissors' };
 const BEATS = { r: 's', p: 'r', s: 'p' };
 
+// Writes in `st.lang`, the challenger's language.
 function render(st) {
+  const L = (text, vars) => tr(st.lang, text, vars);
   const [a, b] = st.players;
-  const lines = [`<b>${TITLE}</b> · ${chips(st.bet)} each`, ''];
+  const lines = [`<b>${L(TITLE)}</b> · ${L('{chips} each', { chips: chips(st.bet) })}`, ''];
   if (st.history.length) lines.push(...st.history, '');
   if (st.winner == null) {
     for (const p of [a, b]) lines.push(`${st.picks[p.id] ? '✅' : '🤔'} ${esc(p.name)}`);
     return {
-      text: lines.join('\n') + '\n\nPick in secret:',
+      text: `${lines.join('\n')}\n\n${L('Pick in secret:')}`,
       markup: kb(
-        Object.entries(MOVES).map(([m, label]) => btn(label, `${KEY}:m:${m}`)),
-        [btn('⏰ Call off & refund (10 min idle)', `${KEY}:t`)],
+        Object.entries(MOVES).map(([m, label]) => btn(L(label), `${KEY}:m:${m}`)),
+        [btn(L('⏰ Call off & refund (10 min idle)'), `${KEY}:t`)],
       ),
     };
   }
   const w = st.players.find((p) => p.id === st.winner);
-  lines.push(`🏆 <b>${esc(w.name)}</b> wins ${chips(st.bet * 2)}`);
+  lines.push(L('🏆 <b>{name}</b> wins {chips}', { name: esc(w.name), chips: chips(st.bet * 2) }));
   return { text: lines.join('\n'), markup: null };
 }
 
@@ -31,13 +34,13 @@ export default {
   // Opponent's pick stays secret until the round resolves.
   view: (st, uid) => ({ ...st, picks: Object.fromEntries(Object.entries(st.picks ?? {}).map(([id, m]) => [id, Number(id) === uid ? m : true])) }),
 
-  async lobby({ creator, bet }) {
+  async lobby({ creator, bet, locale }) {
     const s = await lobbySig(KEY, creator.id, bet);
     return {
-      text: `<b>${TITLE}</b>\n\n<b>${esc(creator.name)}</b> challenges you for <b>${chips(bet)}</b>.`,
+      text: `<b>${tr(locale, TITLE)}</b>\n\n${tr(locale, '<b>{name}</b> challenges you for <b>{chips}</b>.', { name: esc(creator.name), chips: chips(bet) })}`,
       markup: kb(
-        [lobbyBtn(`⚔️ Accept ${bet}`, KEY, 'a', creator.id, bet, s)],
-        [lobbyBtn('✖ Cancel', KEY, 'x', creator.id, bet, s)],
+        [lobbyBtn(tr(locale, '⚔️ Accept {n}', { n: bet }), KEY, 'a', creator.id, bet, s)],
+        [lobbyBtn(tr(locale, '✖ Cancel'), KEY, 'x', creator.id, bet, s)],
       ),
     };
   },
@@ -49,21 +52,22 @@ export default {
     const lob = await parseLobby(KEY, args);
     if (!lob || lob.bet < 1) throw new GameError('Invalid game.');
     const { creatorId, bet } = lob;
+    const lang = await ctx.localeOf(creatorId);
 
     if (args[0] === 'x') {
       if (ctx.user.id !== creatorId) throw new GameError('Only the creator can cancel.');
-      if (!(await ctx.create(KEY, { cancelled: true }))) throw new GameError('Already started.');
-      await ctx.answer('Cancelled');
-      return ctx.edit(`<b>${TITLE}</b>\n<i>Cancelled.</i>`);
+      if (!(await ctx.create(KEY, { cancelled: true, lang }))) throw new GameError('Already started.');
+      await ctx.answer(ctx.t('Cancelled'));
+      return ctx.edit(`<b>${tr(lang, TITLE)}</b>\n<i>${tr(lang, 'Cancelled.')}</i>`);
     }
     if (ctx.user.id === creatorId) throw new GameError('You need an opponent — share this message!');
 
-    if (!(await ctx.debit(ctx.user.id, bet))) throw new GameError(`You need ${bet} chips. Try /daily.`);
+    if (!(await ctx.debit(ctx.user.id, bet))) throw new GameError('You need {n} chips — claim 🎁 Daily chips in my chat.', { n: bet });
     const creator = await ctx.getPlayer(creatorId);
     const st = {
       bet,
-      players: [{ id: creatorId, name: creator?.name ?? 'Player' }, ctx.user],
-      picks: {}, history: [], winner: null, touched: Date.now(),
+      players: [{ id: creatorId, name: creator?.name ?? tr(lang, 'Player') }, ctx.user],
+      picks: {}, history: [], winner: null, touched: Date.now(), lang,
     };
     if (!(await ctx.create(KEY, st))) {
       await ctx.refund(ctx.user.id, bet);
@@ -72,10 +76,10 @@ export default {
     if (!(await ctx.debit(creatorId, bet))) {
       await ctx.refund(ctx.user.id, bet);
       await ctx.mutate(() => ({ cancelled: true }));
-      await ctx.answer('The creator is out of chips', true);
-      return ctx.edit(`<b>${TITLE}</b>\n<i>Called off — the creator can't cover ${chips(bet)}.</i>`);
+      await ctx.answer(ctx.t('The creator is out of chips'), true);
+      return ctx.edit(`<b>${tr(lang, TITLE)}</b>\n<i>${tr(lang, "Called off — {name} can't cover {chips}.", { name: tr(lang, 'the creator'), chips: chips(bet) })}</i>`);
     }
-    await ctx.answer('Game on — pick your move!');
+    await ctx.answer(ctx.t('Game on — pick your move!'));
     const view = render(st);
     await ctx.edit(view.text, view.markup);
   },
@@ -90,8 +94,8 @@ async function callOff(ctx) {
     return s;
   });
   if (!prev.cancelled) for (const p of st.players) await ctx.refund(p.id, st.bet);
-  await ctx.answer('Called off — stakes refunded');
-  return ctx.edit(`<b>${TITLE}</b>\n<i>Called off after 10 minutes of no moves — both stakes refunded.</i>`);
+  await ctx.answer(ctx.t('Called off — stakes refunded'));
+  return ctx.edit(`<b>${tr(st.lang, TITLE)}</b>\n<i>${tr(st.lang, 'Called off after 10 minutes of no moves — both stakes refunded.')}</i>`);
 }
 
 async function move(ctx, m) {
@@ -106,10 +110,10 @@ async function move(ctx, m) {
     const pa = s.picks[a.id];
     const pb = s.picks[b.id];
     if (pa && pb) {
-      s.history.push(`${esc(a.name)} ${MOVES[pa]} vs ${MOVES[pb]} ${esc(b.name)}`);
+      s.history.push(`${esc(a.name)} ${tr(s.lang, MOVES[pa])} ${tr(s.lang, 'vs')} ${tr(s.lang, MOVES[pb])} ${esc(b.name)}`);
       (s.rounds ??= []).push([pa, pb]);
       if (pa === pb) {
-        s.history.push('<i>Draw — go again!</i>');
+        s.history.push(`<i>${tr(s.lang, 'Draw — go again!')}</i>`);
         s.picks = {};
       } else {
         s.winner = BEATS[pa] === pb ? a.id : b.id;
@@ -119,7 +123,7 @@ async function move(ctx, m) {
   });
   // Pay exactly once: only the press whose save flipped `winner` from null pays.
   if (st.winner != null && prev.winner == null) await ctx.credit(st.winner, st.bet * 2, st.bet);
-  await ctx.answer(`You picked ${MOVES[m]}`);
+  await ctx.answer(ctx.t('You picked {move}', { move: ctx.t(MOVES[m]) }));
   const view = render(st);
   await ctx.edit(view.text, view.markup);
 }

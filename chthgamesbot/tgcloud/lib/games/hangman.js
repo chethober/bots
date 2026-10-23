@@ -3,6 +3,7 @@
 import { GameError, btn, kb, esc } from '../ui.js';
 import { pick } from '../rng.js';
 import WORDS from '../data/words.js';
+import { tr } from '../i18n.js';
 
 const KEY = 'hm';
 const LIVES = 6;
@@ -14,24 +15,26 @@ function newWord() {
   return { cat, word, guessed: '', lives: LIVES, scores: {}, over: false, won: false };
 }
 
+// Writes in `st.lang`; the words themselves are English.
 function render(st) {
+  const L = (text, vars) => tr(st.lang, text, vars);
   const shown = [...st.word].map((ch) => (st.guessed.includes(ch) || st.over ? ch : '_')).join(' ');
   const lines = [
-    '<b>🔤 Hangman</b>',
-    `Category: <b>${esc(st.cat)}</b>`,
+    `<b>${L('🔤 Hangman')}</b>`,
+    L('Category: <b>{cat}</b>', { cat: esc(L(st.cat)) }),
     '',
     `<code>${shown}</code>`,
     '',
-    `${GALLOWS[LIVES - st.lives]} Lives: ${'❤️'.repeat(st.lives)}${'🖤'.repeat(LIVES - st.lives)}`,
+    `${GALLOWS[LIVES - st.lives]} ${L('Lives:')} ${'❤️'.repeat(st.lives)}${'🖤'.repeat(LIVES - st.lives)}`,
   ];
   const wrong = [...st.guessed].filter((c) => !st.word.includes(c));
-  if (wrong.length) lines.push(`Misses: ${wrong.join(' ')}`);
+  if (wrong.length) lines.push(`${L('Misses:')} ${wrong.join(' ')}`);
   const top = Object.values(st.scores).sort((a, b) => b.pts - a.pts).slice(0, 5);
   if (top.length) lines.push('', top.map((s) => `${esc(s.name)} ${s.pts}`).join(' · '));
 
   if (st.over) {
-    lines.push('', st.won ? '🎉 Solved!' : `💀 Out of lives — it was <b>${st.word}</b>`);
-    return { text: lines.join('\n'), markup: kb([btn('🔁 New word', `${KEY}:s`)]) };
+    lines.push('', st.won ? L('🎉 Solved!') : L('💀 Out of lives — it was <b>{word}</b>', { word: st.word }));
+    return { text: lines.join('\n'), markup: kb([btn(L('🔁 New word'), `${KEY}:s`)]) };
   }
   const keys = [...ABC].map((c) => (st.guessed.includes(c) ? btn('·', `${KEY}:n`) : btn(c, `${KEY}:g:${c}`)));
   const rows = [];
@@ -46,15 +49,15 @@ export default {
     mask: [...st.word].map((c) => (st.over || st.guessed.includes(c) ? c : null)),
   }),
 
-  async lobby() {
+  async lobby({ locale } = {}) {
     return {
-      text: '<b>🔤 Hangman</b>\nEveryone guesses together — six lives. Points for every letter you find.',
-      markup: kb([btn('▶️ Start', `${KEY}:s`)]),
+      text: `<b>${tr(locale, '🔤 Hangman')}</b>\n${tr(locale, 'Everyone guesses together — six lives. Points for every letter you find.')}`,
+      markup: kb([btn(tr(locale, '▶️ Start'), `${KEY}:s`)]),
     };
   },
 
   async handle(ctx, [act, letter]) {
-    if (act === 'n') return ctx.answer('Already guessed.');
+    if (act === 'n') return ctx.answer(ctx.t('Already guessed.'));
     let st;
     if (act === 's') {
       if (await ctx.create(KEY, newWord())) {
@@ -80,7 +83,7 @@ export default {
           if ([...s.word].every((c) => s.guessed.includes(c))) { s.over = true; s.won = true; }
         } else {
           s.lives--;
-          msg = `❌ No ${letter}`;
+          msg = ctx.t('❌ No {letter}', { letter });
           if (s.lives <= 0) s.over = true;
         }
         return s;

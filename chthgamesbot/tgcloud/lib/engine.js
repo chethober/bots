@@ -6,21 +6,24 @@ import { eq, and, gte, lte, sql } from 'sdk/db';
 import { players, sessions } from '../schema.js';
 import { GameError, nameOf } from './ui.js';
 import { START_CHIPS, DAILY_CHIPS, DAILY_COOLDOWN } from './config.js';
+import { normalizeLocale, playerLocale, tr } from './i18n.js';
 
 const now = () => Math.floor(Date.now() / 1000);
 
 // ---- wallet -----------------------------------------------------------------
 
+// Creates or refreshes the player (name, and Telegram language when known).
 export async function ensurePlayer(user) {
   const name = nameOf(user);
+  const set = { name, ...(user.language_code && { lang: normalizeLocale(user.language_code) }) };
   const [row] = await db.insert(players)
-    .values({ id: user.id, name, chips: START_CHIPS })
-    .onConflictDoUpdate({ target: players.id, set: { name } })
+    .values({ id: user.id, chips: START_CHIPS, ...set })
+    .onConflictDoUpdate({ target: players.id, set })
     .returning();
   return row;
 }
 
-// Chosen UI language (/language). null = auto-detect from Telegram.
+// Chosen UI language (🌐 Language). null = Telegram's.
 export async function setPlayerLocale(id, locale) {
   await db.update(players).set({ locale }).where(eq(players.id, id));
 }
@@ -111,6 +114,8 @@ export async function mutate(key, fn, kind) {
     if (!row) throw new GameError('This game has expired.');
     if (kind && row.kind !== kind) throw new GameError('This button belongs to another game.');
     const next = fn(JSON.parse(JSON.stringify(row.state)));
+    // A game keeps the language it started in, even when a step builds a fresh state.
+    if (next && typeof next === 'object' && next.lang == null && row.state?.lang) next.lang = row.state.lang;
     if (await saveSession(row, next)) return { state: next, prev: row.state };
   }
   throw new GameError('Busy — try again.');
@@ -167,7 +172,10 @@ export async function sendHtml(chatId, text, markup, extra = {}) {
 // ---- callback context -------------------------------------------------------
 
 // Everything a game's `handle(ctx, args)` may use. Built once per button press.
-export function callbackCtx(cb, kind) {
+// `locale` is the presser's language (toasts, alerts); a new session gets it as
+// `state.lang` — the language the game message is shown in — unless the game
+// sets its own (e.g. the lobby creator's, via localeOf).
+export function callbackCtx(cb, kind, locale = 'en') {
   const inline = Boolean(cb.inline_message_id);
   const key = inline ? `i:${cb.inline_message_id}` : `m:${cb.message.chat.id}:${cb.message.message_id}`;
   const target = inline
@@ -180,12 +188,15 @@ export function callbackCtx(cb, kind) {
     key,
     inline,
     chatType: cb.message?.chat.type ?? 'inline',
+    locale,
+    t: (text, vars) => tr(locale, text, vars),
+    localeOf: async (id) => playerLocale(await getPlayer(id), locale),
 
     async session() {
       const row = await loadSession(key);
       return row && row.kind === kind ? row : null;
     },
-    create: (k, state) => createSession(key, k, state),
+    create: (k, state) => createSession(key, k, { lang: locale, ...state }),
     mutate: (fn) => mutate(key, fn, kind),
 
     debit, credit, refund, getPlayer,
@@ -224,6 +235,9 @@ export function appCtx(user, key, kind) {
     key,
     inline: false,
     chatType: 'app',
+    locale: 'en', // the Mini App is English
+    t: (text, vars) => tr('en', text, vars),
+    localeOf: async () => 'en',
     async session() {
       const row = await loadSession(key);
       return row && row.kind === kind ? row : null;

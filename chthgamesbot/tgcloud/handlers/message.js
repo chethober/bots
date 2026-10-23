@@ -1,33 +1,19 @@
-// handlers/message.js — commands. Games themselves run on inline keyboards
-// (handlers/callback_query.js) and in the Mini App (endpoints/).
+// handlers/message.js — the private chat's reply keyboard, /start, the group
+// welcome and the admin commands. Games themselves run on inline keyboards
+// (handlers/callback_query.js) and in the Mini App (endpoints/). The only slash
+// commands are /start and the admin ones.
 
 import { api, db } from 'sdk';
 import { desc } from 'sdk/db';
 import { players } from '../schema.js';
 import { ensurePlayer, claimDaily, sendHtml } from '../lib/engine.js';
-import { BY_CMD } from '../lib/games/index.js';
-import { menuText, menuMarkup, postLobby } from '../lib/menu.js';
-import { adminCommand } from '../lib/admin.js';
-import { esc, chips, nameOf, parseBet } from '../lib/ui.js';
-import { BOT_USERNAME, WEBAPP_URL, DAILY_CHIPS, DAILY_COOLDOWN, START_CHIPS } from '../lib/config.js';
+import { menuText, menuMarkup, sendHome } from '../lib/menu.js';
+import { adminCommand, ADMIN_COMMANDS, isAdmin } from '../lib/admin.js';
+import { esc, chips } from '../lib/ui.js';
+import { BOT_USERNAME, WEBAPP_URL, DAILY_CHIPS, DAILY_COOLDOWN, SOURCE_URL } from '../lib/config.js';
 import { t } from '../lib/strings.js';
-import { SOURCE_URL } from '../lib/config.js';
-import { normalizeLocale, languageKeyboard, mainKeyboard, matchButton } from '../lib/i18n.js';
-
-// Slash commands shown in the menu (bot-specific features; simple English).
-const GAME_COMMANDS = [
-  { command: 'games', description: 'List all games' },
-  { command: 'balance', description: 'Your chips and stats' },
-  { command: 'daily', description: 'Claim daily chips' },
-  { command: 'top', description: 'Richest players' },
-  { command: 'hub', description: 'Open the game hub' },
-];
-
-// A tapped reply-keyboard button (🌐 Language · 🔗 Source code).
-function handleButton(chatId, button, locale) {
-  if (button === 'language') return sendHtml(chatId, t(locale, 'choose_language'), languageKeyboard());
-  return sendHtml(chatId, t(locale, 'source_here'), { inline_keyboard: [[{ text: t(locale, 'source'), url: SOURCE_URL }]] });
-}
+import { languageKeyboard, playerLocale } from '../lib/i18n.js';
+import { drop, matchButton, showScreen } from '../lib/screen.js';
 
 // Never throws (see handlers/callback_query.js) — errors are logged.
 export default async function (message) {
@@ -41,119 +27,102 @@ export default async function (message) {
 async function handle(message) {
   const text = message.text ?? '';
   if (!message.from) return;
+  const chatId = message.chat.id;
+  const chatType = message.chat.type;
 
-  // Unified reply-keyboard buttons (non-slash text).
-  const button = matchButton(text);
-  if (button) {
-    const me = await ensurePlayer(message.from);
-    if (me.banned) return;
-    return handleButton(message.chat.id, button, me.locale || normalizeLocale(message.from.language_code));
+  // Added to a group: say hello with the games menu.
+  if (message.new_chat_members?.some((u) => u.username?.toLowerCase() === BOT_USERNAME.toLowerCase())) {
+    const locale = playerLocale(await ensurePlayer(message.from));
+    return sendHtml(chatId, menuText(chatType, locale), menuMarkup(chatType, locale));
   }
 
-  if (!text.startsWith('/')) return;
+  const button = chatType === 'private' ? matchButton(text) : null;
+  if (!button && !text.startsWith('/')) return;
+
+  const me = await ensurePlayer(message.from);
+  const locale = playerLocale(me);
+
+  if (button) {
+    await drop(chatId, message.message_id);
+    if (me.banned) return showScreen(chatId, t(locale, 'banned'));
+    return onButton(me, button, locale);
+  }
 
   const [head, ...rest] = text.split(/\s+/);
   const [cmd, at] = head.slice(1).toLowerCase().split('@');
   if (at && at !== BOT_USERNAME.toLowerCase()) return; // addressed to another bot
 
-  const chatId = message.chat.id;
-  const chatType = message.chat.type;
-  const me = await ensurePlayer(message.from);
-  const user = { id: message.from.id, name: nameOf(message.from) };
-  const locale = me.locale || normalizeLocale(message.from.language_code);
-
   if (await adminCommand(message, cmd, rest, text)) return;
+  if (cmd !== 'start') {
+    // Old game commands: in private, tidy up and point at the buttons; elsewhere stay quiet.
+    if (chatType === 'private') {
+      await drop(chatId, message.message_id);
+      return showScreen(chatId, t(locale, 'use_buttons'));
+    }
+    return;
+  }
   if (me.banned) {
-    if (chatType === 'private') await sendHtml(chatId, '🚫 You are banned from playing.');
+    if (chatType === 'private') await sendHtml(chatId, t(locale, 'banned'));
     return;
   }
 
-  switch (cmd) {
-    case 'start':
-      if (rest[0]?.startsWith('join_')) return sendHtml(chatId, 'That old invite has expired — start a new game with /tictactoe or open the 🎮 hub.');
-      if (/^room_[a-z0-9]{8}$/.test(rest[0] ?? '')) {
-        return sendHtml(chatId, "🎮 You're invited to a game room:", {
-          inline_keyboard: [[{ text: '▶️ Open the room', web_app: { url: `${WEBAPP_URL}?room=${rest[0].slice(5)}` } }]],
-        });
-      }
-      await api.setMyCommands({ commands: GAME_COMMANDS }).catch(() => {});
-      if (chatType === 'private') {
-        await sendHtml(chatId, welcome(me, locale), mainKeyboard());
-        return sendHtml(chatId, menuText(chatType, locale), menuMarkup(chatType, locale));
-      }
-      return sendHtml(chatId, welcome(me, locale), menuMarkup(chatType, locale));
-    case 'help':
+  if (chatType !== 'private') return sendHtml(chatId, menuText(chatType, locale), menuMarkup(chatType, locale));
+
+  await drop(chatId, message.message_id);
+  if (rest[0]?.startsWith('join_')) return showScreen(chatId, t(locale, 'old_invite'));
+  if (/^room_[a-z0-9]{8}$/.test(rest[0] ?? '')) {
+    return showScreen(chatId, t(locale, 'room_invite'), {
+      inline_keyboard: [[{ text: t(locale, 'open_room'), web_app: { url: `${WEBAPP_URL}?room=${rest[0].slice(5)}` } }]],
+    });
+  }
+  // Users have the reply keyboard instead of a command menu; admins get theirs.
+  await api.deleteMyCommands({}).catch(() => {});
+  if (isAdmin(me.id)) {
+    await api.setMyCommands({
+      commands: ADMIN_COMMANDS.map(([command, description]) => ({ command, description })),
+      scope: { type: 'chat', chat_id: me.id },
+    }).catch(() => {});
+  }
+  await sendHome(me, locale);
+  if (rest[0] === 'hub') return openHub(chatId, locale);
+}
+
+// A tapped reply-keyboard button (private chat); each answer replaces the last screen.
+async function onButton(me, button, locale) {
+  const chatId = me.id;
+  switch (button) {
     case 'games':
-      return sendHtml(chatId, menuText(chatType, locale), menuMarkup(chatType, locale));
-    case 'language':
-    case 'lang':
-      return sendHtml(chatId, t(locale, 'choose_language'), languageKeyboard());
+      return showScreen(chatId, menuText('private', locale), menuMarkup('private', locale));
+    case 'hub':
+      return openHub(chatId, locale);
     case 'balance':
-    case 'bal':
-    case 'me':
-      return sendHtml(chatId, wallet(me), undefined, replyTo(message));
+      return showScreen(chatId, t(locale, 'wallet', {
+        name: esc(me.name), chips: chips(me.chips), played: me.played, wins: me.wins,
+        wagered: chips(me.wagered), best: chips(me.bestWin),
+      }));
     case 'daily': {
-      const after = await claimDaily(user.id);
-      if (after) return sendHtml(chatId, `🎁 +${chips(DAILY_CHIPS)}! Balance: <b>${chips(after.chips)}</b>`, undefined, replyTo(message));
+      const after = await claimDaily(me.id);
+      if (after) return showScreen(chatId, t(locale, 'daily_got', { daily: chips(DAILY_CHIPS), chips: chips(after.chips) }));
       const wait = me.lastDaily + DAILY_COOLDOWN - Math.floor(Date.now() / 1000);
-      return sendHtml(chatId, `⏳ Next bonus in ${Math.ceil(wait / 3600)}h. Balance: ${chips(me.chips)}`, undefined, replyTo(message));
+      return showScreen(chatId, t(locale, 'daily_wait', { h: Math.ceil(wait / 3600), chips: chips(me.chips) }));
     }
     case 'top':
-      return sendHtml(chatId, await leaderboard(), undefined, replyTo(message));
-    case 'hub':
-    case 'crash':
-    case 'plinko':
-    case 'app':
-      return openHub(chatId, chatType, message);
+      return showScreen(chatId, await leaderboard(locale));
+    case 'language':
+      return showScreen(chatId, t(locale, 'choose_language'), languageKeyboard());
+    case 'source':
+      return showScreen(chatId, t(locale, 'source_here'), { inline_keyboard: [[{ text: t(locale, 'kb_source'), url: SOURCE_URL }]] });
   }
-
-  const game = BY_CMD[cmd];
-  if (!game) return;
-  const bet = game.defaultBet ? parseBet(rest[0], game.defaultBet) : 0;
-  if (chatType === 'private' && (game.group === 'duel' || game.group === 'party')) {
-    // Nobody else can join a lobby in a DM — send it to a chat via inline mode instead.
-    return sendHtml(chatId, `${game.title} needs other players. Pick a chat to send it to:`, {
-      inline_keyboard: [[{ text: `📤 Send ${game.title}`, switch_inline_query: bet ? `${game.cmd} ${bet}` : game.cmd }]],
-    });
-  }
-  return postLobby(chatId, game, user, bet);
 }
 
-const replyTo = (m) => (m.chat.type === 'private' ? {} : { reply_parameters: { message_id: m.message_id, allow_sending_without_reply: true } });
-
-function welcome(me, locale = 'en') {
-  return t(locale, 'welcome', {
-    name: esc(me.name),
-    chips: chips(me.chips),
-    start: START_CHIPS,
-    daily: DAILY_CHIPS,
-    bot: BOT_USERNAME,
-  });
-}
-
-function wallet(p) {
-  return [
-    `<b>${esc(p.name)}</b>`,
-    `💰 Balance: <b>${chips(p.chips)}</b>`,
-    `🎮 Games: ${p.played} · 🏆 Wins: ${p.wins}`,
-    `🎲 Wagered: ${chips(p.wagered)} · 🌟 Best win: ${chips(p.bestWin)}`,
-  ].join('\n');
-}
-
-async function leaderboard() {
+async function leaderboard(locale) {
   const rows = await db.select().from(players).orderBy(desc(players.chips)).limit(10);
   const medals = ['🥇', '🥈', '🥉'];
-  return ['<b>🏆 Richest players</b>', '', ...rows.map((p, i) => `${medals[i] ?? `${i + 1}.`} ${esc(p.name)} — ${chips(p.chips)}`)].join('\n');
+  return [`<b>${t(locale, 'top_title')}</b>`, '', ...rows.map((p, i) => `${medals[i] ?? `${i + 1}.`} ${esc(p.name)} — ${chips(p.chips)}`)].join('\n');
 }
 
-async function openHub(chatId, chatType, message) {
-  if (chatType === 'private') {
-    return sendHtml(chatId, 'Every game, with full graphics, lives in the game hub:', {
-      inline_keyboard: [[{ text: '🎮 Open game hub', web_app: { url: WEBAPP_URL } }]],
-    });
-  }
-  // web_app buttons only work in private chats — send people to the DM.
-  return sendHtml(chatId, 'The game hub opens in our private chat:', {
-    inline_keyboard: [[{ text: '🎮 Open game hub', url: `https://t.me/${BOT_USERNAME}?start=hub` }]],
-  }, replyTo(message));
+function openHub(chatId, locale) {
+  return showScreen(chatId, t(locale, 'hub_private'), {
+    inline_keyboard: [[{ text: t(locale, 'open_hub'), web_app: { url: WEBAPP_URL } }]],
+  });
 }

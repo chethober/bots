@@ -1,5 +1,6 @@
 import { boardGame, statusLine } from './board.js';
 import { GameError, btn, kb } from '../ui.js';
+import { tr } from '../i18n.js';
 
 const W = 7, H = 6;
 const MARKS = ['🔴', '🟡'];
@@ -36,6 +37,6 @@ export default boardGame({
     const grid = s.board.map((row) => row.map((v) => (v === -1 ? '⚪' : MARKS[v])).join('')).join('\n');
     const nums = '1️⃣2️⃣3️⃣4️⃣5️⃣6️⃣7️⃣';
     const keys = s.over ? [] : [Array.from({ length: W }, (_, c) => btn(`${c + 1}`, `c4:m:${c}`))];
-    return { text: `<b>🔴🟡 Connect Four</b>\n${statusLine(s, MARKS)}\n\n${grid}\n${nums}`, markup: kb(...keys) };
+    return { text: `<b>${tr(s.lang, '🔴🟡 Connect Four')}</b>\n${statusLine(s, MARKS)}\n\n${grid}\n${nums}`, markup: kb(...keys) };
   },
 });

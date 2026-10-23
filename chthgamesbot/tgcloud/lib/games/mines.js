@@ -1,6 +1,7 @@
 import { soloGame } from './solo.js';
 import { GameError, btn, kb, chips } from '../ui.js';
 import { shuffle } from '../rng.js';
+import { tr } from '../i18n.js';
 
 const N = 25;
 export const EDGE = 0.97;
@@ -62,10 +63,10 @@ export default soloGame({
         return btn(face(i), done || s.open.includes(i) ? 'mn:n' : `mn:c:${i}`);
       }));
     }
-    if (!done && s.open.length) rows.push([btn(`💰 Cash out ${cur}× (${Math.floor(s.stake * cur)})`, 'mn:o')]);
+    if (!done && s.open.length) rows.push([btn(tr(s.lang, '💰 Cash out {mult}× ({n})', { mult: cur, n: Math.floor(s.stake * cur) }), 'mn:o')]);
     const text = [
-      `<b>💣 Mines</b> · ${s.m} mine${s.m > 1 ? 's' : ''} · stake ${chips(s.stake)}`,
-      done ? '' : `Now: <b>${cur}×</b> · next tile: ${next}×`,
+      `<b>${tr(s.lang, '💣 Mines')}</b> · ${tr(s.lang, s.m > 1 ? '{n} mines' : '{n} mine', { n: s.m })} · ${tr(s.lang, 'stake')} ${chips(s.stake)}`,
+      done ? '' : tr(s.lang, 'Now: <b>{mult}×</b> · next tile: {next}×', { mult: cur, next }),
     ].join('\n');
     return { text, markup: kb(...rows) };
   },

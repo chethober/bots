@@ -2,6 +2,7 @@ import { soloGame } from './solo.js';
 import { btn, kb, chips } from '../ui.js';
 import { GameError } from '../ui.js';
 import { deck, rankOf, cardStr } from './cards.js';
+import { tr } from '../i18n.js';
 
 export function handValue(cards) {
   let total = 0;
@@ -69,15 +70,15 @@ export default soloGame({
     const hidden = s.phase === 'play';
     const dealer = hidden ? `${cardStr(s.d[0])} 🂠` : `${s.d.map(cardStr).join(' ')} (${handValue(s.d)})`;
     const text = [
-      `<b>🃏 Blackjack</b> · stake ${chips(s.stake)}${s.doubled ? ' (doubled)' : ''}`,
+      `<b>${tr(s.lang, '🃏 Blackjack')}</b> · ${tr(s.lang, 'stake')} ${chips(s.stake)}${s.doubled ? ` ${tr(s.lang, '(doubled)')}` : ''}`,
       '',
-      `Dealer: ${dealer}`,
-      `You:    ${s.p.map(cardStr).join(' ')} (<b>${handValue(s.p)}</b>)`,
-      s.result ? `\n<b>${s.result}</b>` : '',
+      `${tr(s.lang, 'Dealer:')} ${dealer}`,
+      `${tr(s.lang, 'You:')}    ${s.p.map(cardStr).join(' ')} (<b>${handValue(s.p)}</b>)`,
+      s.result ? `\n<b>${tr(s.lang, s.result)}</b>` : '',
     ].join('\n');
     if (!hidden) return { text, markup: null };
-    const row = [btn('👆 Hit', 'bj:h'), btn('✋ Stand', 'bj:s')];
-    if (s.p.length === 2) row.push(btn(`⏫ Double`, 'bj:x'));
+    const row = [btn(tr(s.lang, '👆 Hit'), 'bj:h'), btn(tr(s.lang, '✋ Stand'), 'bj:s')];
+    if (s.p.length === 2) row.push(btn(tr(s.lang, '⏫ Double'), 'bj:x'));
     return { text, markup: kb(row) };
   },
 });

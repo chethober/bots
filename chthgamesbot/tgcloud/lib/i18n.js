@@ -1,6 +1,11 @@
-// Minimal i18n layer (English + Persian, Arabic, Russian, Spanish).
-// Pure helpers — locale storage lives with the users table (see users.js).
-// Anything without a translation falls back to English, then Persian.
+// Minimal i18n layer (English + Persian, Arabic, Russian, Spanish). Pure helpers.
+// A player's language is their choice (players.locale), else their Telegram
+// language (players.lang). Two kinds of tables:
+//   strings.js  — keyed messages for the menus, t(locale, key, vars);
+//   dict.js     — game text keyed by its English wording, tr(locale, text, vars),
+//                 so the game modules read as plain English.
+
+import DICT from './dict.js';
 
 export const LOCALES = ['en', 'fa', 'ar', 'ru', 'es'];
 export const RTL = new Set(['fa', 'ar']);
@@ -26,31 +31,22 @@ export function makeT(strings) {
   };
 }
 
+const fill = (s, vars) => {
+  if (vars) for (const [k, v] of Object.entries(vars)) s = s.split(`{${k}}`).join(String(v));
+  return s;
+};
+
+// Translates English game text; unknown text (or English) comes back as is.
+export function tr(locale, text, vars) {
+  const row = locale && locale !== 'en' ? DICT[text] : null;
+  return fill(row?.[LOCALES.indexOf(locale) - 1] ?? text, vars);
+}
+
+export const playerLocale = (p, fallback) => p?.locale || p?.lang || fallback || 'en';
+
 // Inline keyboard of language choices; callback data is `lang:<code>`.
 export function languageKeyboard() {
   return {
     inline_keyboard: LOCALES.map((c) => [{ text: `${LOCALE_FLAGS[c]} ${LOCALE_NAMES[c]}`, callback_data: `lang:${c}` }]),
   };
-}
-
-// --- Unified interface: the persistent reply keyboard shown on /start -------
-// Labels are kept in English on purpose (reply-keyboard taps are matched by
-// their text, and a single English label keeps matching simple).
-// No ⚙️ Settings button: players have no settings beyond the language.
-export const BTN = { language: '🌐 Language', source: '🔗 Source code' };
-
-export function mainKeyboard() {
-  return {
-    keyboard: [[{ text: BTN.language }, { text: BTN.source }]],
-    resize_keyboard: true,
-    is_persistent: true,
-  };
-}
-
-// Map a tapped reply-keyboard label to an action, or null for anything else.
-export function matchButton(text) {
-  const t = (text || '').trim();
-  if (t === BTN.language) return 'language';
-  if (t === BTN.source) return 'source';
-  return null;
 }
