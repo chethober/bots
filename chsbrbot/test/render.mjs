@@ -7,6 +7,8 @@ import { parseCve } from '../tgcloud/lib/nvd.js';
 import { cveCard, alertMessage } from '../tgcloud/lib/format.js';
 import { LOCALES } from '../tgcloud/lib/i18n.js';
 import { t } from '../tgcloud/lib/strings.js';
+import { mainKeyboard, matchButton, categoriesView, settingsView } from '../tgcloud/lib/views.js';
+import { ADMIN_IDS } from '../tgcloud/lib/config.js';
 
 const print = process.argv.includes('--print');
 const fixture = (id) => JSON.parse(readFileSync(new URL(`./fixtures/nvd-${id}.json`, import.meta.url))).vulnerabilities[0];
@@ -67,6 +69,32 @@ for (const locale of LOCALES) {
     checkMarkup(reply_markup, `${locale}/${name}`);
     if (print && (locale === 'en' || locale === 'fa')) console.log(`\n--- ${locale}/${name} (${visible(text).length} chars)\n${text}`);
   }
+}
+
+// Reply keyboard labels map back to their button in every language, and no
+// two buttons share a label; the static screens fit too.
+const labels = new Set();
+for (const locale of LOCALES) {
+  for (const row of mainKeyboard(locale).keyboard) {
+    for (const { text } of row) {
+      assert.ok(matchButton(text), `${locale}: “${text}” doesn't match a button`);
+      labels.add(`${matchButton(text)}=${text}`);
+    }
+  }
+  for (const [name, view] of Object.entries({
+    categories: categoriesView(locale),
+    settingsOn: settingsView({ active: true }, 1, locale),
+    settingsOffAdmin: settingsView({ active: false }, ADMIN_IDS[0], locale),
+  })) {
+    checkHtml(view.text, `${locale}/${name}`);
+    checkMarkup(view.reply_markup, `${locale}/${name}`);
+  }
+}
+const byText = new Map();
+for (const l of labels) {
+  const [key, text] = l.split('=');
+  assert.ok(!byText.has(text) || byText.get(text) === key, `“${text}” is used by ${key} and ${byText.get(text)}`);
+  byText.set(text, key);
 }
 
 // Every key has all five languages, and the same {placeholders} in each.

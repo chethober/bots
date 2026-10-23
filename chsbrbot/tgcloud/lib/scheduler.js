@@ -22,7 +22,7 @@ import { getSetting, saveSetting } from './settings.js';
 import { publishedBetween, lookup } from './nvd.js';
 import { loadKev, epssScores, githubPocs } from './feeds.js';
 import { saveCves, fromKev } from './cves.js';
-import { alertMessage } from './format.js';
+import { alertMessage, esc } from './format.js';
 import { isGone, migrate, setActive } from './chats.js';
 import { LOCALES } from './i18n.js';
 
@@ -78,6 +78,7 @@ export async function runTick({ budgetMs = 22_000, maxSends = 300 } = {}) {
     await saveSetting('lock', '0');
   }
   report.ms = Date.now() - started;
+  await saveSetting('last_tick', JSON.stringify(report)).catch(() => {});
   return report;
 }
 
@@ -213,7 +214,8 @@ async function enrich(nvd) {
 
 // Send alerts oldest first. Each alert walks the active chats in id order;
 // `cursor` remembers the last chat it reached, so a run that stops halfway is
-// picked up by the next one.
+// picked up by the next one. Admin broadcasts (kind 'broadcast', the text in
+// `signals`) travel the same way.
 async function deliver(deadline, maxSends) {
   let sent = 0;
   let failed = 0;
@@ -221,19 +223,24 @@ async function deliver(deadline, maxSends) {
   for (;;) {
     const alert = await db.select().from(alerts).where(eq(alerts.status, 'sending')).orderBy(asc(alerts.id)).get();
     if (!alert) break;
-    const cve = await alertCve(alert.cveId);
+    const broadcast = alert.kind === 'broadcast';
+    const cve = broadcast ? null : await alertCve(alert.cveId);
     const rendered = {};
     let cursor = alert.cursor;
     for (;;) {
       if (Date.now() > deadline || sent >= maxSends) return { sent, failed, done, more: true };
+      const where = [eq(chats.active, true)];
+      if (cursor != null) where.push(gt(chats.id, cursor));
+      if (broadcast && alert.signals?.channelsOnly) where.push(eq(chats.type, 'channel'));
       const batch = await db.select({ id: chats.id, locale: chats.locale }).from(chats)
-        .where(cursor == null ? eq(chats.active, true) : and(eq(chats.active, true), gt(chats.id, cursor)))
-        .orderBy(asc(chats.id)).limit(25).all();
+        .where(and(...where)).orderBy(asc(chats.id)).limit(25).all();
       if (!batch.length) break;
       for (const chat of batch) {
         if (Date.now() > deadline || sent >= maxSends) return { sent, failed, done, more: true };
         const locale = LOCALES.includes(chat.locale) ? chat.locale : 'en';
-        rendered[locale] ??= alertMessage(cve, alert.kind, alert.signals, locale);
+        rendered[locale] ??= broadcast
+          ? { text: `📢 ${esc(alert.signals?.text)}` }
+          : alertMessage(cve, alert.kind, alert.signals, locale);
         const outcome = await sendAlert(chat.id, rendered[locale]);
         if (outcome === 'retry') return { sent, failed, done, more: true, rateLimited: true };
         if (outcome === 'sent') sent++;
