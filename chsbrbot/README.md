@@ -39,7 +39,7 @@ switching on a new deployment doesn't flood every chat. Alerts start with the ne
 | `tgcloud/handlers/` | private chat (`message`), its buttons (`callback_query`), joining and leaving chats (`my_chat_member`) |
 | `tgcloud/endpoints/` | `tick` (the scheduler), `setup` (bot profile), `importChats` (switch-over) |
 | `test/` | `npm test`: renders real NVD records in every language and checks Telegram's limits |
-| `worker/` | the previous Cloudflare Worker, kept until the switch-over is done |
+| `scripts/import-from-d1.mjs` | one-off: copies the subscribers of the old Cloudflare Worker |
 
 Thresholds and admin ids are in `tgcloud/lib/config.js`. The optional NVD API key and GitHub token go in the
 git-ignored `tgcloud/lib/secrets.js` (copy `secrets.example.js`).
@@ -61,7 +61,8 @@ Admins are also told when the bot is added to or removed from a group or channel
 ```sh
 npm install
 cp secrets.example.js tgcloud/lib/secrets.js   # keys optional, the file is required
-npx tgcloud login                              # link the project to @chsbrbot
+export NODE_USE_ENV_PROXY=1                    # only needed behind an HTTP proxy
+npx tgcloud login                              # link the project to @chsbrbot (or set TGCLOUD_TOKEN)
 npx tgcloud push                               # deploy code
 npx tgcloud migrate                            # create the tables
 npx tgcloud run endpoints/setup '{}'           # descriptions and command menus
@@ -71,11 +72,12 @@ npx tgcloud run endpoints/tick '{}'            # first run: records what's alrea
 Then add the repository secret `CHSBRBOT_TGCLOUD_TOKEN` (the project's tgcloud token). The workflow runs
 from the default branch only.
 
-### Switching over from the Worker
+### Switching over from the Cloudflare Worker
 
-1. Stop the Worker's cron so it can't send alerts alongside this bot: remove the `[triggers]` block from
-   `worker/wrangler.toml` and run `npm run deploy` in `worker/`, or disable the trigger in the Cloudflare
-   dashboard.
-2. Deploy as above. `tgcloud push` points the bot's webhook at tgcloud, away from the Worker.
-3. Copy the subscribers: `npx wrangler login` in `worker/`, then `node scripts/import-from-d1.mjs` here.
-4. Once it works, delete `worker/` and the Worker in Cloudflare.
+The bot used to be a Cloudflare Worker (`cve-telegram-notifier`, with the D1 database `cve-db`); its code is
+in this repo's history before the tgcloud port.
+
+1. Stop the Worker so it can't send alerts alongside this bot: delete it, or disable its cron trigger, in
+   the Cloudflare dashboard (Workers → `cve-telegram-notifier` → Settings → Triggers).
+2. Copy its subscribers: `npx wrangler login` with the account that owns `cve-db`, then
+   `node scripts/import-from-d1.mjs` here.

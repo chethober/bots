@@ -1,10 +1,11 @@
-// One-off switch-over: copy the Worker's subscribers (with their alerts on/off
-// and language) from Cloudflare D1 into the tgcloud database.
+// One-off switch-over: copy the old Cloudflare Worker's subscribers (with their
+// alerts on/off and language) from its D1 database into the tgcloud database.
 //
-//   node scripts/import-from-d1.mjs              # reads D1 with wrangler (needs `wrangler login`)
+//   npx wrangler login                           # the Cloudflare account that owns `cve-db`
+//   node scripts/import-from-d1.mjs              # reads D1 with wrangler
 //   node scripts/import-from-d1.mjs export.json  # or a saved `wrangler d1 execute --json` output
 //
-// Run from chsbrbot/ after `npx tgcloud login`, `push` and `migrate`.
+// Run from chsbrbot/ once the bot is deployed and migrated.
 import { execFileSync } from 'node:child_process';
 import { readFileSync } from 'node:fs';
 
@@ -14,7 +15,7 @@ function readD1() {
   const env = { ...process.env };
   for (const k of ['HTTPS_PROXY', 'https_proxy', 'HTTP_PROXY', 'http_proxy', 'ALL_PROXY', 'all_proxy']) delete env[k];
   return execFileSync('npx', ['wrangler', 'd1', 'execute', 'cve-db', '--remote', '--json', '--command', QUERY], {
-    cwd: new URL('../worker/', import.meta.url), env, encoding: 'utf8', stdio: ['ignore', 'pipe', 'inherit'],
+    env, encoding: 'utf8', stdio: ['ignore', 'pipe', 'inherit'],
   });
 }
 
