@@ -135,12 +135,17 @@ export class NvdError extends Error {
   }
 }
 
-// GET the CVE API with `params`; resolves to the parsed JSON body.
+// GET the CVE API with `params`; resolves to the parsed JSON body. (The
+// runtime has no URLSearchParams.)
 export async function nvdGet(params) {
-  const qs = new URLSearchParams(Object.entries(params).filter(([, v]) => v != null && v !== ''));
+  const qs = Object.entries(params)
+    .filter(([, v]) => v != null && v !== '')
+    .map(([k, v]) => `${k}=${encodeURIComponent(v)}`).join('&');
   const headers = { 'User-Agent': UA };
   if (NVD_API_KEY) headers.apiKey = NVD_API_KEY;
-  const res = await fetch(`${API}?${qs}`, { headers });
+  // From tgcloud, a connection to NVD now and then fails after 5 s; a second try
+  // goes through. HTTP errors aren't retried.
+  const res = await fetch(`${API}?${qs}`, { headers }).catch(() => fetch(`${API}?${qs}`, { headers }));
   if (!res.ok) throw new NvdError(res.status, await res.text());
   return res.json();
 }
