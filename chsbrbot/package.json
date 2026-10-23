@@ -9,6 +9,6 @@
     "status": "tgcloud status",
     "run": "tgcloud run",
     "tick": "tgcloud run endpoints/tick '{}'",
-    "test": "node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON --import ./test/register.mjs test/render.mjs"
+    "test": "node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON --import ./test/register.mjs test/imports.mjs && node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON --import ./test/register.mjs test/render.mjs"
   }
 }

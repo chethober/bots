@@ -1,0 +1,34 @@
+# Scheduler for the CVE bot (chsbrbot): Telegram Serverless has no cron, so this
+# runs one scheduler pass (fetch new CVEs, trending checks, alert delivery)
+# every 10 minutes. Needs the repository secret CHSBRBOT_TGCLOUD_TOKEN (the
+# bot's tgcloud project token). GitHub runs scheduled workflows only from the
+# default branch.
+name: chsbrbot tick
+
+on:
+  schedule:
+    - cron: '*/10 * * * *'
+  workflow_dispatch:
+
+concurrency:
+  group: chsbrbot-tick
+  cancel-in-progress: false
+
+jobs:
+  tick:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    defaults:
+      run:
+        working-directory: chsbrbot
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: chsbrbot/package-lock.json
+      - run: npm ci
+      - run: npx tgcloud run endpoints/tick '{}'
+        env:
+          TGCLOUD_TOKEN: ${{ secrets.CHSBRBOT_TGCLOUD_TOKEN }}
