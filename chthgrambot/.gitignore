@@ -1,0 +1,5 @@
+.tgcloud/
+node_modules/
+
+# Personal Telegram exports (private chat data)
+ChatExport_*/

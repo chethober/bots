@@ -1,0 +1,16 @@
+{
+  "name": "chthgrambot",
+  "private": true,
+  "type": "module",
+  "description": "Telegram Business secretary bot on Telegram Serverless, powered by Cloudflare Workers AI",
+  "scripts": {
+    "deploy": "NODE_USE_ENV_PROXY=1 tgcloud push",
+    "migrate": "NODE_USE_ENV_PROXY=1 tgcloud migrate",
+    "status": "NODE_USE_ENV_PROXY=1 tgcloud status",
+    "run": "NODE_USE_ENV_PROXY=1 tgcloud run",
+    "webhook": "NODE_USE_ENV_PROXY=1 tgcloud webhook"
+  },
+  "devDependencies": {
+    "@tgcloud/cli": "^0.2.0"
+  }
+}

@@ -1,0 +1,590 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>chth · panel</title>
+<script src="https://telegram.org/js/telegram-web-app.js"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  /* Fixed dark identity, independent of the Telegram theme. */
+  :root {
+    color-scheme: dark;
+    --bg: #070608;
+    --card: #0f0d10;
+    --card-edge: #241a1f;
+    --field: #0a090b;
+    --text: #e6dfda;
+    --hint: #7a7078;
+    --accent: #e0303f;
+    --accent-dim: #7d1622;
+    --accent-text: #fff3f3;
+    --link: #ff6b78;
+    --header: #9c8e95;
+    --danger: #ff5262;
+    --ok: #6fe3b8;
+    --sep: #1e181c;
+    --mono: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
+  }
+  * { box-sizing: border-box; }
+  html { background: var(--bg); }
+  body {
+    margin: 0; padding: 0 16px 96px; color: var(--text); min-height: 100vh;
+    font: 15px/1.45 Inter, -apple-system, system-ui, "Segoe UI", Roboto, sans-serif;
+    background:
+      radial-gradient(120% 60% at 50% -10%, #2a0b12 0%, transparent 60%),
+      var(--bg);
+    -webkit-tap-highlight-color: transparent;
+  }
+  /* scanlines + grain */
+  body::before {
+    content: ""; position: fixed; inset: 0; pointer-events: none; z-index: 50;
+    background: repeating-linear-gradient(0deg, #0000 0 2px, #00000038 2px 3px);
+    mix-blend-mode: multiply;
+  }
+  body::after {
+    content: ""; position: fixed; inset: -50%; pointer-events: none; z-index: 51; opacity: .06;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+    animation: grain 1.2s steps(4) infinite;
+  }
+  @keyframes grain { 0%{transform:translate(0,0)} 25%{transform:translate(-3%,2%)} 50%{transform:translate(2%,-3%)} 75%{transform:translate(-1%,3%)} 100%{transform:translate(0,0)} }
+
+  .hero { display: flex; align-items: center; gap: 14px; padding: 22px 4px 6px; }
+  .hero img {
+    width: 58px; height: 58px; border-radius: 50%; flex: none;
+    box-shadow: 0 0 0 1px #ff3a4c55, 0 0 28px #e0303f55;
+    animation: breathe 5s ease-in-out infinite;
+  }
+  @keyframes breathe { 50% { box-shadow: 0 0 0 1px #ff3a4c88, 0 0 40px #e0303f88; } }
+  .hero h1 {
+    margin: 0; font: 600 20px/1.1 var(--mono); letter-spacing: .14em; text-transform: lowercase;
+    position: relative; color: var(--text);
+  }
+  .hero h1::after {
+    content: attr(data-t); position: absolute; left: 2px; top: 0; color: var(--accent);
+    clip-path: inset(40% 0 45% 0); opacity: .8; animation: glitch 4s infinite steps(1);
+  }
+  @keyframes glitch { 0%,92%{transform:none;opacity:0} 93%{transform:translateX(3px);opacity:.9} 95%{transform:translateX(-2px)} 97%{opacity:0} }
+  .hero p { margin: 5px 0 0; font: 12px/1.35 var(--mono); color: var(--hint); }
+
+  h2 {
+    font: 600 11px/1 var(--mono); text-transform: uppercase; letter-spacing: .22em;
+    color: var(--header); margin: 28px 4px 10px; display: flex; align-items: center; gap: 10px;
+  }
+  h2::before { content: "//"; color: var(--accent); letter-spacing: 0; }
+  h2::after { content: ""; flex: 1; height: 1px; background: linear-gradient(90deg, var(--card-edge), transparent); }
+  .card {
+    background: linear-gradient(180deg, #120f13, var(--card));
+    border: 1px solid var(--card-edge); border-radius: 14px; padding: 4px 14px;
+    box-shadow: inset 0 1px 0 #ffffff08, 0 10px 30px -18px #000;
+  }
+  .row { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 12px 0; border-bottom: 1px solid var(--sep); }
+  .row:last-child { border-bottom: 0; }
+  .stack { display: block; }
+  .stack > label { display: block; margin-bottom: 8px; }
+  .hint { color: var(--hint); font-size: 13px; }
+  .note { color: var(--hint); font-size: 12.5px; margin: 8px 4px 0; }
+  input[type=text], input[type=password], input[type=number], input[type=time], textarea, select {
+    width: 100%; font: inherit; color: var(--text); background: var(--field);
+    border: 1px solid var(--card-edge); border-radius: 10px; padding: 10px 11px; outline: none;
+    transition: border-color .15s, box-shadow .15s;
+  }
+  input::placeholder, textarea::placeholder { color: #554b52; }
+  input:focus, textarea:focus, select:focus { border-color: var(--accent); box-shadow: 0 0 0 3px #e0303f22; }
+  textarea { min-height: 84px; resize: vertical; font-size: 14px; }
+  .row select, .row input[type=number], .row input[type=time] { width: auto; max-width: 55%; }
+  input[type=range] { width: 100%; accent-color: var(--accent); }
+  .val { font: 600 14px var(--mono); font-variant-numeric: tabular-nums; color: var(--accent); }
+  .chips { display: flex; flex-wrap: wrap; gap: 8px; }
+  .chip {
+    border: 1px solid var(--card-edge); background: var(--field); color: var(--text);
+    border-radius: 999px; padding: 7px 13px; font: inherit; font-size: 14px; cursor: pointer;
+    transition: transform .12s, background .15s, border-color .15s;
+  }
+  .chip:active { transform: scale(.96); }
+  .chip.on {
+    background: linear-gradient(180deg, #e0303f, #a3192a); color: var(--accent-text); border-color: #ff4a5a;
+    box-shadow: 0 0 16px -4px #e0303f;
+  }
+  .switch { position: relative; width: 50px; height: 30px; flex: none; }
+  .switch input { opacity: 0; width: 0; height: 0; }
+  .switch span { position: absolute; inset: 0; background: #241d22; border: 1px solid var(--card-edge); border-radius: 30px; transition: .2s; cursor: pointer; }
+  .switch span::before { content: ""; position: absolute; width: 24px; height: 24px; left: 2px; top: 2px; background: #8a7f86; border-radius: 50%; transition: .2s; }
+  .switch input:checked + span { background: var(--accent-dim); border-color: var(--accent); }
+  .switch input:checked + span::before { transform: translateX(20px); background: #fff; box-shadow: 0 0 10px #ff3a4c; }
+  .btn {
+    width: 100%; border: 1px solid #ff4a5a; border-radius: 11px; padding: 12px; font: 600 14px var(--mono);
+    letter-spacing: .04em; background: linear-gradient(180deg, #d42a3a, #96172a); color: var(--accent-text); cursor: pointer;
+    box-shadow: 0 8px 24px -12px #e0303f; transition: transform .12s, filter .15s;
+  }
+  .btn:active { transform: scale(.98); filter: brightness(1.1); }
+  .btn.ghost { background: transparent; color: var(--link); border-color: var(--card-edge); box-shadow: none; }
+  .btn.danger { background: transparent; color: var(--danger); border-color: #3a1a20; box-shadow: none; }
+  .btn:disabled { opacity: .5; }
+  .status { display: flex; gap: 12px; align-items: center; }
+  .dot { width: 10px; height: 10px; border-radius: 50%; background: var(--hint); flex: none; }
+  .dot.ok { background: var(--ok); box-shadow: 0 0 10px var(--ok); animation: pulse 2.4s infinite; }
+  .dot.warn { background: #ffb02e; box-shadow: 0 0 10px #ffb02e; }
+  .dot.bad { background: var(--danger); box-shadow: 0 0 10px var(--danger); }
+  @keyframes pulse { 50% { opacity: .45; } }
+  .bubble {
+    background: var(--field); border: 1px solid var(--card-edge); border-left: 2px solid var(--accent);
+    border-radius: 10px; padding: 10px 12px; white-space: pre-wrap; margin-top: 10px;
+  }
+  .chat { min-width: 0; }
+  .chat b { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-weight: 500; }
+  .toast {
+    position: fixed; left: 16px; right: 16px; bottom: 20px; z-index: 60; background: #140d10ee; color: var(--text);
+    border: 1px solid var(--accent-dim); font: 13px var(--mono); padding: 11px 14px; border-radius: 10px;
+    opacity: 0; transform: translateY(8px); transition: .25s; pointer-events: none; text-align: center;
+    box-shadow: 0 10px 30px -10px #000;
+  }
+  .toast.show { opacity: 1; transform: none; }
+  #loading { text-align: center; color: var(--hint); padding: 120px 0; font: 13px var(--mono); letter-spacing: .2em; }
+  #loading::before {
+    content: ""; display: block; width: 44px; height: 44px; margin: 0 auto 18px; border-radius: 50%;
+    border: 2px solid var(--card-edge); border-top-color: var(--accent); animation: spin 1s linear infinite;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  #app { display: none; animation: rise .5s ease-out; }
+  @keyframes rise { from { opacity: 0; transform: translateY(8px); } }
+  .hidden { display: none !important; }
+  .chat input { margin-top: 6px; padding: 6px 9px; font-size: 14px; }
+  .bubble + .bubble { margin-top: 6px; }
+  .steps { margin: 4px 0 6px; padding-left: 20px; }
+  .steps li { margin: 6px 0; }
+  .steps li::marker { color: var(--accent); font-family: var(--mono); }
+  a { color: var(--link); }
+  ::selection { background: #e0303f66; }
+  @media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after { animation: none !important; transition: none !important; }
+  }
+</style>
+</head>
+<body>
+<div id="loading">waking…</div>
+
+<div id="app">
+  <div class="hero"><img src="avatar.jpg" alt=""><div><h1 data-t="chth">chth</h1><p>not quite a bot. not quite you.</p></div></div>
+  <h2>Status</h2>
+  <div class="card">
+    <div class="row"><div class="status"><span class="dot" id="connDot"></span><div><div id="connText"></div><div class="hint" id="connHint"></div></div></div></div>
+    <div class="row"><div>Auto-replies<div class="hint">Answer your chats with AI</div></div><label class="switch"><input type="checkbox" data-k="enabled"><span></span></label></div>
+    <div class="row"><div>Replies today</div><div class="val" id="repliesToday">0</div></div>
+  </div>
+
+  <h2>Voice</h2>
+  <div class="card">
+    <div class="row stack"><div class="chips" id="voice"></div><div class="hint" id="voiceHint" style="margin-top:8px"></div></div>
+    <div id="meBox">
+      <div class="row"><div>Learn from my messages<div class="hint">Saves what you type yourself in business chats</div></div><label class="switch"><input type="checkbox" data-k="learnStyle"><span></span></label></div>
+      <div class="row"><div>Writing samples</div><div class="val" id="sampleCount">0</div></div>
+      <div class="row stack">
+        <label>Add examples of your messages</label>
+        <textarea id="samplesIn" placeholder="Paste real messages you wrote. Put a blank line between messages.&#10;&#10;e.g.&#10;haha no way 😂 send pics&#10;&#10;ok cool, lmk when ur free"></textarea>
+        <div style="height:8px"></div>
+        <button class="btn" id="addSamples">Add examples</button>
+        <div class="hint" style="margin-top:6px">Tip: forward your own messages to the bot to add them too.</div>
+      </div>
+      <div class="row stack">
+        <label>Style guide <span class="hint">(how you write; edit freely)</span></label>
+        <textarea data-k="styleProfile" id="styleProfile" style="min-height:140px" placeholder="- lowercase, rarely uses punctuation&#10;- mixes English and Persian (Finglish)&#10;- short bursts, 3–8 words&#10;- favorite words: 'bro', 'fr', 'aha'&#10;- uses 😂 and 🙏, nothing else"></textarea>
+        <div style="height:8px"></div>
+        <button class="btn ghost" id="analyze">✨ Analyze my style from samples</button>
+      </div>
+      <div class="row stack"><label>Examples per reply <span class="val" data-show="styleExamples"></span></label>
+        <input type="range" data-k="styleExamples" min="0" max="40" step="1"><div class="hint">How many random samples the AI sees each time. More = closer imitation, costs more quota.</div></div>
+      <div class="row"><button class="btn danger" id="clearSamples">Delete all samples</button></div>
+      <div class="row"><div>Imported conversations<div class="hint">Your past replies, from chat exports</div></div><div class="val" id="exampleCount">0</div></div>
+      <div class="row stack">
+        <label>Import a Telegram chat export</label>
+        <div class="hint" style="margin-bottom:8px">Telegram Desktop → open a chat → ⋮ → Export chat history → format: JSON. Then pick <b>result.json</b>. It's processed on your device. Only "their message → your reply" pairs are uploaded, and links and phone/card numbers are removed.</div>
+        <input type="file" id="exportFile" accept=".json,application/json" class="hidden">
+        <button class="btn" id="importBtn">📥 Import result.json</button>
+        <div class="hint" id="importStatus" style="margin-top:6px"></div>
+      </div>
+      <div class="row stack"><label>Past conversations per reply <span class="val" data-show="dialogExamples"></span></label>
+        <input type="range" data-k="dialogExamples" min="0" max="60" step="1"><div class="hint">The most similar past exchanges plus a few random ones. More = closer to you, uses more quota.</div></div>
+      <div class="row"><button class="btn danger" id="clearExamples">Delete imported conversations</button></div>
+    </div>
+  </div>
+  <p class="note" id="meNote">If someone sincerely asks whether they're talking to a bot, it won't claim to be human. It says you'll reply personally.</p>
+
+  <h2>Personality</h2>
+  <div class="card">
+    <div class="row stack"><label>Mood</label><div class="chips" id="mood"></div>
+      <input type="text" data-k="customMood" id="customMood" class="hidden" placeholder="Describe the mood, e.g. 'chill surfer who loves puns'" style="margin-top:8px"></div>
+    <div class="row stack"><label>Emoji style</label><div class="chips" id="emojiStyle"></div>
+      <input type="text" data-k="emojiPalette" id="emojiPalette" class="hidden" placeholder="Allowed emoji, e.g. ✨🌸💫" style="margin-top:8px"></div>
+    <div class="row stack"><label>Reply length</label><div class="chips" id="length"></div></div>
+    <div class="row stack"><label>Formality</label><div class="chips" id="formality"></div></div>
+    <div class="row"><div>Language</div>
+      <input type="text" data-k="language" list="langs" style="max-width:55%" placeholder="auto">
+      <datalist id="langs"><option>auto</option><option>English</option><option>Persian</option><option>Arabic</option><option>Turkish</option><option>Russian</option><option>Spanish</option><option>German</option><option>French</option><option>Hindi</option><option>Chinese</option></datalist>
+    </div>
+    <div class="row stack"><label>Assistant name <span class="hint">(optional)</span></label><input type="text" data-k="personaName" placeholder="e.g. Max"></div>
+  </div>
+
+  <h2>Creativity</h2>
+  <div class="card">
+    <div class="row stack"><label>Model</label><select data-k="model" id="model"></select></div>
+    <div class="row stack"><label>Temperature <span class="val" data-show="temperature"></span></label>
+      <input type="range" data-k="temperature" min="0" max="2" step="0.05"><div class="hint">Low = predictable, high = creative and surprising.</div></div>
+    <div class="row stack"><label>Top-p <span class="val" data-show="topP"></span></label>
+      <input type="range" data-k="topP" min="0.05" max="1" step="0.05"></div>
+    <div class="row stack"><label>Variety (presence penalty) <span class="val" data-show="presencePenalty"></span></label>
+      <input type="range" data-k="presencePenalty" min="0" max="2" step="0.1"><div class="hint">Higher avoids repeating the same phrases.</div></div>
+    <div class="row stack"><label>Max tokens <span class="val" data-show="maxTokens"></span></label>
+      <input type="range" data-k="maxTokens" min="32" max="1024" step="16"></div>
+  </div>
+
+  <h2>Knowledge</h2>
+  <div class="card">
+    <div class="row stack"><label>About you</label><textarea data-k="aboutOwner" placeholder="Facts the assistant may share: what you do, working hours, prices, links, how to book…"></textarea></div>
+    <div class="row stack"><label>Extra instructions</label><textarea data-k="instructions" placeholder="e.g. Never discuss politics. Invite people to call after 6pm."></textarea></div>
+    <div class="row stack"><label>Signature</label><input type="text" data-k="signature" placeholder="e.g. — sent by my assistant"></div>
+    <div class="row" id="aiLabelToggle"><div>Label replies as AI<div class="hint">Recommended — be transparent</div></div><label class="switch"><input type="checkbox" data-k="aiLabel"><span></span></label></div>
+    <div class="row" id="aiLabelRow"><div>Label text</div><input type="text" data-k="aiLabelText" style="max-width:40%"></div>
+    <div class="row stack"><label>Fallback reply <span class="hint">(sent if the AI fails; empty = stay silent)</span></label><input type="text" data-k="fallbackText" placeholder="I'm away right now, I'll reply soon!"></div>
+  </div>
+
+  <h2>Behavior</h2>
+  <div class="card">
+    <div class="row stack"><label>Context memory <span class="val" data-show="historySize"></span> messages</label>
+      <input type="range" data-k="historySize" min="0" max="30" step="1"></div>
+    <div class="row stack"><label>Reply delay <span class="val" data-show="replyDelay"></span> s</label>
+      <input type="range" data-k="replyDelay" min="0" max="15" step="1"><div class="hint">Shows "typing…" and merges quick bursts of messages into one reply.</div></div>
+    <div class="row"><div>Step back after I reply<div class="hint">Minutes, 0 = never</div></div><input type="number" data-k="ownerPauseMinutes" min="0" max="1440"></div>
+    <div class="row stack"><label>Photos, voice, files &amp; stickers</label><div class="chips" id="nonText"></div>
+      <div class="hint" style="margin-top:6px" id="nonTextHint"></div></div>
+    <div class="row"><div>Split into several messages<div class="hint">Sends short bursts like a real person texting</div></div><label class="switch"><input type="checkbox" data-k="splitMessages"><span></span></label></div>
+    <div class="row"><div>Quote the message</div><label class="switch"><input type="checkbox" data-k="quoteReply"><span></span></label></div>
+    <div class="row"><div>Mark messages as read</div><label class="switch"><input type="checkbox" data-k="markRead"><span></span></label></div>
+    <div class="row"><div>Only reply during hours</div><label class="switch"><input type="checkbox" id="scheduleOn"><span></span></label></div>
+    <div id="scheduleBox">
+      <div class="row"><div>From</div><input type="time" data-k="scheduleFrom"></div>
+      <div class="row"><div>To</div><input type="time" data-k="scheduleTo"></div>
+      <div class="row"><div>Time zone</div><select data-k="utcOffsetMinutes" id="tz"></select></div>
+    </div>
+  </div>
+
+  <h2>Playground</h2>
+  <div class="card">
+    <div class="row stack">
+      <input type="text" id="testText" placeholder="Hey! Are you free tomorrow?">
+      <div style="height:8px"></div>
+      <button class="btn" id="testBtn">Test current settings</button>
+      <div class="bubble hidden" id="testOut"></div>
+    </div>
+  </div>
+  <p class="note">Uses the settings above, even before you save.</p>
+
+  <h2>Chats</h2>
+  <div class="card" id="chats"></div>
+  <p class="note">Notes tell the AI who the contact is, e.g. "my mom, speak Persian, call her maman". Muted chats are never answered. Context is kept for 3 days, then deleted.</p>
+  <button class="btn danger" id="clearAll" style="margin-top:6px">Forget all conversation context</button>
+
+  <h2>AI provider · Cloudflare Workers AI</h2>
+  <div class="card">
+    <div class="row"><div>Credentials</div><div class="hint" id="credState"></div></div>
+    <div class="row stack">
+      <label>How to get them (free, about 2 minutes)</label>
+      <ol class="steps">
+        <li>Open the <a href="#" data-link="https://dash.cloudflare.com/?to=/:account/ai/workers-ai">Workers AI dashboard</a>. If you have no account, <a href="#" data-link="https://dash.cloudflare.com/sign-up">sign up free</a>; no card is needed.</li>
+        <li>Click <b>Use REST API</b> and copy your <b>Account ID</b>.</li>
+        <li>On the same page, click <b>Create a Workers AI API Token</b>, then <b>Create API Token</b>, and copy it. It is shown only once. (Alternative: <a href="#" data-link="https://dash.cloudflare.com/profile/api-tokens">API tokens page</a> → Create Token → "Workers AI" template.)</li>
+        <li>Paste both below, or let the bot guide you step by step in chat.</li>
+      </ol>
+      <button class="btn ghost" id="chatSetup">💬 Guide me in chat instead</button>
+    </div>
+    <div class="row stack"><label>Account ID</label><input type="text" id="cfAccount" placeholder="32-character account ID" autocomplete="off"></div>
+    <div class="row stack"><label>API token</label><input type="password" id="cfToken" placeholder="Workers AI: Read token" autocomplete="off"></div>
+    <div class="row stack"><button class="btn" id="saveCreds">Save credentials</button></div>
+  </div>
+  <p class="note">The free tier gives 10,000 neurons per day, roughly a few hundred short replies with the smaller models. Run a Playground test after saving to check the key works.</p>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+const tg = window.Telegram?.WebApp;
+const $ = (s) => document.querySelector(s);
+const $$ = (s) => [...document.querySelectorAll(s)];
+let state = null, saved = '', current = null;
+
+function call(name, input = {}) {
+  return new Promise((resolve, reject) => {
+    if (!tg?.Serverless) return reject(new Error('Open this panel from the bot inside Telegram.'));
+    tg.Serverless.call(name, input, (err, res) => err ? reject(err) : resolve(res));
+  });
+}
+function toast(msg) {
+  const t = $('#toast'); t.textContent = msg; t.classList.add('show');
+  clearTimeout(toast.t); toast.t = setTimeout(() => t.classList.remove('show'), 2400);
+}
+const haptic = (t = 'light') => tg?.HapticFeedback?.impactOccurred(t);
+
+function chips(id, options) {
+  const box = $('#' + id);
+  box.innerHTML = '';
+  for (const o of options) {
+    const b = document.createElement('button');
+    b.className = 'chip'; b.textContent = o.label; b.dataset.v = o.id;
+    b.onclick = () => { current[id] = o.id; haptic(); render(); };
+    box.append(b);
+  }
+}
+
+function fill() {
+  const o = state.options;
+  chips('voice', o.voices);
+  chips('nonText', [
+    { id: 'relay', label: '📨 Forward to me' }, { id: 'ai', label: '🤖 Let AI guess' }, { id: 'ignore', label: '🙈 Ignore' },
+  ]);
+  chips('mood', o.moods); chips('emojiStyle', o.emojiStyles); chips('length', o.lengths); chips('formality', o.formality);
+  $('#model').innerHTML = o.models.map((m) => `<option value="${m.id}">${m.name}</option>`).join('');
+  const tz = [];
+  for (let m = -720; m <= 840; m += 30) {
+    const sign = m < 0 ? '−' : '+', a = Math.abs(m);
+    tz.push(`<option value="${m}">UTC${sign}${String(Math.floor(a / 60)).padStart(2, '0')}:${String(a % 60).padStart(2, '0')}</option>`);
+  }
+  $('#tz').innerHTML = tz.join('');
+}
+
+function render() {
+  for (const el of $$('[data-k]')) {
+    const v = current[el.dataset.k];
+    if (el.type === 'checkbox') el.checked = !!v; else if (document.activeElement !== el) el.value = v;
+  }
+  for (const el of $$('[data-show]')) el.textContent = current[el.dataset.show];
+  for (const id of ['voice', 'nonText', 'mood', 'emojiStyle', 'length', 'formality']) {
+    for (const b of $$(`#${id} .chip`)) b.classList.toggle('on', b.dataset.v === current[id]);
+  }
+  const asMe = current.voice === 'me';
+  $('#voiceHint').textContent = state.options.voices.find((v) => v.id === current.voice)?.hint ?? '';
+  $('#meBox').classList.toggle('hidden', !asMe);
+  $('#nonTextHint').textContent = {
+    relay: 'The bot sends them to you, and whatever you reply with goes back to the contact from your account.',
+    ai: "The AI can't see or hear media. It only knows something like \"[sent a voice message]\" plus any caption.",
+    ignore: 'No reply is sent for non-text messages.',
+  }[current.nonText];
+  $('#meNote').classList.toggle('hidden', !asMe);
+  $('#customMood').classList.toggle('hidden', current.mood !== 'custom');
+  $('#emojiPalette').classList.toggle('hidden', current.emojiStyle !== 'custom');
+  $('#aiLabelToggle').classList.toggle('hidden', asMe);
+  $('#aiLabelRow').classList.toggle('hidden', !current.aiLabel || asMe);
+  $('#scheduleOn').checked = current.scheduleMode === 'window';
+  $('#scheduleBox').classList.toggle('hidden', current.scheduleMode !== 'window');
+  updateSaveButton();
+}
+
+function renderStatus() {
+  const c = state.connection, dot = $('#connDot');
+  let text, hint, cls;
+  if (!c || !c.enabled) { cls = 'bad'; text = 'Not connected'; hint = 'Settings → Telegram Business → Chatbots → add this bot'; }
+  else if (!c.canReply) { cls = 'warn'; text = 'Connected, can\'t reply'; hint = 'Allow "Reply to messages" in the chatbot settings'; }
+  else if (!state.credentials.source) { cls = 'warn'; text = 'Connected'; hint = 'Add Cloudflare credentials below'; }
+  else { cls = 'ok'; text = 'Connected and ready'; hint = state.credentials.source === 'shared' ? 'Using the shared AI key' : 'Using your Cloudflare key'; }
+  dot.className = 'dot ' + cls; $('#connText').textContent = text; $('#connHint').textContent = hint;
+  $('#repliesToday').textContent = state.repliesToday;
+  $('#sampleCount').textContent = state.sampleCount;
+  $('#exampleCount').textContent = state.exampleCount;
+  const cr = state.credentials;
+  $('#credState').textContent = cr.source === 'own' ? `✅ saved ${cr.tokenHint}` : cr.source === 'shared' ? 'shared key' : '❌ not set';
+  $('#cfAccount').value = cr.accountId;
+  $('#cfToken').placeholder = cr.tokenHint ? `${cr.tokenHint} (leave blank to keep)` : 'Workers AI: Read token';
+  renderChats();
+}
+
+function renderChats() {
+  const box = $('#chats');
+  if (!state.chats.length) { box.innerHTML = '<div class="row hint">No chats yet — they appear after the first message.</div>'; return; }
+  box.innerHTML = '';
+  const now = Date.now() / 1000;
+  for (const c of state.chats) {
+    const row = document.createElement('div'); row.className = 'row';
+    const paused = c.pausedUntil > now;
+    const info = document.createElement('div'); info.className = 'chat';
+    const name = document.createElement('b'); name.textContent = c.title || (c.username ? '@' + c.username : c.chatId);
+    const sub = document.createElement('div'); sub.className = 'hint';
+    sub.textContent = paused ? `Paused ${Math.ceil((c.pausedUntil - now) / 60)} min (you replied) · tap to resume` : (c.username ? '@' + c.username : '');
+    if (paused) sub.style.cursor = 'pointer', sub.onclick = async () => { await call('updateChat', { chatId: c.chatId, unpause: true }); c.pausedUntil = 0; renderChats(); };
+    const note = document.createElement('input');
+    note.type = 'text'; note.placeholder = 'Note for the AI: who is this?'; note.value = c.note; note.maxLength = 300;
+    note.onchange = async () => {
+      try { await call('updateChat', { chatId: c.chatId, note: note.value }); c.note = note.value; toast('Note saved'); }
+      catch (e) { toast(e.message); }
+    };
+    info.append(name, sub, note); info.style.flex = '1';
+    const sw = document.createElement('label'); sw.className = 'switch';
+    sw.innerHTML = '<input type="checkbox"><span></span>';
+    const cb = sw.querySelector('input'); cb.checked = !c.muted; cb.title = 'Auto-reply in this chat';
+    cb.onchange = async () => {
+      try { await call('updateChat', { chatId: c.chatId, muted: !cb.checked }); c.muted = !cb.checked; haptic(); }
+      catch (e) { cb.checked = !cb.checked; toast(e.message); }
+    };
+    row.append(info, sw); box.append(row);
+  }
+}
+
+function dirty() { return JSON.stringify(current) !== saved; }
+function updateSaveButton() {
+  const mb = tg?.MainButton; if (!mb) return;
+  if (dirty()) { mb.setText('Save changes'); mb.show(); mb.enable(); } else mb.hide();
+}
+async function save() {
+  const mb = tg?.MainButton; mb?.showProgress();
+  try {
+    const res = await call('saveSettings', { settings: current });
+    current = res.settings; saved = JSON.stringify(current);
+    tg?.HapticFeedback?.notificationOccurred('success'); toast('Saved'); render();
+  } catch (e) { toast(e.message); } finally { mb?.hideProgress(); }
+}
+
+function bind() {
+  for (const el of $$('[data-k]')) {
+    const ev = el.type === 'checkbox' || el.tagName === 'SELECT' ? 'change' : 'input';
+    el.addEventListener(ev, () => {
+      const k = el.dataset.k;
+      current[k] = el.type === 'checkbox' ? el.checked
+        : (el.type === 'range' || el.type === 'number' || k === 'utcOffsetMinutes') ? Number(el.value) : el.value;
+      render();
+    });
+  }
+  $('#scheduleOn').onchange = (e) => {
+    current.scheduleMode = e.target.checked ? 'window' : 'always';
+    if (e.target.checked && current.utcOffsetMinutes === 0) {
+      current.utcOffsetMinutes = Math.round(-new Date().getTimezoneOffset() / 30) * 30;
+    }
+    render();
+  };
+  $('#testBtn').onclick = async () => {
+    const btn = $('#testBtn'), out = $('#testOut');
+    const text = $('#testText').value.trim() || $('#testText').placeholder;
+    btn.disabled = true; btn.textContent = 'Thinking…';
+    try {
+      const r = await call('preview', { text, settings: current });
+      out.innerHTML = ''; out.className = '';
+      for (const t of r.replies) { const b = document.createElement('div'); b.className = 'bubble'; b.textContent = t; out.append(b); }
+    }
+    catch (e) { toast(e.message); } finally { btn.disabled = false; btn.textContent = 'Test current settings'; }
+  };
+  $('#saveCreds').onclick = async () => {
+    try {
+      await call('saveCredentials', { accountId: $('#cfAccount').value, apiToken: $('#cfToken').value });
+      $('#cfToken').value = ''; toast('Credentials saved'); await load(false);
+    } catch (e) { toast(e.message); }
+  };
+  $('#clearAll').onclick = () => {
+    const go = async (ok) => { if (!ok) return; try { await call('clearHistory', {}); toast('Context cleared'); } catch (e) { toast(e.message); } };
+    tg?.showConfirm ? tg.showConfirm('Forget the stored context of all chats?', go) : go(confirm('Forget all context?'));
+  };
+  for (const a of $$('[data-link]')) a.onclick = (e) => {
+    e.preventDefault();
+    tg?.openLink ? tg.openLink(a.dataset.link) : window.open(a.dataset.link, '_blank');
+  };
+  $('#addSamples').onclick = async () => {
+    const text = $('#samplesIn').value.trim(); if (!text) return toast('Paste some of your messages first');
+    try {
+      const r = await call('addSamples', { text });
+      state.sampleCount = r.total; $('#sampleCount').textContent = r.total; $('#samplesIn').value = '';
+      toast(`Added ${r.added} samples`); haptic();
+    } catch (e) { toast(e.message); }
+  };
+  $('#analyze').onclick = async () => {
+    const btn = $('#analyze'); btn.disabled = true; btn.textContent = 'Analyzing…';
+    try {
+      const r = await call('analyzeStyle', { settings: current });
+      current.styleProfile = r.profile; render(); toast('Review the guide, then save');
+    } catch (e) { toast(e.message); } finally { btn.disabled = false; btn.textContent = '✨ Analyze my style from samples'; }
+  };
+  $('#clearSamples').onclick = () => {
+    const go = async (ok) => { if (!ok) return; try { await call('clearSamples', {}); state.sampleCount = 0; $('#sampleCount').textContent = 0; toast('Samples deleted'); } catch (e) { toast(e.message); } };
+    tg?.showConfirm ? tg.showConfirm('Delete all saved samples of your writing?', go) : go(confirm('Delete all samples?'));
+  };
+  $('#importBtn').onclick = () => $('#exportFile').click();
+  $('#exportFile').onchange = async (e) => {
+    const file = e.target.files[0]; e.target.value = ''; if (!file) return;
+    const status = $('#importStatus'), btn = $('#importBtn');
+    btn.disabled = true; status.textContent = 'Reading file…';
+    try {
+      const data = JSON.parse(await file.text());
+      const me = 'user' + tg?.initDataUnsafe?.user?.id;
+      const pairs = exportToPairs(data, me);
+      if (!pairs.length) throw new Error('No "their message → your reply" pairs found. Is this your own export?');
+      const replace = state.exampleCount > 0 && await new Promise((r) => tg?.showConfirm
+        ? tg.showConfirm(`Replace the ${state.exampleCount} conversations already imported? Cancel keeps them and adds these.`, r)
+        : r(confirm('Replace existing imported conversations?')));
+      let total = 0;
+      for (let i = 0; i < pairs.length; i += 500) {
+        status.textContent = `Uploading ${Math.min(i + 500, pairs.length)} / ${pairs.length}…`;
+        const r = await call('importExamples', { pairs: pairs.slice(i, i + 500), replace: replace && i === 0, source: String(data.name ?? 'export') });
+        total = r.total;
+      }
+      state.exampleCount = total; $('#exampleCount').textContent = total;
+      status.textContent = `✅ Imported ${pairs.length} exchanges from "${data.name ?? 'chat'}".`; haptic('medium');
+    } catch (err) { status.textContent = ''; toast(err.message); } finally { btn.disabled = false; }
+  };
+  $('#clearExamples').onclick = () => {
+    const go = async (ok) => { if (!ok) return; try { await call('clearExamples', {}); state.exampleCount = 0; $('#exampleCount').textContent = 0; toast('Deleted'); } catch (e) { toast(e.message); } };
+    tg?.showConfirm ? tg.showConfirm('Delete all imported conversations?', go) : go(confirm('Delete all imported conversations?'));
+  };
+  $('#chatSetup').onclick = async () => {
+    try { await call('startSetup', {}); toast('Check your chat with the bot'); setTimeout(() => tg?.close(), 900); }
+    catch (e) { toast(e.message); }
+  };
+  tg?.MainButton?.onClick(save);
+}
+
+// Turns a Telegram Desktop JSON export into [theirTurn, myReply, unixTime] pairs.
+function exportToPairs(data, me) {
+  const chats = data.chats?.list ?? [data];
+  const label = { voice_message: 'voice message', video_message: 'video message', sticker: 'sticker', animation: 'GIF', audio_file: 'audio', video_file: 'video' };
+  const sens = /https?:\/\/\S+|www\.\S+|(?:[0-9۰-۹][\s-]?){7,}/g;
+  const text = (m) => (Array.isArray(m.text) ? m.text.map((p) => (typeof p === 'string' ? p : p.text ?? '')).join('') : m.text ?? '').trim();
+  const pairs = [];
+  for (const chat of chats) {
+    const turns = [];
+    for (const m of chat.messages ?? []) {
+      if (m.type !== 'message' || m.forwarded_from) continue;
+      const t = text(m);
+      const kind = m.photo ? 'photo' : label[m.media_type] ?? (m.file ? 'file' : null);
+      let r = kind ? `[sent a ${kind}${m.sticker_emoji ? ' ' + m.sticker_emoji : ''}]${t ? ' ' + t : ''}` : t;
+      if (!r) continue;
+      r = r.replace(sens, '…');
+      const who = m.from_id === me ? 'me' : 'them', ts = Number(m.date_unixtime);
+      const last = turns[turns.length - 1];
+      if (last && last.who === who && ts - last.end < 600) { last.lines.push(r); last.end = ts; }
+      else turns.push({ who, lines: [r], start: ts, end: ts });
+    }
+    for (let i = 1; i < turns.length; i++) {
+      const a = turns[i - 1], b = turns[i];
+      if (a.who !== 'them' || b.who !== 'me' || b.start - a.end > 6 * 3600) continue;
+      const reply = b.lines.join('\n');
+      if (/^(\[sent a [^\]]*\]\s*)+$/.test(reply)) continue;
+      pairs.push([a.lines.slice(-4).join('\n').slice(-400), reply.slice(0, 400), b.start]);
+    }
+  }
+  return pairs;
+}
+
+async function load(full = true) {
+  state = await call('getState');
+  if (full) { current = state.settings; saved = JSON.stringify(current); fill(); render(); }
+  renderStatus();
+}
+
+(async () => {
+  tg?.ready(); tg?.expand();
+  try { tg?.setHeaderColor('#070608'); tg?.setBackgroundColor('#070608'); tg?.setBottomBarColor?.('#070608'); tg?.MainButton?.setParams({ color: '#d42a3a', text_color: '#fff3f3' }); } catch {}
+  try {
+    await load(); bind();
+    $('#loading').style.display = 'none'; $('#app').style.display = 'block';
+  } catch (e) {
+    $('#loading').textContent = e.message || 'Failed to load';
+  }
+})();
+</script>
+</body>
+</html>

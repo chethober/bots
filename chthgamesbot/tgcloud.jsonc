@@ -1,0 +1,9 @@
+{
+  // The Mini App is plain static files — no build step, so push serves public/ as-is.
+  // File names aren't content-hashed, so tell Telegram's webview to revalidate every load.
+  "static": {
+    "source": "public",
+    "headers": [{ "path": "/*", "set": { "Cache-Control": "no-cache" } }]
+  },
+  "$schema": "./node_modules/@tgcloud/cli/schema/tgcloud.json"
+}

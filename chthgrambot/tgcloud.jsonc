@@ -1,0 +1,5 @@
+{
+  "$schema": "./node_modules/@tgcloud/cli/schema/tgcloud.json",
+  // The management panel (Mini App) is a single static HTML file — no build step.
+  "static": { "source": "web" }
+}

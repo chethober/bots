@@ -1,0 +1,25 @@
+{
+  "name": "anonm",
+  "version": "1.0.0",
+  "description": "Personal anonymous-message link bot for Telegram, running serverless on tgcloud",
+  "license": "MIT",
+  "private": true,
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/chethober/anonm.git"
+  },
+  "keywords": [
+    "telegram",
+    "telegram-bot",
+    "anonymous",
+    "tgcloud"
+  ],
+  "devDependencies": {
+    "@tgcloud/cli": "^0.2.0"
+  },
+  "scripts": {
+    "deploy": "tgcloud push",
+    "status": "tgcloud status",
+    "run": "tgcloud run"
+  }
+}

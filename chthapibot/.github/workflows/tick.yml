@@ -1,0 +1,28 @@
+# Scheduler for the bot: Telegram Serverless has no cron, so this runs one
+# scheduler pass (alerts, reminders, daily digests) every 10 minutes.
+# Requires the repository secret TGCLOUD_TOKEN (the project's tgcloud token).
+name: tick
+
+on:
+  schedule:
+    - cron: '*/10 * * * *'
+  workflow_dispatch:
+
+concurrency:
+  group: tick
+  cancel-in-progress: false
+
+jobs:
+  tick:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npx tgcloud run endpoints/tick '{}'
+        env:
+          TGCLOUD_TOKEN: ${{ secrets.TGCLOUD_TOKEN }}

@@ -1,0 +1,38 @@
+{
+  "name": "telegram-games",
+  "version": "1.0.0",
+  "description": "Casino, poker and party games for Telegram — chat games, inline mode and a graphic Mini App on Telegram Serverless. Play-money only.",
+  "license": "MIT",
+  "author": "chethober",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/chethober/games.git"
+  },
+  "homepage": "https://github.com/chethober/games#readme",
+  "bugs": "https://github.com/chethober/games/issues",
+  "keywords": [
+    "telegram",
+    "telegram-bot",
+    "telegram-mini-app",
+    "serverless",
+    "poker",
+    "texas-holdem",
+    "blackjack",
+    "games"
+  ],
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "deploy": "NODE_USE_ENV_PROXY=1 tgcloud push",
+    "migrate": "NODE_USE_ENV_PROXY=1 tgcloud migrate",
+    "status": "tgcloud status",
+    "run": "NODE_USE_ENV_PROXY=1 tgcloud run",
+    "test": "node test/validate.js",
+    "test:ui": "node test/ui.js",
+    "test:live-ui": "node test/ui.js"
+  },
+  "devDependencies": {
+    "@tgcloud/cli": "^0.2.0",
+    "playwright-core": "1.56"
+  }
+}

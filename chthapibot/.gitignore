@@ -1,0 +1,6 @@
+node_modules/
+.tgcloud/
+tgcloud/endpoints/zz_*.js
+.env
+*.log
+.DS_Store

@@ -1,0 +1,36 @@
+{
+  "name": "chthapibot",
+  "private": true,
+  "type": "module",
+  "description": "Multi-utility Telegram bot (crypto, sports, food & drinks, random, daily briefing) on Telegram Serverless",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/chethober/chthapibot.git"
+  },
+  "homepage": "https://t.me/chthapibot",
+  "keywords": [
+    "telegram",
+    "telegram-bot",
+    "telegram-serverless",
+    "tgcloud",
+    "crypto",
+    "sports",
+    "recipes",
+    "trivia"
+  ],
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "deploy": "tgcloud push",
+    "migrate": "tgcloud migrate",
+    "status": "tgcloud status",
+    "tick": "tgcloud run endpoints/tick '{}'",
+    "health": "tgcloud run endpoints/healthcheck '{}'",
+    "webhook": "tgcloud webhook"
+  },
+  "devDependencies": {
+    "@tgcloud/cli": "^0.2.0"
+  }
+}
