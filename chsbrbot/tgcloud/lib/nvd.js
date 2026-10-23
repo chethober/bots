@@ -64,12 +64,15 @@ function cwesOf(cve) {
 }
 
 // "vendor/product v1.2" or "vendor/product (>=1.0, <1.4)" from the CPE matches.
+// Hardware entries (part "h") are left out: they are the platforms vulnerable
+// firmware runs on, not affected products themselves.
 function softwareOf(cve) {
   const out = new Set();
   for (const config of cve.configurations ?? []) {
     for (const node of config.nodes ?? []) {
       for (const m of node.cpeMatch ?? []) {
         const p = (m.criteria ?? '').split(':'); // cpe:2.3:part:vendor:product:version:…
+        if (p[2] === 'h') continue;
         const real = (v) => (v && v !== '*' && v !== '-' ? v : '');
         const [vendor, product, version] = [real(p[3]), real(p[4]), real(p[5])];
         if (!product) continue;
