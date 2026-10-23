@@ -32,25 +32,3 @@ export function languageKeyboard() {
     inline_keyboard: LOCALES.map((c) => [{ text: `${LOCALE_FLAGS[c]} ${LOCALE_NAMES[c]}`, callback_data: `lang:${c}` }]),
   };
 }
-
-// --- Unified interface: the persistent reply keyboard shown on /start -------
-// Labels are kept in English on purpose (reply-keyboard taps are matched by
-// their text, and a single English label keeps matching simple).
-export const BTN = { settings: '⚙️ Settings', language: '🌐 Language', source: '🔗 Source code' };
-
-export function mainKeyboard() {
-  return {
-    keyboard: [[{ text: BTN.settings }, { text: BTN.language }], [{ text: BTN.source }]],
-    resize_keyboard: true,
-    is_persistent: true,
-  };
-}
-
-// Map a tapped reply-keyboard label to an action, or null for anything else.
-export function matchButton(text) {
-  const t = (text || '').trim();
-  if (t === BTN.settings) return 'settings';
-  if (t === BTN.language) return 'language';
-  if (t === BTN.source) return 'source';
-  return null;
-}

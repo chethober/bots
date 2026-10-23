@@ -6,7 +6,9 @@
 // (hub menus), while send() always posts a new message (content cards).
 import { api } from 'sdk';
 import { sendCard, editCard } from './telegram.js';
-import { setPending, putCache, getCache } from './store.js';
+import { setPending } from './store.js';
+import { screenId, showScreen } from './screen.js';
+import { t } from './strings.js';
 import { esc } from './format.js';
 
 export const btn = (text, data) => ({ text, callback_data: data });
@@ -15,51 +17,34 @@ export function show(ctx, card) {
   return ctx.message ? editCard(ctx.message, card) : sendCard(ctx.chatId, card);
 }
 
-// Navigation menus. In private chats they use the reply keyboard (buttons under the text
-// field); each label's action is remembered per chat so a tap can be routed like a button
-// press. Groups keep inline buttons: with privacy mode on, Telegram doesn't deliver reply
-// keyboard taps from groups to the bot.
-const MENU_TTL = 90 * 86400;
-const ALWAYS = { '🏠 Main menu': 'm:home', '✖️ Hide menu': 'kb:close' };
-
+// Navigation menus are inline buttons on a screen. In a private chat the screen
+// follows clean chat (lib/screen.js): a button on the current screen edits it in
+// place, anything else replaces it with a new one, and content cards are never
+// overwritten. Groups have no screen: a menu edits the message it was opened
+// from, or posts a new one. A notice shown earlier in the same interaction is
+// kept at the top of the menu that replaces it.
 export async function menu(ctx, card) {
-  if (ctx.chatType !== 'private') {
-    // Inline menus in groups: there is no reply keyboard to hide.
-    return show(ctx, { ...card, keyboard: card.keyboard?.map((r) => r.filter((b) => b?.callback_data !== 'kb:close')).filter((r) => r.length) });
+  card = { ...card, keyboard: card.keyboard?.map((r) => r.filter((b) => b?.callback_data !== 'kb:close')).filter((r) => r.length) };
+  if (ctx.chatType !== 'private') return show(ctx, card);
+  if (ctx.notes?.length) {
+    card = { ...card, text: `${ctx.notes.join('\n')}\n\n${card.text}` };
+    ctx.notes = [];
   }
-  const rows = (card.keyboard ?? [])
-    .map((row) => row.filter((b) => b?.callback_data && b.callback_data !== 'noop'))
-    .filter((row) => row.length);
-  const actions = {};
-  for (const b of rows.flat()) actions[b.text] = b.callback_data;
-  await putCache(`menu:${ctx.chatId}`, actions, MENU_TTL);
-  return api.sendMessage({
-    chat_id: ctx.chatId,
-    text: card.text,
-    parse_mode: 'HTML',
-    link_preview_options: { is_disabled: true },
-    reply_markup: {
-      keyboard: rows.map((row) => row.map((b) => ({ text: b.text }))),
-      resize_keyboard: true,
-      // Not persistent: the ⌨️ toggle can collapse it, and ✖️ Hide menu removes it.
-      input_field_placeholder: 'Pick an option or type a command',
-    },
-  });
-}
-
-// The action behind a reply-keyboard label from the chat's current menu, or null.
-export async function menuAction(ctx, text) {
-  if (ctx.chatType !== 'private') return null;
-  const actions = await getCache(`menu:${ctx.chatId}`);
-  return actions?.[text] ?? ALWAYS[text] ?? null;
+  if (ctx.message && ctx.message.message_id === (await screenId(ctx.chatId))) {
+    return editCard(ctx.message, card);
+  }
+  return showScreen(ctx.chatId, () => sendCard(ctx.chatId, card));
 }
 
 export function send(ctx, card) {
   return sendCard(ctx.chatId, card);
 }
 
-export function notice(ctx, html) {
-  return sendCard(ctx.chatId, { text: html });
+// A short confirmation or error. In a private chat it becomes the screen.
+export async function notice(ctx, html) {
+  if (ctx.chatType !== 'private') return sendCard(ctx.chatId, { text: html });
+  (ctx.notes ??= []).push(html);
+  return showScreen(ctx.chatId, () => sendCard(ctx.chatId, { text: html }));
 }
 
 // Private chats: always. Groups: only creator/administrators.
@@ -84,10 +69,21 @@ export async function requireManage(ctx) {
   return false;
 }
 
-// Asks for free text: remembers `action` for this user for 10 min and shows a reply prompt.
+// Asks for free text: remembers `action` for this user for 10 min. In a private
+// chat the prompt is a screen with a Cancel button; in groups it's a reply
+// prompt addressed to the user (privacy mode only delivers replies).
 export async function ask(ctx, action, promptHtml, { data = null, placeholder } = {}) {
   await setPending(ctx.chatId, ctx.userId, action, data);
-  const mention = ctx.chatType === 'private' ? '' : `<a href="tg://user?id=${ctx.userId}">${esc(ctx.userName ?? 'you')}</a>, `;
+  if (ctx.chatType === 'private') {
+    const card = {
+      text: `${promptHtml}\n<i>${t(ctx.locale, 'prompt_hint')}</i>`,
+      keyboard: [[btn(t(ctx.locale, 'btn_cancel'), 'x')]],
+    };
+    ctx.notes = [];
+    if (ctx.message && ctx.message.message_id === (await screenId(ctx.chatId))) return editCard(ctx.message, card);
+    return showScreen(ctx.chatId, () => sendCard(ctx.chatId, card));
+  }
+  const mention = `<a href="tg://user?id=${ctx.userId}">${esc(ctx.userName ?? 'you')}</a>, `;
   await api.sendMessage({
     chat_id: ctx.chatId,
     text: `${mention}${promptHtml}\n<i>Reply to this message, or send /cancel.</i>`,

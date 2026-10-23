@@ -1,10 +1,19 @@
-// Text commands, replies to prompts, and location messages. Payload is the Message.
+// Text commands, replies to prompts, reply-keyboard taps and location messages.
+// Payload is the Message.
+//
+// A private chat follows clean chat (lib/screen.js): the user's message is
+// deleted once handled, a keyboard tap opens its screen, and typed text answers
+// the open prompt. Groups keep inline menus and reply prompts.
 import { api } from 'sdk';
 import { findCommand, runCallback, runInput, runFallbackText, saveLocation } from '../lib/hubs/index.js';
+import { sendHome } from '../lib/hubs/main.js';
 import { takePending, getPrefs } from '../lib/store.js';
-import { notice, menuAction } from '../lib/ui.js';
+import { notice } from '../lib/ui.js';
+import { drop, showScreen, closeScreen } from '../lib/screen.js';
+import { sendCard } from '../lib/telegram.js';
 import { esc } from '../lib/format.js';
-import { normalizeLocale, matchButton } from '../lib/i18n.js';
+import { normalizeLocale, LOCALES } from '../lib/i18n.js';
+import { matchButton } from '../lib/keyboard.js';
 import { t, SOURCE_URL } from '../lib/strings.js';
 
 let botUsername = null;
@@ -17,30 +26,45 @@ export default async function (msg) {
     userId: msg.from.id,
     userName: msg.from.first_name,
     message: null,
-    // Menu taps run callback actions; their pop-up toasts become short notices
+    // Keyboard taps run callback actions; their pop-up toasts become short notices
     // ("Loading…"-style progress toasts are dropped).
     answer: async (t) => {
       if (t && !t.endsWith('…')) await notice(ctx, esc(t));
     },
   };
   ctx.locale = (await getPrefs(ctx.chatId)).locale || normalizeLocale(msg.from.language_code);
+  const isPrivate = ctx.chatType === 'private';
 
   try {
-    if (msg.location) return await saveLocation(ctx, msg.location);
+    if (isPrivate) await drop(ctx.chatId, msg.message_id);
+
+    if (msg.location) {
+      // Shared from the location screen: put the main keyboard back first.
+      if (isPrivate) await sendHome(ctx);
+      return await saveLocation(ctx, msg.location);
+    }
 
     const text = msg.text?.trim();
     if (!text) return;
 
-    // Unified reply-keyboard buttons (⚙️ Settings · 🌐 Language · 🔗 Source code).
-    const button = matchButton(text);
-    if (button === 'source') {
-      await api.sendMessage({ chat_id: ctx.chatId, text: t(ctx.locale, 'source_here'),
-        reply_markup: { inline_keyboard: [[{ text: t(ctx.locale, 'source'), url: SOURCE_URL }]] } });
-      return;
-    }
-    if (button) {
-      await takePending(ctx.chatId, ctx.userId);
-      return await findCommand(button === 'settings' ? 'settings' : 'language')(ctx, []);
+    if (isPrivate) {
+      // ⬅️ Settings on the location screen.
+      if (LOCALES.some((l) => t(l, 'btn_back_settings') === text)) {
+        await sendHome(ctx);
+        return await runCallback(ctx, 'st:home');
+      }
+      const action = matchButton(text);
+      if (action) {
+        await takePending(ctx.chatId, ctx.userId);
+        if (action === 'source') {
+          return await showScreen(ctx.chatId, () => sendCard(ctx.chatId, {
+            text: t(ctx.locale, 'source_here'),
+            keyboard: [[{ text: t(ctx.locale, 'source'), url: SOURCE_URL }]],
+          }));
+        }
+        if (action === 'language') return await findCommand('language')(ctx, []);
+        return await runCallback(ctx, action);
+      }
     }
 
     if (text.startsWith('/')) {
@@ -49,7 +73,7 @@ export default async function (msg) {
       if (mention && mention.toLowerCase() !== (await username())) return; // for another bot
       const run = findCommand(name);
       if (!run) {
-        if (ctx.chatType === 'private') await notice(ctx, 'Unknown command. Send /help for the list.');
+        if (isPrivate) await notice(ctx, 'Unknown command. Send /help for the list.');
         return;
       }
       // A new command abandons any prompt this user was answering (except /cancel, which reports it).
@@ -57,19 +81,13 @@ export default async function (msg) {
       return await run(ctx, args);
     }
 
-    // A tap on a reply-keyboard menu button runs its action like an inline button press.
-    // A pending prompt wins over labels that could be typed answers ("5", "Italian");
-    // labels with emoji/symbols ("🏠 Main menu") always act as buttons.
-    const action = await menuAction(ctx, text);
-    const buttonish = action && /[^\p{L}\p{N}\s.,:'’&()/+-]/u.test(text);
-    const pending = buttonish ? null : await takePending(ctx.chatId, ctx.userId);
-    if (pending) return await runInput(ctx, pending, text);
-    if (action) {
-      await takePending(ctx.chatId, ctx.userId);
-      return await runCallback(ctx, action);
+    const pending = await takePending(ctx.chatId, ctx.userId);
+    if (pending) {
+      if (isPrivate) await closeScreen(ctx.chatId); // the answered prompt
+      return await runInput(ctx, pending, text);
     }
     if (await runFallbackText(ctx, text)) return;
-    if (ctx.chatType === 'private') await notice(ctx, 'Send /menu to see what I can do.');
+    if (isPrivate) await sendHome(ctx);
   } catch (e) {
     console.error('message failed', msg.text, e);
     await notice(ctx, '⚠️ Something went wrong. Please try again in a moment.').catch(() => {});

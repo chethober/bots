@@ -11,6 +11,8 @@ export const prefs = table('prefs', {
   quietEnd:   text('quiet_end'),
   muted:      json('muted'),                           // ['crypto', ...]
   daily:      json('daily'),                           // { weather: true, crypto: true, ... }
+  homeMsg:    integer('home_msg'),                     // private chat: message carrying the reply keyboard
+  screenMsg:  integer('screen_msg'),                   // private chat: the menu/notice shown last (clean chat)
   updatedAt:  integer('updated_at').default(sql`(unixepoch())`),
 });
 

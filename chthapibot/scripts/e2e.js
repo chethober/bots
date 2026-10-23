@@ -11,7 +11,7 @@
 //
 // Parts: 1 crypto · 2 settings/notifications/scheduler · 3 saved/legacy buttons/groups
 //        4 sports · 5 live match alerts (real NBA games) · 6 food & drinks
-//        7–11 random (tools, discover, more discover, fun, trivia/picks) · 12 daily sections · 13 reply-keyboard navigation
+//        7–11 random (tools, discover, more discover, fun, trivia/picks) · 12 daily sections · 13 keyboard and clean chat
 // Optional `range: [from, to]` runs a slice of a part's steps. Keep parts short: a run has
 // ~30 s of wall time, and cold caches make the first run of a part slower.
 import { api, db } from 'sdk';
@@ -439,50 +439,42 @@ export default async function (input) {
   }
 
   if (only === 13) {
-    // Reply-keyboard navigation in a private chat: tap labels like a user would.
+    // The shared interface in a private chat: the persistent reply keyboard opens
+    // screens, inline buttons on the current screen edit it, typed text answers
+    // prompts, and the user's messages are deleted (clean chat).
     const tap = (label) => msg(label);
+    const screen = async () => (await db.select({ id: prefs.screenMsg }).from(prefs).where(eq(prefs.chatId, CHAT)).get())?.id;
+    const press = async (data) => onCallback({ id: 'q', data, from: { id: 4242, first_name: 'Tester' }, message: { message_id: await screen(), chat: { id: CHAT, type: 'private' } } });
     await S('/start', () => msg('/start'));
+    await S('/start again replaces home', () => msg('/start'));
     await S('tap 🍽 Food & drinks', () => tap('🍽 Food & drinks'));
-    await S('tap 🍲 Recipes', () => tap('🍲 Recipes'));
-    await S('tap 🌍 By cuisine', () => tap('🌍 By cuisine'));
-    await S('tap Italian', () => tap('Italian'));
-    await S('tap ⬅️ Recipes', () => tap('⬅️ Recipes'));
-    await S('tap 🔎 Search → pasta', async () => { await tap('🔎 Search'); await msg('pasta'); });
-    await S('tap ⬅️ Food & drinks', () => tap('⬅️ Food & drinks'));
-    await S('tap ☕️ Coffee', () => tap('☕️ Coffee'));
-    await S('tap 🏠 Main menu', () => tap('🏠 Main menu'));
-    await S('tap 💰 Crypto', () => tap('💰 Crypto'));
-    await S('tap 🔔 Alerts', () => tap('🔔 Alerts'));
-    await S('tap 🏠 Main menu (global)', () => tap('🏠 Main menu'));
+    await S('press recipes (edits screen)', () => press('fd:r'));
+    await S('tap 💰 Crypto (replaces screen)', () => tap('💰 Crypto'));
+    await S('press search → prompt', () => press('cr:s'));
+    await S('answer prompt', () => msg('dogecoin'));
+    await S('prompt then cancel', async () => { await press('cr:s'); await press('x'); });
     await S('tap 🏆 Sports', () => tap('🏆 Sports'));
-    await S('tap 🏀 Basketball', () => tap('🏀 Basketball'));
-    await S('tap NBA', () => tap('NBA'));
-    await S('tap ⭐ Follow (league)', () => tap('⭐ Follow'));
-    await S('tap 📺 Scores', () => tap('📺 Scores'));
-    await S('tap 🏠 Main menu', () => tap('🏠 Main menu'));
     await S('tap 🎲 Random', () => tap('🎲 Random'));
-    await S('tap 🎲 Tools', () => tap('🎲 Tools'));
-    await S('tap 🪙 Coin flip', () => tap('🪙 Coin flip'));
-    await S('tap 🃏 Draw cards', () => tap('🃏 Draw cards'));
-    await S('tap 5', () => tap('5'));
-    await S('prompt beats label: /number then 5', async () => { await msg('/number'); await msg('5'); });
-    await S('tap 🏠 Main menu', () => tap('🏠 Main menu'));
+    await S('tap ☀️ Daily briefing', () => tap('☀️ Daily briefing'));
+    await S('tap 🔔 Notifications', () => tap('🔔 Notifications'));
     await S('tap ⚙️ Settings', () => tap('⚙️ Settings'));
-    await S('tap 🧩 Briefing sections', () => tap('🧩 Briefing sections'));
-    await S('tap ⬜️ 🤓 Fact', () => tap('⬜️ 🤓 Fact'));
-    await S('tap ⬅️ Settings', () => tap('⬅️ Settings'));
-    await S('tap 📍 Location', () => tap('📍 Location'));
-    await S('tap ⬅️ Settings (from location kb)', () => tap('⬅️ Settings'));
-    await S('tap ✖️ Hide menu', async () => { await tap('🏠 Main menu'); await tap('✖️ Hide menu'); });
-    await S('after hide, label is plain text', () => tap('💰 Crypto'));
-    await S('/menu restores', () => msg('/menu'));
-    await S('soccer leagues order', async () => { await tap('🏆 Sports'); await tap('⚽️ Soccer'); });
-    await S('food grid', async () => { await tap('🏠 Main menu'); await tap('🍽 Food & drinks'); });
-    await S('unknown text', () => msg('blah blah'));
-    await S('inline back → reply menu', () => cb('fd:r'));
+    await S('press sections, toggle fact', async () => { await press('st:dsec'); await press('st:dsec:fact'); });
+    await S('press location → location keyboard', async () => { await tap('⚙️ Settings'); await press('st:loc'); });
+    await S('tap ⬅️ Settings restores keyboard', () => tap('⬅️ Settings'));
+    await S('share a location', () => onMessage({ message_id: 2, chat: { id: CHAT, type: 'private' }, from: { id: 4242, first_name: 'Tester', is_bot: false }, location: { latitude: 52.52, longitude: 13.4 } }));
+    await S('tap 🔗 Source code', () => tap('🔗 Source code'));
+    await S('tap 🌐 Language → fa', async () => { await tap('🌐 Language'); await press('lang:fa'); });
+    await S('Persian label opens crypto', () => tap('💰 کریپتو'));
+    await S('English label still works', () => tap('🏆 Sports'));
+    await S('back to English', async () => { await tap('🌐 زبان'); await press('lang:en'); });
+    await S('old ✖️ Hide menu button', () => cb('kb:close'));
+    await S('unknown text → home', () => msg('blah blah'));
+    await S('/menu → home', () => msg('/menu'));
+    await S('/crypto command still works', () => msg('/crypto'));
     memberStatus = 'administrator';
     await S('group /crypto stays inline', () => msg('/crypto', GROUP, 'supergroup'));
     await S('group text label ignored', () => msg('🍲 Recipes', GROUP, 'supergroup'));
+    await S('group /start', () => msg('/start', GROUP, 'supergroup'));
   }
 
   await cleanup();

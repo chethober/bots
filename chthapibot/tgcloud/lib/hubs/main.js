@@ -2,7 +2,7 @@
 // the notification centre and general reminders.
 import { api } from 'sdk';
 import { getJson, safely } from '../http.js';
-import { getPrefs, savePrefs, takePending, putCache } from '../store.js';
+import { getPrefs, savePrefs, takePending } from '../store.js';
 import {
   listNotifications, describe, getNotification, setActive, deleteNotification, createNotification,
   upsertSchedule, findSchedule, rescheduleChat, CATEGORY_LABELS,
@@ -12,7 +12,10 @@ import { btn, menu, show, send, notice, ask, requireManage, pagerRow, homeRow, n
 import { esc } from '../format.js';
 import { buildDaily, SECTIONS } from '../daily.js';
 import { t, SOURCE_URL } from '../strings.js';
-import { languageKeyboard, LOCALE_NAMES, normalizeLocale, mainKeyboard } from '../i18n.js';
+import { languageKeyboard, LOCALE_NAMES, normalizeLocale } from '../i18n.js';
+import { mainKeyboard } from '../keyboard.js';
+import { showHome, showScreen, closeScreen } from '../screen.js';
+import { sendCard } from '../telegram.js';
 
 export const MENU_COMMANDS = [
   { command: 'crypto', description: '💰 Prices, watchlist, alerts, portfolio' },
@@ -24,13 +27,21 @@ export const MENU_COMMANDS = [
   { command: 'help', description: 'All commands' },
 ];
 
-// The main-menu keyboard, in the chat's language, with a source-code link.
+// The main menu's inline buttons, in the chat's language (🏠 Main menu, and groups).
 const homeKeyboard = (locale = 'en') => [
   [btn(t(locale, 'btn_crypto'), 'm:crypto'), btn(t(locale, 'btn_sports'), 'm:sports')],
   [btn(t(locale, 'btn_food'), 'm:food'), btn(t(locale, 'btn_random'), 'm:random')],
   [btn(t(locale, 'btn_daily'), 'm:daily'), btn(t(locale, 'btn_notifications'), 'n:l:*:0')],
-  [btn(t(locale, 'btn_hide'), 'kb:close')],
+  [btn(t(locale, 'btn_settings'), 'st:home')],
 ];
+
+// Private chat: the greeting with the persistent reply keyboard (clean chat's
+// home message). Also restores the keyboard after the location screen.
+export function sendHome(ctx) {
+  return showHome(ctx.chatId, () => api.sendMessage({
+    chat_id: ctx.chatId, text: t(ctx.locale, 'greeting'), reply_markup: mainKeyboard(ctx.locale),
+  }));
+}
 
 const HELP = `<b>Hubs</b> — tap through menus
 /crypto · /sports · /food · /random
@@ -63,12 +74,8 @@ const HELP = `<b>Hubs</b> — tap through menus
 const NOTIF_PAGE = 8;
 
 export const commands = {
-  async start(ctx) {
-    await api.setMyCommands({ commands: MENU_COMMANDS }).catch(() => {});
-    await api.sendMessage({ chat_id: ctx.chatId, text: t(ctx.locale, 'greeting'), reply_markup: mainKeyboard() });
-    await home(ctx);
-  },
-  menu: (ctx) => home(ctx),
+  start: (ctx) => (ctx.chatType === 'private' ? sendHome(ctx) : home(ctx)),
+  menu: (ctx) => (ctx.chatType === 'private' ? sendHome(ctx) : home(ctx)),
   language: (ctx) => menu(ctx, { text: t(ctx.locale, 'choose_language'), keyboard: languageKeyboard().inline_keyboard }),
   async daily(ctx) {
     await api.sendChatAction({ chat_id: ctx.chatId, action: 'typing' }).catch(() => {});
@@ -94,14 +101,18 @@ export const commands = {
     return applyTz(ctx, tz);
   },
 
+  // Location can only be requested from a reply keyboard, so this screen swaps
+  // the keyboard for 📍 / ⬅️ Settings; the message handler puts the main one
+  // back when either is used.
   async location(ctx) {
     if (ctx.chatType !== 'private') return notice(ctx, 'Send a 📍 location (attach → Location) to set it.');
-    await putCache(`menu:${ctx.chatId}`, { '⬅️ Settings': 'st:home', '🏠 Main menu': 'm:home' }, 90 * 86400);
-    await api.sendMessage({
-      chat_id: ctx.chatId,
-      text: 'Tap 📍 to share your location. It sets your time zone and adds weather to /daily.',
-      reply_markup: { keyboard: [[{ text: '📍 Share location', request_location: true }], [{ text: '⬅️ Settings' }, { text: '🏠 Main menu' }]], resize_keyboard: true },
-    });
+    await showScreen(ctx.chatId, () => sendCard(ctx.chatId, { text: t(ctx.locale, 'location_prompt') }, {
+      reply_markup: {
+        keyboard: [[{ text: t(ctx.locale, 'btn_share_location'), request_location: true }], [{ text: t(ctx.locale, 'btn_back_settings') }]],
+        resize_keyboard: true,
+        one_time_keyboard: true,
+      },
+    }));
   },
 
   // Back-compat: /digest 07:30 | off
@@ -120,13 +131,19 @@ export const callbacks = {
     await savePrefs(ctx.chatId, { locale });
     ctx.locale = locale;
     await ctx.answer(t(locale, 'language_set', { name: LOCALE_NAMES[locale] ?? locale }));
-    return home(ctx);
+    // A private chat gets its keyboard relabelled; groups see the menu again.
+    return ctx.chatType === 'private' ? sendHome(ctx) : home(ctx);
   },
-  // ✖️ Hide menu: remove the reply keyboard; /menu brings it back.
+  // ✖️ Hide menu on messages from before the shared interface: bring the keyboard back.
   async kb(ctx) {
     await ctx.answer();
-    await putCache(`menu:${ctx.chatId}`, {}, 60);
-    return api.sendMessage({ chat_id: ctx.chatId, text: 'Menu hidden. Send /menu to bring it back.', reply_markup: { remove_keyboard: true } });
+    if (ctx.chatType === 'private') return sendHome(ctx);
+  },
+  // ✖️ Cancel on a prompt.
+  async x(ctx) {
+    const had = await takePending(ctx.chatId, ctx.userId);
+    await ctx.answer(had ? t(ctx.locale, 'cancelled') : undefined);
+    if (ctx.chatType === 'private') return closeScreen(ctx.chatId);
   },
   async dl(ctx) {
     await ctx.answer('Refreshing…');
