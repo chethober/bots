@@ -20,6 +20,21 @@ deploy instructions. Clone the repo, `cd` into the one you want, and follow its 
 | [`chtht2sbot`](chtht2sbot) | t2s | Watches a forum's topics and files every posted track into a per-topic Spotify playlist | tgcloud |
 | [`chsbrbot`](chsbrbot) | CVE notifier | Fetches newly published CVEs and posts them to Telegram | Cloudflare Worker |
 
+## How they work
+
+The bots share one interface style:
+
+- **Buttons, not commands.** Everything a user does is a button: a reply keyboard under the text
+  field and inline buttons under each screen. Slash commands are only `/start` and the admin
+  commands (shown in admins' own command menus).
+- **Five languages.** English, Persian, Arabic, Russian and Spanish, picked from the user's
+  Telegram language or the 🌐 Language button, including the bot descriptions.
+- **Clean chat.** Button taps are deleted and each screen replaces the previous one, so the chat
+  keeps only real content (messages, games, alerts).
+
+The anonymous-link, secretary, games and t2s bots follow it fully; the multi-utility and CVE bots
+are being moved over.
+
 ## Setup, in general
 
 Every bot keeps its secrets out of git. Before deploying one, copy its example config
@@ -35,6 +50,9 @@ npx tgcloud login     # link the project to your bot
 npx tgcloud push      # deploy the code
 npx tgcloud migrate   # apply schema changes to the database
 ```
+
+Some bots also have a one-off setup endpoint or script that applies the bot profile (descriptions,
+command menus) — see each README.
 
 See [`<bot>/AGENTS.md`](chthapibot/AGENTS.md) in any tgcloud bot for the platform's
 module rules and SDK reference.
