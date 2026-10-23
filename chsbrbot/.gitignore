@@ -1,19 +1,5 @@
-# Environment variables and secrets
-.env
-.env.local
-
-# Dependencies
+.tgcloud/
 node_modules/
 
-# Cloudflare Wrangler build output
-.wrangler/
-seed*.sql
-
-# Local SQLite databases
-data/*.db
-data/*.db-shm
-data/*.db-wal
-
-
-# Wrangler local secrets
-.dev.vars
+# Deployment secrets
+tgcloud/lib/secrets.js

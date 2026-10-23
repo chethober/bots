@@ -1,22 +1,13 @@
 {
-  "name": "cve-telegram-notifier",
-  "version": "1.0.0",
-  "description": "Cloudflare Worker to fetch new CVEs and send notifications to Telegram",
-  "main": "src/index.js",
-  "type": "module",
-  "scripts": {
-    "dev": "node dev-server.js",
-    "dev:worker": "wrangler dev",
-    "deploy": "env -u HTTPS_PROXY -u https_proxy -u HTTP_PROXY -u http_proxy -u ALL_PROXY -u all_proxy wrangler deploy",
-    "bot:setup": "node scripts/setup-telegram-bot.js",
-    "fetch-local": "node fetch-local.js",
-    "check-trending": "node check-trending.js",
-    "d1:create": "wrangler d1 create cve-db",
-    "d1:init:local": "wrangler d1 execute cve-db --local --file=./schema.sql",
-    "d1:init:remote": "wrangler d1 execute cve-db --remote --file=./schema.sql",
-    "d1:import": "node scripts/import-to-d1.js"
-  },
+  "name": "chsbrbot",
+  "private": true,
   "devDependencies": {
-    "wrangler": "^3.50.0"
+    "@tgcloud/cli": "^0.2.0"
+  },
+  "scripts": {
+    "deploy": "tgcloud push",
+    "status": "tgcloud status",
+    "run": "tgcloud run",
+    "tick": "tgcloud run endpoints/tick '{}'"
   }
 }
