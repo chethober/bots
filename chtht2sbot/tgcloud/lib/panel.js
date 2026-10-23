@@ -10,7 +10,7 @@ import { t } from './strings.js';
 import { localeFor, mainKeyboard } from './i18n.js';
 import { showHome } from './screen.js';
 
-const ADMIN_COMMANDS = [
+export const ADMIN_COMMANDS = [
   { command: 'status', description: 'Playlists and track counts' },
   { command: 'playlist', description: 'Link a topic to a playlist' },
   { command: 'dedupe', description: 'Remove duplicate tracks' },
