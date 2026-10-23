@@ -86,6 +86,35 @@ const strings = {
   settings_title: {
     en: '⚙️ Settings', fa: '⚙️ تنظیمات', ar: '⚙️ الإعدادات', ru: '⚙️ Настройки', es: '⚙️ Ajustes',
   },
+  settings_receiving: {
+    en: 'Receiving messages: ▶️ on', fa: 'دریافت پیام: ▶️ روشن', ar: 'استقبال الرسائل: ▶️ مُفعّل',
+    ru: 'Приём сообщений: ▶️ вкл', es: 'Recibir mensajes: ▶️ activado',
+  },
+  settings_paused: {
+    en: 'Receiving messages: ⏸ paused', fa: 'دریافت پیام: ⏸ متوقف', ar: 'استقبال الرسائل: ⏸ متوقف',
+    ru: 'Приём сообщений: ⏸ на паузе', es: 'Recibir mensajes: ⏸ en pausa',
+  },
+  st_pause: {
+    en: '⏸ Pause receiving', fa: '⏸ توقف دریافت', ar: '⏸ إيقاف الاستقبال', ru: '⏸ Приостановить', es: '⏸ Pausar',
+  },
+  st_resume: {
+    en: '▶️ Resume receiving', fa: '▶️ ادامه‌ی دریافت', ar: '▶️ استئناف الاستقبال', ru: '▶️ Возобновить', es: '▶️ Reanudar',
+  },
+  st_text: {
+    en: '✏️ Invitation text', fa: '✏️ متن دعوت', ar: '✏️ نص الدعوة', ru: '✏️ Текст приглашения', es: '✏️ Texto de invitación',
+  },
+  st_types: {
+    en: '📨 Message types', fa: '📨 نوع پیام‌ها', ar: '📨 أنواع الرسائل', ru: '📨 Типы сообщений', es: '📨 Tipos de mensaje',
+  },
+  st_blocked: {
+    en: '🚫 Blocked senders', fa: '🚫 مسدودها', ar: '🚫 المحظورون', ru: '🚫 Заблокированные', es: '🚫 Bloqueados',
+  },
+  st_newlink: {
+    en: '🔄 New link', fa: '🔄 لینک جدید', ar: '🔄 رابط جديد', ru: '🔄 Новая ссылка', es: '🔄 Enlace nuevo',
+  },
+  st_delete: {
+    en: '🗑 Delete my data', fa: '🗑 پاک کردن اطلاعاتم', ar: '🗑 حذف بياناتي', ru: '🗑 Удалить мои данные', es: '🗑 Borrar mis datos',
+  },
   source_here: {
     en: '📦 Source code:', fa: '📦 کد منبع:', ar: '📦 الكود المصدري:', ru: '📦 Исходный код:', es: '📦 Código fuente:',
   },

@@ -9,7 +9,8 @@ export const ADMIN_IDS = [6330862227];
 // secrets.example.js in the project root).
 export { SPOTIFY_CLIENT_ID, SPOTIFY_CLIENT_SECRET } from './secrets.js';
 
-// Delete a post when every track in it is already in the topic's playlist.
+// Default for deleting a post when every track in it is already in the topic's
+// playlist. Admins can flip it in ⚙️ Settings; that choice is stored in the DB.
 export const DELETE_DUPLICATES = true;
 
 // Default reaction put on a post once its tracks were added. Admins can turn it

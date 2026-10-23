@@ -5,21 +5,18 @@
 import { api, db, BotApiError } from 'sdk';
 import { and, eq, inArray } from 'sdk/db';
 import { topics, tracks } from '../schema.js';
-import {
-  FORUM_ID, ADMIN_IDS, DELETE_DUPLICATES, ADDED_REACTION, PUBLIC_PLAYLISTS, playlistDescription, SOURCE_URL,
-} from '../lib/config.js';
-import { getSetting, saveSetting } from '../lib/settings.js';
+import { FORUM_ID, PUBLIC_PLAYLISTS, playlistDescription, SOURCE_URL } from '../lib/config.js';
+import { saveSetting } from '../lib/settings.js';
+import { getReaction, getDeleteDuplicates, isAdminId, settingsView } from '../lib/panel.js';
 import { localeFor, languageKeyboard, mainKeyboard, matchButton } from '../lib/i18n.js';
 import { t } from '../lib/strings.js';
 
-// ⚙️ Settings screen: language, the reaction toggle, and the source link.
+// ⚙️ Settings screen (forum admins only): reaction, repost deletion, Spotify status.
 async function settingsScreen(message) {
   const locale = await localeFor(message.from);
-  const { enabled, emoji } = await getReaction();
-  const rows = languageKeyboard().inline_keyboard.slice();
-  rows.push([{ text: enabled ? t(locale, 'reaction_on', { emoji }) : t(locale, 'reaction_off'), callback_data: 'react:toggle' }]);
-  rows.push([{ text: t(locale, 'source'), url: SOURCE_URL }]);
-  return reply(message, t(locale, 'settings_title'), { reply_markup: { inline_keyboard: rows } });
+  if (!(await isForumAdmin(message))) return reply(message, t(locale, 'admins_only'));
+  const { text, reply_markup } = await settingsView(locale);
+  return reply(message, text, { reply_markup });
 }
 
 async function sendHelp(message) {
@@ -30,6 +27,7 @@ async function sendHelp(message) {
     { command: 'playlist', description: 'Link a topic to a playlist' },
     { command: 'dedupe', description: 'Remove duplicate tracks' },
     { command: 'spotify', description: 'Connect Spotify' },
+    { command: 'settings', description: 'Reaction and repost settings' },
   ] }).catch(() => {});
   return reply(message, `${t(locale, 'help')}\n\n${connected ? t(locale, 'spotify_connected') : t(locale, 'spotify_not')}`,
     { reply_markup: mainKeyboard() });
@@ -47,14 +45,7 @@ function parseCommand(text) {
 
 async function isForumAdmin(message) {
   if (message.sender_chat?.id === FORUM_ID) return true; // anonymous admin
-  if (!message.from) return false;
-  if (ADMIN_IDS.includes(message.from.id)) return true;
-  try {
-    const member = await api.getChatMember({ chat_id: FORUM_ID, user_id: message.from.id });
-    return member.status === 'creator' || member.status === 'administrator';
-  } catch {
-    return false;
-  }
+  return message.from ? isAdminId(message.from.id) : false;
 }
 
 function reply(message, text, extra = {}) {
@@ -66,12 +57,6 @@ function reply(message, text, extra = {}) {
     link_preview_options: { is_disabled: true },
     ...extra,
   });
-}
-
-// The reaction is stored as `reaction_emoji` + `reaction_enabled` ('1'/'0').
-async function getReaction() {
-  const enabled = (await getSetting('reaction_enabled')) !== '0';
-  return { enabled, emoji: (await getSetting('reaction_emoji')) || ADDED_REACTION };
 }
 
 async function handleReactionCommand(message, args) {
@@ -174,7 +159,7 @@ export async function handleMusic(message, { backfill = false } = {}) {
   }
 
   // Everything in this post is already in the playlist → it's a duplicate.
-  if (backfill || !DELETE_DUPLICATES) return 'duplicate';
+  if (backfill || !(await getDeleteDuplicates())) return 'duplicate';
   const original = await db.select().from(tracks)
     .where(and(eq(tracks.threadId, threadId), eq(tracks.trackId, ids[0]))).get();
   try {
@@ -246,7 +231,7 @@ async function handleAdminCommand(message, { cmd, args }) {
 async function handlePrivate(message, command) {
   // Unified reply-keyboard buttons.
   const button = matchButton(message.text);
-  if (button === 'settings') return settingsScreen(message);
+  if (button === 'settings' || command?.cmd === 'settings') return settingsScreen(message);
   if (button === 'language' || command?.cmd === 'language' || command?.cmd === 'lang') {
     const locale = await localeFor(message.from);
     return reply(message, t(locale, 'choose_language'), { reply_markup: languageKeyboard() });

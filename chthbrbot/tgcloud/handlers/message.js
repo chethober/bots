@@ -8,7 +8,7 @@ import { ban, bansView, dashboardView, isAdmin, recipientCount, sendOpenReports,
 import { acceptedKinds, typesKeyboard } from '../lib/content.js';
 import { deliverAnonymous, deliverReply, findAlbumStart, findOwnerCopy, findReplyCopy } from '../lib/delivery.js';
 import { isFiltered } from '../lib/filter.js';
-import { blockedView, confirmKeyboard, sendQr } from '../lib/manage.js';
+import { blockedView, confirmKeyboard, sendQr, settingsView } from '../lib/manage.js';
 import { T, invitation } from '../lib/texts.js';
 import {
   getOrCreateUser, getUser, getUserByCode, getState, setState, setPaused, setPrompt,
@@ -29,10 +29,9 @@ async function handleButton(msg, button) {
   if (button === 'source') {
     return reply(msg, t(locale, 'source_here'), { reply_markup: { inline_keyboard: [[{ text: t(locale, 'source'), url: SOURCE_URL }]] } });
   }
-  // ⚙️ Settings — minimal screen: language + source.
-  const rows = languageKeyboard().inline_keyboard.slice();
-  rows.push([{ text: t(locale, 'source'), url: SOURCE_URL }]);
-  return reply(msg, t(locale, 'settings_title'), { reply_markup: { inline_keyboard: rows } });
+  // ⚙️ Settings — the owner's link settings (see settingsView).
+  const { text, reply_markup } = settingsView(await getOrCreateUser(msg.from), locale);
+  return reply(msg, text, { reply_markup });
 }
 
 const reply = (msg, text, extra = {}) => safeApi('sendMessage', { chat_id: msg.chat.id, text, ...extra });
@@ -178,7 +177,7 @@ async function onBroadcastMessage(msg) {
   });
 }
 
-async function command(msg, { cmd, arg }) {
+export async function command(msg, { cmd, arg }) {
   if (ADMIN_COMMANDS.includes(cmd) && isAdmin(msg.from.id)) return adminCommand(msg, { cmd, arg });
   switch (cmd) {
     case 'start':   return start(msg, arg);
@@ -193,6 +192,7 @@ async function command(msg, { cmd, arg }) {
     case 'newlink': return confirmCommand(msg, T.newlinkConfirm, 'n', T.btnNewlinkYes);
     case 'delete':  return confirmCommand(msg, T.deleteConfirm, 'd', T.btnDeleteYes);
     case 'privacy': return reply(msg, T.privacy);
+    case 'settings': return handleButton(msg, 'settings');
     case 'language':
     case 'lang': {
       const user = await getUser(msg.from.id);

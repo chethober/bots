@@ -36,11 +36,12 @@ export function languageKeyboard() {
 // --- Unified interface: the persistent reply keyboard shown on /start -------
 // Labels are kept in English on purpose (reply-keyboard taps are matched by
 // their text, and a single English label keeps matching simple).
-export const BTN = { settings: '⚙️ Settings', language: '🌐 Language', source: '🔗 Source code' };
+// No ⚙️ Settings button: players have no settings beyond the language.
+export const BTN = { language: '🌐 Language', source: '🔗 Source code' };
 
 export function mainKeyboard() {
   return {
-    keyboard: [[{ text: BTN.settings }, { text: BTN.language }], [{ text: BTN.source }]],
+    keyboard: [[{ text: BTN.language }, { text: BTN.source }]],
     resize_keyboard: true,
     is_persistent: true,
   };
@@ -49,7 +50,6 @@ export function mainKeyboard() {
 // Map a tapped reply-keyboard label to an action, or null for anything else.
 export function matchButton(text) {
   const t = (text || '').trim();
-  if (t === BTN.settings) return 'settings';
   if (t === BTN.language) return 'language';
   if (t === BTN.source) return 'source';
   return null;

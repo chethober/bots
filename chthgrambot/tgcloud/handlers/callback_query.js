@@ -1,6 +1,6 @@
-// Inline buttons: /status toggles, setup wizard, and relayed-message actions.
+// Inline buttons: /status toggles, ⚙️ Settings (st:<key>), setup wizard, and relayed-message actions.
 import { api } from 'sdk';
-import { patchSettings, loadSettingsRow, sanitize, resolveCredentials } from '../lib/settings.js';
+import { getSettings, patchSettings, loadSettingsRow, sanitize, resolveCredentials } from '../lib/settings.js';
 import { normalizeLocale, LOCALES, LOCALE_NAMES } from '../lib/i18n.js';
 import { t } from '../lib/strings.js';
 import { getRelay, getConnection, getChat } from '../lib/store.js';
@@ -8,7 +8,7 @@ import { promptAnswer, markRelay } from '../lib/relay.js';
 import { aiReply } from '../lib/secretary.js';
 import { describeAiError } from '../lib/ai.js';
 import { isAllowed } from '../lib/config.js';
-import { statusKeyboard } from '../lib/ui.js';
+import { statusKeyboard, settingsKeyboard, nextSetting } from '../lib/ui.js';
 import { startSetup, cancelSetup } from '../lib/setup.js';
 
 export default async function (q) {
@@ -33,6 +33,20 @@ export default async function (q) {
       await api.editMessageText({ chat_id: q.message.chat.id, message_id: q.message.message_id, text }).catch(() => {});
     } else {
       await api.sendMessage({ chat_id: q.from.id, text }).catch(() => {});
+    }
+    return;
+  }
+
+  if (q.data?.startsWith('st:')) {
+    const patch = nextSetting(await getSettings(q.from.id), q.data.slice(3));
+    if (!patch) return answer();
+    const s = await patchSettings(q.from.id, patch);
+    await answer();
+    if (q.message) {
+      const hasCreds = !!resolveCredentials(await loadSettingsRow(q.from.id), q.from.id);
+      await api.editMessageReplyMarkup({
+        chat_id: q.message.chat.id, message_id: q.message.message_id, reply_markup: settingsKeyboard(s, hasCreds),
+      }).catch(() => {});
     }
     return;
   }

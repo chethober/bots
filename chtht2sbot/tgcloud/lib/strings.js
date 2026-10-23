@@ -110,6 +110,16 @@ const strings = {
     ar: '🔕 التفاعل: متوقف — اضغط للتفعيل', ru: '🔕 Реакция: выкл — нажми, чтобы включить',
     es: '🔕 Reacción: desactivada — toca para activar',
   },
+  dedupe_on: {
+    en: '🔁 Delete reposts: on — tap to turn off', fa: '🔁 حذف پست تکراری: روشن — برای خاموش کردن بزن',
+    ar: '🔁 حذف المنشورات المكررة: مُفعّل — اضغط للإيقاف', ru: '🔁 Удалять повторы: вкл — нажми, чтобы выключить',
+    es: '🔁 Borrar repetidos: activado — toca para desactivar',
+  },
+  dedupe_off: {
+    en: '🔁 Delete reposts: off — tap to turn on', fa: '🔁 حذف پست تکراری: خاموش — برای روشن کردن بزن',
+    ar: '🔁 حذف المنشورات المكررة: متوقف — اضغط للتفعيل', ru: '🔁 Удалять повторы: выкл — нажми, чтобы включить',
+    es: '🔁 Borrar repetidos: desactivado — toca para activar',
+  },
   admins_only: {
     en: 'Only forum admins can use this command.',
     fa: 'فقط مدیران گروه می‌توانند از این دستور استفاده کنند.',

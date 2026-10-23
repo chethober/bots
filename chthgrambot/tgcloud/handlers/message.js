@@ -7,7 +7,7 @@ import { getSettings, patchSettings, loadSettingsRow, resolveCredentials, MOODS,
 import { getUserConnection, countRepliesToday, addSamples, countSamples, findRelayByOwnerMessage } from '../lib/store.js';
 import { previewReply } from '../lib/secretary.js';
 import { describeAiError } from '../lib/ai.js';
-import { panelKeyboard, statusKeyboard, setupButton } from '../lib/ui.js';
+import { panelKeyboard, statusKeyboard, setupButton, settingsKeyboard } from '../lib/ui.js';
 import { startSetup, cancelSetup, handleSetupInput } from '../lib/setup.js';
 import { deliverAnswer } from '../lib/relay.js';
 
@@ -24,6 +24,12 @@ export default async function (message) {
     return s.uiLocale && s.uiLocale !== 'auto' ? s.uiLocale : normalizeLocale(message.from.language_code);
   };
 
+  // ⚙️ Settings: one-tap everyday settings, plus the panel for everything else.
+  const sendSettings = async () => {
+    const [locale, s, row] = await Promise.all([localeOf(), getSettings(userId), loadSettingsRow(userId)]);
+    return send(t(locale, 'settings_title'), { reply_markup: settingsKeyboard(s, !!resolveCredentials(row, userId)) });
+  };
+
   const text = message.text ?? '';
   const cmd = text.startsWith('/') ? text.split(/[\s@]/)[0].toLowerCase() : null;
 
@@ -35,9 +41,7 @@ export default async function (message) {
     if (button === 'source') {
       return send(t(locale, 'source_here'), { reply_markup: { inline_keyboard: [[{ text: t(locale, 'source'), url: SOURCE_URL }]] } });
     }
-    // ⚙️ Settings → the management panel (Mini App), or the language picker if no panel.
-    if (!PANEL_URL) return send(t(locale, 'choose_language'), { reply_markup: languageKeyboard() });
-    return send(t(locale, 'settings_title'), { reply_markup: panelKeyboard() });
+    return sendSettings();
   }
 
   // A reply to a relayed contact message is the answer to send back to them.
@@ -81,6 +85,9 @@ export default async function (message) {
 
     case '/setup':
       return startSetup(chat_id, userId);
+
+    case '/settings':
+      return sendSettings();
 
     case '/learn': {
       const [n, s] = await Promise.all([countSamples(userId), getSettings(userId)]);
@@ -141,6 +148,7 @@ Then tap "Analyze my style" in the panel to turn the samples into a style guide 
 async function setupChat(chat_id) {
   await api.setMyCommands({
     commands: [
+      { command: 'settings', description: 'Quick settings' },
       { command: 'panel', description: 'Open the management panel' },
       { command: 'setup', description: 'Connect Cloudflare AI step by step' },
       { command: 'learn', description: 'Teach me to write like you' },

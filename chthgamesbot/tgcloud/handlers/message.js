@@ -23,15 +23,10 @@ const GAME_COMMANDS = [
   { command: 'hub', description: 'Open the game hub' },
 ];
 
-// A tapped reply-keyboard button (⚙️ Settings · 🌐 Language · 🔗 Source code).
+// A tapped reply-keyboard button (🌐 Language · 🔗 Source code).
 function handleButton(chatId, button, locale) {
   if (button === 'language') return sendHtml(chatId, t(locale, 'choose_language'), languageKeyboard());
-  if (button === 'source') {
-    return sendHtml(chatId, t(locale, 'source_here'), { inline_keyboard: [[{ text: t(locale, 'source'), url: SOURCE_URL }]] });
-  }
-  const rows = languageKeyboard().inline_keyboard.slice();
-  rows.push([{ text: t(locale, 'source'), url: SOURCE_URL }]);
-  return sendHtml(chatId, t(locale, 'settings_title'), { inline_keyboard: rows });
+  return sendHtml(chatId, t(locale, 'source_here'), { inline_keyboard: [[{ text: t(locale, 'source'), url: SOURCE_URL }]] });
 }
 
 // Never throws (see handlers/callback_query.js) — errors are logged.

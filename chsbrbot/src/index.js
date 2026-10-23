@@ -50,7 +50,6 @@ const I18N = {
   },
   source: { en: '🔗 Source code', fa: '🔗 کد منبع', ar: '🔗 الكود المصدري', ru: '🔗 Исходный код', es: '🔗 Código fuente' },
   source_here: { en: '📦 Source code:', fa: '📦 کد منبع:', ar: '📦 الكود المصدري:', ru: '📦 Исходный код:', es: '📦 Código fuente:' },
-  settings_title: { en: '⚙️ Settings', fa: '⚙️ تنظیمات', ar: '⚙️ الإعدادات', ru: '⚙️ Настройки', es: '⚙️ Ajustes' },
 };
 
 export function tr(locale, key, vars) {
@@ -385,6 +384,34 @@ export function getMainMenuKeyboard() {
   };
 }
 
+// ⚙️ Settings screen: alert subscription on/off (+ the admin dashboard for admins).
+// Shared by the Settings button, /settings, "📊 My Status" and the sub:toggle button.
+export function settingsView(isActive, minCvss, isAdmin = false) {
+  const text = [
+    `⚙️ <b>Settings</b>`,
+    '',
+    `• <b>Alerts:</b> ${isActive ? '🟢 Active (Subscribed)' : '🔴 Inactive (Unsubscribed)'}`,
+    `• <b>Alert Level:</b> High & Critical Vulnerabilities (&ge; CVSS <code>${minCvss}</code>) + KEV`,
+    '',
+    isActive
+      ? `You are receiving automated notifications for newly disclosed High & Critical vulnerabilities.`
+      : `Tap below to enable automated notifications.`
+  ].join('\n');
+  const rows = [[{
+    text: isActive ? '🔕 Unsubscribe from Alerts' : '🔔 Subscribe to Alerts',
+    callback_data: 'sub:toggle'
+  }]];
+  if (isAdmin) rows.push([{ text: '👑 Admin Dashboard', callback_data: 'admin:panel' }]);
+  return { text, reply_markup: { inline_keyboard: rows } };
+}
+
+async function isSubscribed(chatId, db) {
+  if (!db) return false;
+  await ensureD1Tables(db);
+  const sub = await db.prepare("SELECT is_active FROM subscribers WHERE chat_id = ?").bind(String(chatId)).first();
+  return sub ? sub.is_active === 1 : false;
+}
+
 // Inline Keyboard for quick threat categories
 export function getQuickCategoriesKeyboard() {
   return {
@@ -494,6 +521,7 @@ export async function syncBotProfileAndCommands(env) {
         { command: 'latest', description: 'Latest CVEs' },
         { command: 'trending', description: 'Trending exploited CVEs' },
         { command: 'categories', description: 'Browse by category' },
+        { command: 'settings', description: 'Alert subscription' },
         { command: 'help', description: 'How the bot works' },
         { command: 'language', description: 'Change language' },
       ],
@@ -2738,36 +2766,8 @@ export async function handleTelegramWebhook(request, env, ctx) {
           text: isNowActive ? '🔔 Subscribed to alerts!' : '🔕 Unsubscribed from alerts.'
         });
 
-        const minCvss = env?.MIN_CVSS_SCORE || '7.6';
-        const updatedStatus = [
-          `ℹ️ <b>Subscription Status</b>`,
-          '',
-          `• <b>Status:</b> ${isNowActive ? '🟢 Active (Subscribed)' : '🔴 Inactive (Unsubscribed)'}`,
-          `• <b>Alert Level:</b> High & Critical Vulnerabilities (&ge; CVSS <code>${minCvss}</code>)`,
-          '',
-          isNowActive
-            ? `You are receiving automated notifications for newly disclosed High & Critical vulnerabilities.`
-            : `You are unsubscribed. Tap below anytime to re-activate alerts.`
-        ].join('\n');
-
-        const toggleMarkup = {
-          inline_keyboard: [
-            [
-              {
-                text: isNowActive ? '🔕 Unsubscribe from Alerts' : '🔔 Subscribe to Alerts',
-                callback_data: 'sub:toggle'
-              }
-            ],
-            [
-              { text: '🔍 Search CVEs', callback_data: 'menu:search' },
-              { text: '⚡ Categories', callback_data: 'menu:categories' }
-            ]
-          ]
-        };
-
-        await editTelegramMessage(chatId, messageId, updatedStatus, env, {
-          reply_markup: toggleMarkup
-        });
+        const view = settingsView(isNowActive, env?.MIN_CVSS_SCORE || '7.6', isAdmin);
+        await editTelegramMessage(chatId, messageId, view.text, env, { reply_markup: view.reply_markup });
         return new Response(JSON.stringify({ ok: true }), { status: 200 });
       }
 
@@ -3119,12 +3119,10 @@ export async function handleTelegramWebhook(request, env, ctx) {
       return new Response(JSON.stringify({ ok: true }), { status: 200 });
     }
 
-    // 3.3b ⚙️ Settings button — minimal screen (language + source)
-    if (lowerText === '⚙️ settings' || command === '/settings') {
-      const locale = await getUserLocale(chatId, env, message.from?.language_code);
-      const rows = languageInlineKeyboard().inline_keyboard.slice();
-      rows.push([{ text: tr(locale, 'source'), url: SOURCE_URL }]);
-      await sendTelegramMessage(chatId, tr(locale, 'settings_title'), env, { reply_markup: { inline_keyboard: rows } });
+    // 3.3b ⚙️ Settings button / /settings / "📊 My Status" — alert subscription (+ admin dashboard)
+    if (lowerText === '⚙️ settings' || command === '/settings' || lowerText === '📊 my status') {
+      const view = settingsView(await isSubscribed(chatId, db), env?.MIN_CVSS_SCORE || '7.6', isAdmin);
+      await sendTelegramMessage(chatId, view.text, env, { reply_markup: view.reply_markup });
       return new Response(JSON.stringify({ ok: true }), { status: 200 });
     }
 
@@ -3164,46 +3162,6 @@ export async function handleTelegramWebhook(request, env, ctx) {
       await sendTelegramMessage(chatId, text, env, {
         reply_markup: getQuickCategoriesKeyboard()
       });
-      return new Response(JSON.stringify({ ok: true }), { status: 200 });
-    }
-
-    // 3.10 "📊 My Status"
-    if (lowerText === '📊 my status') {
-      let isSubscribed = false;
-      if (db) {
-        await ensureD1Tables(db);
-        const sub = await db.prepare("SELECT is_active FROM subscribers WHERE chat_id = ?").bind(String(chatId)).first();
-        isSubscribed = sub ? sub.is_active === 1 : false;
-      }
-      const minCvss = env?.MIN_CVSS_SCORE || '7.6';
-      const statusMsg = [
-        `ℹ️ <b>Subscription Status</b>`,
-        '',
-        `• <b>Status:</b> ${isSubscribed ? '🟢 Active (Subscribed)' : '🔴 Inactive (Unsubscribed)'}`,
-        `• <b>Alert Level:</b> High & Critical Vulnerabilities (&ge; CVSS <code>${minCvss}</code>)`,
-        '',
-        isSubscribed
-          ? `You are receiving automated notifications for newly disclosed High & Critical vulnerabilities.`
-          : `Tap below to enable automated notifications.`,
-        isAdmin ? `\n👑 <b>Admin Note:</b> Tap Admin Panel for system metrics.` : ''
-      ].filter(Boolean).join('\n');
-
-      const toggleMarkup = {
-        inline_keyboard: [
-          [
-            {
-              text: isSubscribed ? '🔕 Unsubscribe from Alerts' : '🔔 Subscribe to Alerts',
-              callback_data: 'sub:toggle'
-            }
-          ],
-          [
-            { text: '🔍 Search CVEs', callback_data: 'menu:search' },
-            { text: '⚡ Categories', callback_data: 'menu:categories' }
-          ]
-        ]
-      };
-
-      await sendTelegramMessage(chatId, statusMsg, env, { reply_markup: toggleMarkup });
       return new Response(JSON.stringify({ ok: true }), { status: 200 });
     }
 

@@ -59,6 +59,7 @@ export const BOT_PROFILE = {
     { command: 'blocked', description: 'Blocked senders and unblocking' },
     { command: 'stats',   description: 'Your message stats' },
     { command: 'newlink', description: 'New link (the old one stops working)' },
+    { command: 'settings', description: 'Pause, invitation text, message types…' },
     { command: 'privacy', description: 'What data is stored' },
     { command: 'delete',  description: 'Delete your data' },
     { command: 'language', description: 'Change language' },

@@ -2,7 +2,7 @@
 //   owner, under a received message: Reply / Block / Report  r:/b:/p:<messageId>
 //   sender, under "delivered":       Unsend u:<messageId>, Send another s:<code>
 //   /types toggles k:<kind>, /text reset x:reset, /blocked unblock ub:<rowid>,
-//   /newlink n:yes|no, /delete d:yes|no, QR code q:me
+//   /newlink n:yes|no, /delete d:yes|no, QR code q:me, ⚙️ Settings st:<op>
 //   admin, under a report:           Ban / Dismiss / Unban  ab:/ad:/au:<reportId>
 //   admin, /admin dashboard am:refresh|reports|bans, /bans unban bu:<createdAt>.<rank>,
 //   /broadcast send bc:<adminMsgId>|no
@@ -16,14 +16,15 @@ import {
 } from '../lib/admin.js';
 import { acceptedKinds, toggleKind, typesKeyboard } from '../lib/content.js';
 import { unsend } from '../lib/delivery.js';
-import { blockedView, sendQr, unblock } from '../lib/manage.js';
+import { blockedView, sendQr, settingsView, unblock } from '../lib/manage.js';
 import { T } from '../lib/texts.js';
 import {
-  deleteUserData, getOrCreateUser, getUser, getUserByCode, resetCode, setAccepts, setPrompt, setState, setUserLocale,
+  deleteUserData, getOrCreateUser, getUser, getUserByCode, resetCode, setAccepts, setPaused, setPrompt, setState, setUserLocale,
 } from '../lib/users.js';
 import { now, personalLink, safeApi } from '../lib/util.js';
 import { normalizeLocale, LOCALE_NAMES, LOCALES } from '../lib/i18n.js';
 import { t } from '../lib/strings.js';
+import { command } from './message.js';
 
 // /language — save the chosen locale and confirm in that language.
 async function onLanguage(q, value) {
@@ -169,6 +170,24 @@ async function onDelete(q, answer) {
   return {};
 }
 
+// ⚙️ Settings: st:pause|resume toggle in place; the rest run their command.
+const SETTINGS_OPS = ['text', 'types', 'qr', 'blocked', 'newlink', 'delete'];
+async function onSettings(q, op) {
+  const user = await getOrCreateUser(q.from);
+  if (op === 'pause' || op === 'resume') {
+    const paused = op === 'pause';
+    await setPaused(user.id, paused);
+    const locale = user.locale || normalizeLocale(q.from.language_code);
+    const { text, reply_markup } = settingsView({ ...user, paused }, locale);
+    await editButtonMessage(q, text, reply_markup);
+    return { text: t(locale, paused ? 'settings_paused' : 'settings_receiving') };
+  }
+  if (!SETTINGS_OPS.includes(op)) return {};
+  await setState(user.id, 'idle'); // like any command, abandons a pending send/reply/edit
+  await command({ chat: { id: q.from.id }, from: q.from }, { cmd: op, arg: '' });
+  return {};
+}
+
 // q:me
 async function onQr(q) {
   await sendQr(await getOrCreateUser(q.from));
@@ -263,6 +282,7 @@ export default async function (q, ctx) {
     else if (action === 'bc') answer = await onBroadcastButton(q, value);
     else if (action === 'bu') answer = await onBansUnban(q, value);
     else if (action === 'lang') answer = await onLanguage(q, value);
+    else if (action === 'st') answer = await onSettings(q, value);
     else if (id === null) answer = {};
     else if (['r', 'b', 'p'].includes(action)) answer = await onMessageButton(q, action, id);
     else if (action === 'u') answer = await onUnsend(q, id);

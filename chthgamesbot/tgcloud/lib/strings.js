@@ -30,9 +30,6 @@ const strings = {
     en: '🌐 Choose your language:', fa: '🌐 زبان خود را انتخاب کنید:', ar: '🌐 اختر لغتك:',
     ru: '🌐 Выберите язык:', es: '🌐 Elige tu idioma:',
   },
-  settings_title: {
-    en: '⚙️ Settings', fa: '⚙️ تنظیمات', ar: '⚙️ الإعدادات', ru: '⚙️ Настройки', es: '⚙️ Ajustes',
-  },
   source_here: {
     en: '📦 Source code:', fa: '📦 کد منبع:', ar: '📦 الكود المصدري:', ru: '📦 Исходный код:', es: '📦 Código fuente:',
   },
