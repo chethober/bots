@@ -1,27 +1,27 @@
 // Admin (ADMIN_IDS) tools shared by commands and buttons: reports, bans, the
 // bot-wide dashboard and broadcasts. Everything here checks isAdmin() itself or is
-// only reached after the caller did.
+// only reached after the caller did. `L` is the admin's texts table.
 
 import { api, db, BotApiError } from 'sdk';
 import { and, desc, eq, ne, sql } from 'sdk/db';
 import { messages, reports, bans, broadcasts } from '../schema.js';
 import { ADMIN_IDS } from './config.js';
-import { T } from './texts.js';
 import { getUser } from './users.js';
 import { isUnreachable, now, safeApi } from './util.js';
+import { textsOf } from './chats.js';
 
 export const isAdmin = (userId) => ADMIN_IDS.includes(userId);
 
 // --- reports ---------------------------------------------------------------------
 
-export function reportKeyboard(report) {
+export function reportKeyboard(report, L) {
   const id = report.id;
-  if (report.status === 'banned') return { inline_keyboard: [[{ text: T.btnBanned, callback_data: `au:${id}` }]] };
-  if (report.status === 'dismissed') return { inline_keyboard: [[{ text: T.btnDismissed, callback_data: `ab:${id}` }]] };
+  if (report.status === 'banned') return { inline_keyboard: [[{ text: L.btnBanned, callback_data: `au:${id}` }]] };
+  if (report.status === 'dismissed') return { inline_keyboard: [[{ text: L.btnDismissed, callback_data: `ab:${id}` }]] };
   return {
     inline_keyboard: [[
-      { text: T.btnBan, callback_data: `ab:${id}` },
-      { text: T.btnDismiss, callback_data: `ad:${id}` },
+      { text: L.btnBan, callback_data: `ab:${id}` },
+      { text: L.btnDismiss, callback_data: `ad:${id}` },
     ]],
   };
 }
@@ -33,28 +33,29 @@ export async function sendReport(report, msg, adminIds = ADMIN_IDS) {
   if (!adminIds.length) return;
   const owner = await getUser(report.ownerId);
   const prior = await db.$count(reports, and(eq(reports.senderId, report.senderId), ne(reports.id, report.id)));
-  const text = T.adminReport(report, owner, prior);
-  const reply_markup = reportKeyboard(report);
   for (const chat_id of adminIds) {
+    const L = await textsOf(chat_id);
+    const text = L.adminReport(report, owner, prior);
+    const reply_markup = reportKeyboard(report, L);
     if (!(await safeApi('sendMessage', { chat_id, text }))) continue;
     const copy = await safeApi('copyMessage', {
       chat_id, from_chat_id: msg.senderChatId, message_id: msg.senderMsgId, reply_markup,
     }) ?? (msg.ownerMsgId && await safeApi('copyMessage', {
       chat_id, from_chat_id: msg.ownerId, message_id: msg.ownerMsgId, reply_markup,
     }));
-    if (!copy) await safeApi('sendMessage', { chat_id, text: T.adminMessageGone, reply_markup });
+    if (!copy) await safeApi('sendMessage', { chat_id, text: L.adminMessageGone, reply_markup });
   }
 }
 
 const REPORTS_LIMIT = 5;
 
 // /reports: re-sends the oldest open reports to the admin `chatId`, so none get lost.
-export async function sendOpenReports(chatId) {
+export async function sendOpenReports(chatId, L) {
   const open = await db.select().from(reports).where(eq(reports.status, 'open'))
     .orderBy(reports.id).limit(REPORTS_LIMIT + 1).all();
-  if (!open.length) return safeApi('sendMessage', { chat_id: chatId, text: T.adminNoReports });
+  if (!open.length) return safeApi('sendMessage', { chat_id: chatId, text: L.adminNoReports });
   const total = await db.$count(reports, eq(reports.status, 'open'));
-  await safeApi('sendMessage', { chat_id: chatId, text: T.adminReportsHeader(Math.min(open.length, REPORTS_LIMIT), total) });
+  await safeApi('sendMessage', { chat_id: chatId, text: L.adminReportsHeader(Math.min(open.length, REPORTS_LIMIT), total) });
   for (const report of open.slice(0, REPORTS_LIMIT)) {
     const msg = await db.select().from(messages).where(eq(messages.id, report.messageId)).get();
     if (msg) await sendReport(report, msg, [chatId]);
@@ -93,20 +94,20 @@ const BANS_LIMIT = 30;
 // The /bans message → { text, reply_markup? }. Like /blocked, the sender's id never
 // reaches the client: a ban is addressed by when it was made and its rank among
 // bans made that same second (bu:<createdAt>.<rank>, see unbanAt).
-export async function bansView() {
+export async function bansView(L) {
   const rows = await db.select().from(bans).orderBy(desc(bans.createdAt), bans.senderId).limit(BANS_LIMIT + 1).all();
-  if (!rows.length) return { text: T.adminNoBans };
+  if (!rows.length) return { text: L.adminNoBans };
   const shown = rows.slice(0, BANS_LIMIT);
   const rank = (r, i) => shown.slice(0, i).filter((o) => o.createdAt === r.createdAt).length;
-  const buttons = shown.map((r, i) => ({ text: T.btnUnblock(i + 1), callback_data: `bu:${r.createdAt}.${rank(r, i)}` }));
+  const buttons = shown.map((r, i) => ({ text: L.btnUnblock(i + 1), callback_data: `bu:${r.createdAt}.${rank(r, i)}` }));
   const keyboard = [];
   for (let i = 0; i < buttons.length; i += 5) keyboard.push(buttons.slice(i, i + 5));
-  return { text: T.adminBansList(shown, rows.length > BANS_LIMIT), reply_markup: { inline_keyboard: keyboard } };
+  return { text: L.adminBansList(shown, rows.length > BANS_LIMIT), reply_markup: { inline_keyboard: keyboard } };
 }
 
 // --- dashboard -------------------------------------------------------------------
 
-export async function dashboardView() {
+export async function dashboardView(L) {
   const dayAgo = now() - 86400;
   const weekAgo = now() - 7 * 86400;
   const [counts, byStatus, today] = await Promise.all([
@@ -127,13 +128,13 @@ export async function dashboardView() {
   ]);
   const messagesBy = Object.fromEntries(byStatus.map((r) => [r.status, r.n]));
   return {
-    text: T.adminDashboard({ ...counts, messages: messagesBy, deliveredDay: today.n }),
+    text: L.adminDashboard({ ...counts, messages: messagesBy, deliveredDay: today.n }),
     reply_markup: {
       inline_keyboard: [
-        [{ text: T.btnAdminRefresh, callback_data: 'am:refresh' }],
+        [{ text: L.btnAdminRefresh, callback_data: 'am:refresh' }],
         [
-          { text: T.btnAdminReports(counts.openReports), callback_data: 'am:reports' },
-          { text: T.btnAdminBans(counts.bans), callback_data: 'am:bans' },
+          { text: L.btnAdminReports(counts.openReports), callback_data: 'am:reports' },
+          { text: L.btnAdminBans(counts.bans), callback_data: 'am:bans' },
         ],
       ],
     },
@@ -141,7 +142,7 @@ export async function dashboardView() {
 }
 
 // --- broadcast -------------------------------------------------------------------
-// Recipients are everyone who ever talked to the bot and hasn't /delete'd: link
+// Recipients are everyone who ever talked to the bot and hasn't deleted their data: link
 // owners (users) and people who opened a link (states) — except the admin sending it. Progress lives in the
 // broadcasts table, so a run that is cut off (or a retried update) resumes from
 // the cursor instead of sending twice.
@@ -187,9 +188,9 @@ async function copyTo(chatId, adminId, sourceMsgId) {
 }
 
 // Sends (or resumes) the broadcast of message `sourceMsgId` in admin `adminId`'s chat.
-// `progress(text, done)` is called to show how it's going.
+// `progress(text, done)` is called to show how it's going, in `L`.
 // → 'busy' (another run holds it) | 'done' (already finished) | 'finished'
-export async function runBroadcast(adminId, sourceMsgId, progress) {
+export async function runBroadcast(adminId, sourceMsgId, progress, L) {
   const total = await recipientCount(adminId);
   const mine = and(eq(broadcasts.adminId, adminId), eq(broadcasts.sourceMsgId, sourceMsgId));
   await db.insert(broadcasts)
@@ -204,7 +205,7 @@ export async function runBroadcast(adminId, sourceMsgId, progress) {
   }
   let { id, cursor, sent, failed } = await db.select().from(broadcasts).where(mine).get();
 
-  await progress(T.broadcastProgress(sent, failed, total), false);
+  await progress(L.broadcastProgress(sent, failed, total), false);
   for (;;) {
     const batch = await db.all(sql`${recipients(adminId, cursor)} LIMIT ${BATCH}`);
     if (!batch.length) break;
@@ -216,9 +217,9 @@ export async function runBroadcast(adminId, sourceMsgId, progress) {
         .where(eq(broadcasts.id, id));
       await sleep(PACE_MS);
     }
-    await progress(T.broadcastProgress(sent, failed, total), false);
+    await progress(L.broadcastProgress(sent, failed, total), false);
   }
   await db.update(broadcasts).set({ status: 'done', lockedUntil: 0 }).where(eq(broadcasts.id, id));
-  await progress(T.broadcastDone(sent, failed), true);
+  await progress(L.broadcastDone(sent, failed), true);
   return 'finished';
 }

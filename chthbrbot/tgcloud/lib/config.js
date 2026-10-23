@@ -8,11 +8,11 @@ export const CODE_LENGTH = 8;
 // No look-alike characters (0/O, 1/l/I).
 export const CODE_ALPHABET = 'abcdefghjkmnpqrstuvwxyzABCDEFGHJKLMNPQRSTUVWXYZ23456789';
 
-// Max length of an owner's custom invitation text (/text).
+// Max length of an owner's custom invitation text.
 export const PROMPT_MAX = 200;
 
-// Message types an owner can accept, in /types menu order. Labels live in
-// lib/texts.js (KIND_LABELS). Owners toggle these with /types.
+// Message types an owner can accept, in menu order. Labels live in lib/texts.js
+// (kinds). Owners toggle these in ⚙️ Settings → 📨 Message types.
 export const KINDS = ['text', 'photo', 'video', 'animation', 'video_note', 'voice', 'audio', 'sticker', 'document'];
 // Accepted until the owner changes it.
 export const DEFAULT_KINDS = ['text', 'photo', 'video', 'animation', 'video_note', 'voice', 'audio', 'sticker'];
@@ -23,7 +23,7 @@ export const DEFAULT_KINDS = ['text', 'photo', 'video', 'animation', 'video_note
 // recorded. An admin must have pressed Start in the bot for anything to reach them.
 export const ADMIN_IDS = [6330862227];
 
-// A pending send / reply / /text edit is dropped after this long without a message.
+// A pending send / reply / invitation-text edit is dropped after this long without a message.
 export const STATE_TTL_SEC = 30 * 60;
 
 // How long a sender can still edit or unsend a delivered message.
@@ -36,5 +36,5 @@ export const UNSEND_WINDOW_SEC = 60 * 60;
 export const ALBUM_WINDOW_SEC = 120;
 export const ALBUM_MAX = 10;
 
-// Public source code for this bot (shown on /start).
+// Public source code for this bot (🔗 Source code button).
 export const SOURCE_URL = 'https://github.com/chethober/bots/tree/main/chthbrbot';

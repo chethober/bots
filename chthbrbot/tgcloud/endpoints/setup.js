@@ -1,6 +1,7 @@
-// endpoints/setup.js — one-off: applies the bot profile from lib/texts.js (BOT_PROFILE):
-// description, short description, command menu (plus the admin commands in each
-// admin's chat, see ADMIN_IDS) and, optionally, the profile photo.
+// endpoints/setup.js — one-off: applies the bot profile: description and short
+// description in every language (lib/texts.js), the command menu — empty for
+// users, who have the reply keyboard; the admin commands in each admin's chat
+// (ADMIN_IDS) — and, optionally, the profile photo.
 //
 //   npx tgcloud run endpoints/setup '{}'
 //   npx tgcloud run endpoints/setup "{ photo: '$(base64 -w0 assets/avatar.jpg)' }"
@@ -10,7 +11,17 @@
 
 import { api, InputFile, EndpointError } from 'sdk';
 import { ADMIN_IDS } from '../lib/config.js';
-import { BOT_PROFILE } from '../lib/texts.js';
+import { LOCALES } from '../lib/i18n.js';
+import { texts } from '../lib/texts.js';
+
+const ADMIN_COMMANDS = [
+  { command: 'admin',     description: '🛠 Admin panel and bot stats' },
+  { command: 'reports',   description: '🛠 Open reports' },
+  { command: 'bans',      description: '🛠 Banned senders' },
+  { command: 'ban',       description: '🛠 Ban by id' },
+  { command: 'unban',     description: '🛠 Unban by id' },
+  { command: 'broadcast', description: '🛠 Broadcast a message' },
+];
 
 // The runtime has no atob/Buffer.
 const B64 = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/';
@@ -33,18 +44,19 @@ export default async function (input, ctx) {
   if (ctx?.initData) throw new EndpointError('Not available', { code: 'FORBIDDEN' });
 
   const done = [];
-  await api.setMyDescription({ description: BOT_PROFILE.description });
-  done.push('description');
-  await api.setMyShortDescription({ short_description: BOT_PROFILE.shortDescription });
-  done.push('short description');
-  await api.setMyCommands({ commands: BOT_PROFILE.commands });
-  done.push('commands');
+  // English is also the default, for languages without their own.
+  for (const locale of [null, ...LOCALES]) {
+    const { profile } = texts(locale ?? 'en');
+    const language_code = locale ?? undefined;
+    await api.setMyDescription({ description: profile.description, language_code });
+    await api.setMyShortDescription({ short_description: profile.shortDescription, language_code });
+    done.push(`description (${locale ?? 'default'})`);
+  }
+  await api.deleteMyCommands({});
+  done.push('user commands removed');
   for (const chat_id of ADMIN_IDS) {
     try {
-      await api.setMyCommands({
-        commands: [...BOT_PROFILE.adminCommands, ...BOT_PROFILE.commands],
-        scope: { type: 'chat', chat_id },
-      });
+      await api.setMyCommands({ commands: ADMIN_COMMANDS, scope: { type: 'chat', chat_id } });
       done.push(`admin commands for ${chat_id}`);
     } catch (e) {
       done.push(`admin commands for ${chat_id} failed (has the admin pressed Start?): ${e.description ?? e.message}`);

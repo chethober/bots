@@ -3,7 +3,7 @@
 // switched on in BotFather (/setinline).
 
 import { api } from 'sdk';
-import { T, invitation } from '../lib/texts.js';
+import { textsFor } from '../lib/chats.js';
 import { getOrCreateUser } from '../lib/users.js';
 import { personalLink } from '../lib/util.js';
 
@@ -11,10 +11,11 @@ const MAX_QUERY = 200;
 
 export default async function (q, ctx) {
   try {
+    const L = await textsFor(q.from);
     const user = await getOrCreateUser(q.from);
     const link = await personalLink(user.code);
     const custom = (q.query ?? '').trim().slice(0, MAX_QUERY);
-    const button = { inline_keyboard: [[{ text: T.btnSendAnon(user), url: link }]] };
+    const button = { inline_keyboard: [[{ text: L.btnSendAnon(user), url: link }]] };
 
     const article = (id, title, description, text) => ({
       type: 'article',
@@ -26,10 +27,10 @@ export default async function (q, ctx) {
     });
 
     const results = [];
-    if (custom) results.push(article('custom', T.inlineCustomTitle, custom, custom));
-    const inviteDesc = user.paused ? T.inlinePaused : invitation(user);
-    results.push(article('invite', T.inlineShareTitle, inviteDesc, T.inlineInvite(user)));
-    results.push(article('link', T.inlineLinkTitle, link, link));
+    if (custom) results.push(article('custom', L.inlineCustomTitle, custom, custom));
+    const inviteDesc = user.paused ? L.inlinePaused : L.invitation(user);
+    results.push(article('invite', L.inlineShareTitle, inviteDesc, L.inlineInvite(user)));
+    results.push(article('link', L.inlineLinkTitle, link, link));
 
     await api.answerInlineQuery({
       inline_query_id: q.id,

@@ -15,23 +15,29 @@
 
 ---
 
-The bot's interface is in **Persian**. Every user-facing string is in one file
-([`tgcloud/lib/texts.js`](tgcloud/lib/texts.js)), so translating it doesn't touch any logic.
+The bot speaks **Persian, English, Arabic, Russian and Spanish**, picked from the user's Telegram
+language or the 🌐 Language button. Every user-facing string is in one file
+([`tgcloud/lib/texts.js`](tgcloud/lib/texts.js)), one table per language.
+
+Everything a user does is a button: a reply keyboard (🎭 My link · 📊 Stats · ⚙️ Settings ·
+🌐 Language · 🔒 Privacy · 🔗 Source code) and inline buttons under each screen. The chat stays
+clean: button taps are deleted, and each screen replaces the previous one. Slash commands are
+only `/start` and the admin commands.
 
 ## Features
 
 **For link owners**
 - A personal deep link (`t.me/<bot>?start=<code>`) to put in a bio, a story or a group.
-- A **QR code** of the link (`/qr`), generated in pure JS, for stories and print.
-- Your own **invitation text** (`/text`), shown to everyone who opens your link.
-- Choose which **message kinds** you accept (`/types`): text, photo, video, GIF, video note, voice, audio, sticker, file.
+- A **QR code** of the link, generated in pure JS, for stories and print.
+- Your own **invitation text**, shown to everyone who opens your link.
+- Choose which **message kinds** you accept: text, photo, video, GIF, video note, voice, audio, sticker, file.
 - **Reply anonymously** with a button or a native swipe-reply. Threads continue in both directions.
 - **Reactions are mirrored** both ways. The bot is the one who reacts, so no identity leaks.
-- **Block** a sender with one tap. **Unblock** from `/blocked`, which shows each block by time only, never identity.
+- **Block** a sender with one tap. **Unblock** from ⚙️ Settings → 🚫 Blocked senders, which shows each block by time only, never identity.
 - **Report** a message. It is copied (not forwarded) to the bot's admins, who can ban the sender from the whole bot.
-- `/pause` / `/resume`, `/stats`.
-- `/newlink` makes the old link stop working, for when it reached the wrong people.
-- `/delete` erases your data (see [Privacy](#privacy) for exactly what that covers).
+- Pause / resume receiving, and 📊 Stats.
+- 🔄 New link makes the old link stop working, for when it reached the wrong people.
+- 🗑 Delete my data erases your data (see [Privacy](#privacy) for exactly what that covers).
 - Inline mode: type `@<bot>` in any chat to share your link with your invitation, or with custom text.
 
 **For senders**
@@ -56,28 +62,27 @@ The bot's interface is in **Persian**. Every user-facing string is in one file
 ## Privacy
 
 No message text, captions or media are stored. Telegram copies messages between chats directly.
-The database holds Telegram ids, statuses, timestamps, the owner's first name and their own invitation text.
+The database holds Telegram ids, statuses, timestamps, the owner's first name and their own invitation text,
+plus each chat's language and the ids of the bot's two live menu messages (to delete stale ones).
 The owner never sees the sender's id or name, and the client never sees it either (for example in callback data).
-[`tgcloud/schema.js`](tgcloud/schema.js) is the complete list, and the bot's `/privacy` command describes it to users.
+[`tgcloud/schema.js`](tgcloud/schema.js) is the complete list, and the bot's 🔒 Privacy button describes it to users.
 
-`/delete` removes the user's link, their settings, the messages they received, their replies, the blocks they made and the reports they filed.
+🗑 Delete my data removes the user's link, their settings, the messages they received, their replies, the blocks they made and the reports they filed.
 Rows where the user is the **sender** are kept: messages they sent to others, and blocks, reports and bans against them. Those belong to the recipients and to moderation, and deleting them would let someone escape a ban.
 
-## Commands
+## Buttons and commands
 
-| Command    | What it does                                       |
-|------------|----------------------------------------------------|
-| `/start`   | Get your link (or, with a code, start sending)     |
-| `/text`    | Set your invitation text                           |
-| `/types`   | Choose which kinds of messages you accept          |
-| `/qr`      | QR code of your link                               |
-| `/pause` · `/resume` | Stop / resume receiving                  |
-| `/blocked` | List blocked senders and unblock them              |
-| `/stats`   | Counts of received, replied, blocked, filtered     |
-| `/newlink` | Replace your link; the old one stops working       |
-| `/privacy` | What is stored                                     |
-| `/delete`  | Delete your data                                   |
-| `/cancel`  | Cancel a pending send, reply or edit               |
+| Button             | What it does                                                        |
+|--------------------|---------------------------------------------------------------------|
+| 🎭 My link         | Your link, with Share and QR code buttons                           |
+| 📊 Stats           | Counts of received, replied, blocked, filtered                      |
+| ⚙️ Settings        | Pause/resume, invitation text, message types, QR code, blocked senders, new link, delete my data |
+| 🌐 Language        | Persian, English, Arabic, Russian, Spanish                          |
+| 🔒 Privacy         | What is stored                                                      |
+| 🔗 Source code     | This repository                                                     |
+
+A pending send, reply or edit has a ✖️ Cancel button. `/start` (with a code: start sending) is the
+only user command.
 
 Admin only:
 
@@ -108,7 +113,7 @@ npx tgcloud login            # link the project to your bot
    npm run deploy               # = npx tgcloud push
    npx tgcloud migrate          # applies tgcloud/schema.js to the database
    ```
-3. Set the bot's description, command menu (plus the admin commands in admins' chats) and, optionally, its photo. Run it again after changing `ADMIN_IDS`:
+3. Set the bot's description (in every language), command menu (empty for users; the admin commands in admins' chats) and, optionally, its photo. Run it again after changing `ADMIN_IDS`:
    ```sh
    npx tgcloud run endpoints/setup "{ photo: '$(base64 -w0 assets/avatar.jpg)' }"
    ```
@@ -121,21 +126,23 @@ Deploying never touches the database. After changing `schema.js`, run `npx tgclo
 
 ```
 tgcloud/
-├── schema.js                  tables: users, messages, replies, blocks, reports, bans, broadcasts, states
+├── schema.js                  tables: users, messages, replies, blocks, reports, bans, broadcasts, states, chats
 ├── handlers/                  one module per Telegram update type
-│   ├── message.js             commands, sending, replying, native replies, albums
+│   ├── message.js             keyboard buttons, /start, sending, replying, native replies, albums, admin commands
 │   ├── edited_message.js      mirrors a sender's edit to the owner's copy
-│   ├── callback_query.js      every inline button (reply/block/report, unsend, admin, broadcast, …)
+│   ├── callback_query.js      every inline button (reply/block/report, unsend, settings, admin, broadcast, …)
 │   ├── message_reaction.js    mirrors reactions across the pair of chats
 │   └── inline_query.js        @bot sharing
 ├── endpoints/setup.js         one-off: applies the bot profile
 └── lib/
     ├── delivery.js            the anonymous relay: send, album items, unsend, reply
-    ├── users.js               owners, link codes, conversation state, /delete
-    ├── manage.js              /qr and /blocked
+    ├── users.js               owners, link codes, conversation state, data deletion
+    ├── chats.js               each chat's language, clean chat (home + screen), the reply keyboard
+    ├── manage.js              home, My link, QR code, Stats, Settings and its sub-screens
     ├── admin.js               reports, bans, /admin dashboard, broadcasts
     ├── qr.js                  QR encoder + 1-bit PNG writer (no dependencies)
-    ├── texts.js               all user-facing strings (Persian)
+    ├── texts.js               all user-facing strings, one table per language
+    ├── i18n.js                supported languages
     ├── config.js · filter.js · content.js · util.js
 ```
 
@@ -149,7 +156,7 @@ See [`AGENTS.md`](AGENTS.md) for the platform's module rules and [`docs/tgcloud-
 Issues and pull requests are welcome. Please keep the privacy guarantees intact:
 - Never store message content.
 - Never put a Telegram id in callback data.
-- Update `/privacy` in `texts.js` whenever `schema.js` changes.
+- Update the privacy text in `texts.js` (every language) whenever `schema.js` changes.
 
 ## License
 

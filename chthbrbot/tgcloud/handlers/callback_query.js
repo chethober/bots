@@ -1,8 +1,10 @@
 // handlers/callback_query.js — inline buttons:
 //   owner, under a received message: Reply / Block / Report  r:/b:/p:<messageId>
 //   sender, under "delivered":       Unsend u:<messageId>, Send another s:<code>
-//   /types toggles k:<kind>, /text reset x:reset, /blocked unblock ub:<rowid>,
-//   /newlink n:yes|no, /delete d:yes|no, QR code q:me, ⚙️ Settings st:<op>
+//   any prompt:                      Cancel c:x
+//   ⚙️ Settings st:<op> (st:home = back to it), message types k:<kind>,
+//   invitation reset x:reset, unblock ub:<rowid>, new link n:yes|no,
+//   delete d:yes|no, QR code q:me, language lang:<code>
 //   admin, under a report:           Ban / Dismiss / Unban  ab:/ad:/au:<reportId>
 //   admin, /admin dashboard am:refresh|reports|bans, /bans unban bu:<createdAt>.<rank>,
 //   /broadcast send bc:<adminMsgId>|no
@@ -14,28 +16,17 @@ import { KINDS, UNSEND_WINDOW_SEC } from '../lib/config.js';
 import {
   ban, bansView, dashboardView, isAdmin, reportKeyboard, runBroadcast, sendOpenReports, sendReport, unban, unbanAt,
 } from '../lib/admin.js';
-import { acceptedKinds, toggleKind, typesKeyboard } from '../lib/content.js';
+import { cancelRow, closeScreen, drop, isScreen, setLocale, showScreen, textsFor } from '../lib/chats.js';
+import { toggleKind } from '../lib/content.js';
 import { unsend } from '../lib/delivery.js';
-import { blockedView, sendQr, settingsView, unblock } from '../lib/manage.js';
-import { T } from '../lib/texts.js';
+import { LOCALE_NAMES } from '../lib/i18n.js';
 import {
-  deleteUserData, getOrCreateUser, getUser, getUserByCode, resetCode, setAccepts, setPaused, setPrompt, setState, setUserLocale,
+  blockedView, confirmView, sendHome, sendQr, settingsView, textView, typesView, unblock,
+} from '../lib/manage.js';
+import {
+  deleteUserData, getOrCreateUser, getUser, getUserByCode, resetCode, setAccepts, setPaused, setPrompt, setState,
 } from '../lib/users.js';
 import { now, personalLink, safeApi } from '../lib/util.js';
-import { normalizeLocale, LOCALE_NAMES, LOCALES } from '../lib/i18n.js';
-import { t } from '../lib/strings.js';
-import { command } from './message.js';
-
-// /language — save the chosen locale and confirm in that language.
-async function onLanguage(q, value) {
-  const locale = LOCALES.includes(value) ? value : normalizeLocale(value);
-  await getOrCreateUser(q.from);
-  await setUserLocale(q.from.id, locale);
-  const text = t(locale, 'language_set', { name: LOCALE_NAMES[locale] ?? locale });
-  if (q.message) await editButtonMessage(q, text);
-  else await safeApi('sendMessage', { chat_id: q.from.id, text });
-  return {};
-}
 
 // Replaces the text (and buttons) of the message the button was on.
 async function editButtonMessage(q, text, reply_markup) {
@@ -44,22 +35,50 @@ async function editButtonMessage(q, text, reply_markup) {
     chat_id: q.message.chat.id,
     message_id: q.message.message_id,
     text,
+    link_preview_options: { is_disabled: true },
     ...(reply_markup && { reply_markup }),
   });
 }
 
+// A screen opened from a button: edits the button's message in place when that
+// message is the open screen, otherwise opens a new screen.
+async function openScreen(q, { text, reply_markup }) {
+  if (q.message && await isScreen(q.from.id, q.message.message_id)) {
+    const edited = await editButtonMessage(q, text, reply_markup);
+    if (edited) return edited;
+  }
+  return showScreen(q.from.id, { text, ...(reply_markup && { reply_markup }) });
+}
+
+// lang:<code> — save it, then re-send home so the reply keyboard is relabelled
+// (that also removes the picker).
+async function onLanguage(q, value) {
+  await setLocale(q.from.id, value);
+  const L = await textsFor(q.from);
+  await sendHome(q.from, L);
+  return { text: L.languageSet(LOCALE_NAMES[value] ?? value) };
+}
+
+// c:x — a prompt's ✖️ Cancel: back to idle, and the prompt goes away.
+async function onCancel(q, L) {
+  await setState(q.from.id, 'idle');
+  if (q.message && !(await isScreen(q.from.id, q.message.message_id))) await drop(q.from.id, q.message.message_id);
+  await closeScreen(q.from.id);
+  return { text: L.cancelled };
+}
+
 // --- owner: buttons under a received message ------------------------------------
 
-async function onMessageButton(q, action, messageId) {
+async function onMessageButton(q, action, messageId, L) {
   const userId = q.from.id;
   const msg = await db.select().from(messages).where(eq(messages.id, messageId)).get();
-  if (!msg || msg.ownerId !== userId) return { text: T.notYourMessage };
+  if (!msg || msg.ownerId !== userId) return { text: L.notYourMessage };
 
   if (action === 'r') {
     await setState(userId, 'replying_to', msg.id);
-    await safeApi('sendMessage', {
-      chat_id: userId,
-      text: T.replyPrompt,
+    await showScreen(userId, {
+      text: L.replyPrompt,
+      reply_markup: { inline_keyboard: [cancelRow(L)] },
       ...(q.message && { reply_parameters: { message_id: q.message.message_id, allow_sending_without_reply: true } }),
     });
     return {};
@@ -69,8 +88,8 @@ async function onMessageButton(q, action, messageId) {
     await db.insert(blocks)
       .values({ ownerId: userId, senderId: msg.senderId, createdAt: now() })
       .onConflictDoNothing();
-    await safeApi('sendMessage', { chat_id: userId, text: T.blocked });
-    return { text: T.blockedToast };
+    await showScreen(userId, { text: L.blocked });
+    return { text: L.blockedToast };
   }
 
   if (action === 'p') {
@@ -78,10 +97,10 @@ async function onMessageButton(q, action, messageId) {
       .values({ messageId: msg.id, ownerId: userId, senderId: msg.senderId, status: 'open', createdAt: now() })
       .onConflictDoNothing({ target: reports.messageId })
       .returning();
-    if (!report) return { text: T.alreadyReported };
-    await safeApi('sendMessage', { chat_id: userId, text: T.reported });
+    if (!report) return { text: L.alreadyReported };
+    await showScreen(userId, { text: L.reported });
     await sendReport(report, msg);
-    return { text: T.reportedToast };
+    return { text: L.reportedToast };
   }
 
   return {};
@@ -90,114 +109,115 @@ async function onMessageButton(q, action, messageId) {
 // --- sender: buttons under "delivered" ----------------------------------------
 
 // u:<messageId>
-async function onUnsend(q, messageId) {
+async function onUnsend(q, messageId, L) {
   const msg = await db.select().from(messages).where(eq(messages.id, messageId)).get();
-  if (!msg || msg.senderId !== q.from.id) return { text: T.notYourMessage };
-  if (msg.status === 'unsent') return { text: T.alreadyUnsent };
+  if (!msg || msg.senderId !== q.from.id) return { text: L.notYourMessage };
+  if (msg.status === 'unsent') return { text: L.alreadyUnsent };
   if (now() - msg.createdAt > UNSEND_WINDOW_SEC) {
-    return { text: T.unsendTooLate(Math.round(UNSEND_WINDOW_SEC / 60)), show_alert: true };
+    return { text: L.unsendTooLate(Math.round(UNSEND_WINDOW_SEC / 60)), show_alert: true };
   }
   await unsend(msg);
   // Keep "send another" if it was there.
   const another = q.message?.reply_markup?.inline_keyboard?.flat().find((b) => b.callback_data?.startsWith('s:'));
-  await editButtonMessage(q, T.unsent(await getUser(msg.ownerId)),
+  await editButtonMessage(q, L.unsent(await getUser(msg.ownerId)),
     another ? { inline_keyboard: [[another]] } : undefined);
-  return { text: T.unsentToast };
+  return { text: L.unsentToast };
 }
 
 // s:<code> — same as opening the link again.
-async function onSendAnother(q, code) {
+async function onSendAnother(q, code, L) {
   const owner = await getUserByCode(code);
   const chat_id = q.from.id;
-  let text = T.invalidLink;
-  if (owner?.paused) text = T.ownerPaused(owner);
-  else if (owner) {
-    await setState(chat_id, 'sending_to', owner.id);
-    text = T.sendPrompt(owner);
-  }
-  await safeApi('sendMessage', { chat_id, text });
+  if (!owner) return showScreen(chat_id, { text: L.invalidLink }).then(() => ({}));
+  if (owner.paused) return showScreen(chat_id, { text: L.ownerPaused(owner) }).then(() => ({}));
+  await setState(chat_id, 'sending_to', owner.id);
+  await showScreen(chat_id, { text: L.sendPrompt(owner), reply_markup: { inline_keyboard: [cancelRow(L)] } });
   return {};
 }
 
 // --- owner settings --------------------------------------------------------------
 
-// /types toggle: k:<kind>
-async function onKindButton(q, kind) {
+// Message types toggle: k:<kind>
+async function onKindButton(q, kind, L) {
   if (!KINDS.includes(kind)) return {};
   const user = await getOrCreateUser(q.from);
   const next = toggleKind(user, kind);
-  if (!next) return { text: T.typesLastOne, show_alert: true };
+  if (!next) return { text: L.typesLastOne, show_alert: true };
   await setAccepts(user.id, next);
-  const updated = { ...user, accepts: next };
-  if (q.message) await editButtonMessage(q, T.typesMenu(acceptedKinds(updated)), typesKeyboard(updated));
+  if (q.message) await openScreen(q, typesView({ ...user, accepts: next }, L));
   return {};
 }
 
-// /text "back to default" button: x:reset
-async function onTextReset(q) {
+// Invitation text "back to default": x:reset
+async function onTextReset(q, L) {
   const user = await getOrCreateUser(q.from);
   await setPrompt(user.id, null);
   await setState(user.id, 'idle');
-  await safeApi('sendMessage', { chat_id: user.id, text: T.textReset({ ...user, prompt: null }) });
-  return { text: T.textResetToast };
+  await openScreen(q, {
+    text: L.textReset({ ...user, prompt: null }),
+    reply_markup: { inline_keyboard: [[{ text: L.btnBack, callback_data: 'st:home' }]] },
+  });
+  return { text: L.textResetToast };
 }
 
-// /blocked: ub:<rowid>
-async function onUnblock(q, rowid) {
+// Unblock: ub:<rowid>
+async function onUnblock(q, rowid, L) {
   await unblock(q.from.id, rowid);
-  const { text, reply_markup } = await blockedView(q.from.id);
-  await editButtonMessage(q, text, reply_markup);
-  return { text: T.unblockedToast };
+  await openScreen(q, await blockedView(q.from.id, L));
+  return { text: L.unblockedToast };
 }
 
-// /newlink: n:yes|no
-async function onNewlink(q, answer) {
+// New link: n:yes|no
+async function onNewlink(q, answer, L) {
   const user = await getUser(q.from.id);
-  if (!user) await editButtonMessage(q, T.needLink);
-  else if (answer !== 'yes') await editButtonMessage(q, T.confirmCancelled);
-  else await editButtonMessage(q, T.newlinkDone(await personalLink(await resetCode(user.id))));
-  return {};
+  if (!user) await openScreen(q, { text: L.needLink });
+  else if (answer !== 'yes') await openScreen(q, settingsView(user, L));
+  else await openScreen(q, { text: L.newlinkDone(await personalLink(await resetCode(user.id))) });
+  return answer === 'yes' ? {} : { text: L.confirmCancelled };
 }
 
-// /delete: d:yes|no
-async function onDelete(q, answer) {
+// Delete: d:yes|no
+async function onDelete(q, answer, L) {
   if (answer !== 'yes') {
-    await editButtonMessage(q, T.confirmCancelled);
-    return {};
+    const user = await getUser(q.from.id);
+    await openScreen(q, user ? settingsView(user, L) : { text: L.needLink });
+    return { text: L.confirmCancelled };
   }
   await deleteUserData(q.from.id);
-  await editButtonMessage(q, T.deleted);
+  await editButtonMessage(q, L.deleted);
   return {};
 }
 
-// ⚙️ Settings: st:pause|resume toggle in place; the rest run their command.
-const SETTINGS_OPS = ['text', 'types', 'qr', 'blocked', 'newlink', 'delete'];
-async function onSettings(q, op) {
+// ⚙️ Settings: st:pause|resume toggle in place; the rest open their sub-screen in
+// the same message; st:home goes back to Settings.
+async function onSettings(q, op, L) {
   const user = await getOrCreateUser(q.from);
   if (op === 'pause' || op === 'resume') {
     const paused = op === 'pause';
     await setPaused(user.id, paused);
-    const locale = user.locale || normalizeLocale(q.from.language_code);
-    const { text, reply_markup } = settingsView({ ...user, paused }, locale);
-    await editButtonMessage(q, text, reply_markup);
-    return { text: t(locale, paused ? 'settings_paused' : 'settings_receiving') };
+    await openScreen(q, settingsView({ ...user, paused }, L));
+    return { text: paused ? L.settingsPaused : L.settingsReceiving };
   }
-  if (!SETTINGS_OPS.includes(op)) return {};
-  await setState(user.id, 'idle'); // like any command, abandons a pending send/reply/edit
-  await command({ chat: { id: q.from.id }, from: q.from }, { cmd: op, arg: '' });
-  return {};
-}
-
-// q:me
-async function onQr(q) {
-  await sendQr(await getOrCreateUser(q.from));
+  await setState(user.id, 'idle'); // abandons a pending send/reply/edit
+  switch (op) {
+    case 'home':    await openScreen(q, settingsView(user, L)); break;
+    case 'types':   await openScreen(q, typesView(user, L)); break;
+    case 'blocked': await openScreen(q, await blockedView(user.id, L)); break;
+    case 'qr':      await sendQr(user, L); break;
+    case 'newlink': await openScreen(q, confirmView(L.newlinkConfirm, 'n', L.btnNewlinkYes, L)); break;
+    case 'delete':  await openScreen(q, confirmView(L.deleteConfirm, 'd', L.btnDeleteYes, L)); break;
+    case 'text':
+      await setState(user.id, 'setting_prompt');
+      await openScreen(q, textView(user, L));
+      break;
+  }
   return {};
 }
 
 // --- admin -----------------------------------------------------------------------
 
 // ab: ban, ad: dismiss, au: unban — <reportId>
-async function onAdminButton(q, action, reportId) {
+async function onAdminButton(q, action, reportId, L) {
   if (!isAdmin(q.from.id)) return {};
   const report = await db.select().from(reports).where(eq(reports.id, reportId)).get();
   if (!report) return {};
@@ -205,65 +225,65 @@ async function onAdminButton(q, action, reportId) {
   let status, toast;
   if (action === 'ab') {
     await ban(report.senderId, reportId);
-    [status, toast] = ['banned', T.bannedToast];
+    [status, toast] = ['banned', L.bannedToast];
   } else if (action === 'au') {
     await unban(report.senderId);
-    [status, toast] = ['dismissed', T.unbannedToast];
+    [status, toast] = ['dismissed', L.unbannedToast];
   } else {
-    [status, toast] = ['dismissed', T.dismissedToast];
+    [status, toast] = ['dismissed', L.dismissedToast];
   }
   await db.update(reports).set({ status }).where(eq(reports.id, reportId));
   if (q.message) {
     await safeApi('editMessageReplyMarkup', {
       chat_id: q.message.chat.id,
       message_id: q.message.message_id,
-      reply_markup: reportKeyboard({ ...report, status }),
+      reply_markup: reportKeyboard({ ...report, status }, L),
     });
   }
   return { text: toast };
 }
 
 // am:refresh|reports|bans — the /admin dashboard's buttons.
-async function onDashboardButton(q, value) {
+async function onDashboardButton(q, value, L) {
   if (!isAdmin(q.from.id)) return {};
   if (value === 'refresh') {
-    const { text, reply_markup } = await dashboardView();
+    const { text, reply_markup } = await dashboardView(L);
     await editButtonMessage(q, text, reply_markup);
-    return { text: T.adminRefreshedToast };
+    return { text: L.adminRefreshedToast };
   }
-  if (value === 'reports') await sendOpenReports(q.from.id);
+  if (value === 'reports') await sendOpenReports(q.from.id, L);
   else if (value === 'bans') {
-    const { text, reply_markup } = await bansView();
+    const { text, reply_markup } = await bansView(L);
     await safeApi('sendMessage', { chat_id: q.from.id, text, ...(reply_markup && { reply_markup }) });
   }
   return {};
 }
 
 // bu:<createdAt>.<rank> — unban from the /bans list.
-async function onBansUnban(q, ref) {
+async function onBansUnban(q, ref, L) {
   if (!isAdmin(q.from.id)) return {};
   await unbanAt(ref);
-  const { text, reply_markup } = await bansView();
+  const { text, reply_markup } = await bansView(L);
   await editButtonMessage(q, text, reply_markup);
-  return { text: T.unbannedToast };
+  return { text: L.unbannedToast };
 }
 
 // bc:<adminMsgId> sends (or resumes) a broadcast, bc:no drops it. A broadcast
 // outlives the callback's answer window, so this answers the button itself
 // (returns null) before it starts sending.
-async function onBroadcastButton(q, value) {
+async function onBroadcastButton(q, value, L) {
   if (!isAdmin(q.from.id)) return {};
   if (value === 'no') {
-    await editButtonMessage(q, T.broadcastCancelled);
+    await editButtonMessage(q, L.broadcastCancelled);
     return {};
   }
   const sourceMsgId = Number(value);
   if (!Number.isSafeInteger(sourceMsgId)) return {};
-  await api.answerCallbackQuery({ callback_query_id: q.id, text: T.broadcastStartedToast }).catch(() => {});
-  const resume = { inline_keyboard: [[{ text: T.btnBroadcastResume, callback_data: `bc:${sourceMsgId}` }]] };
-  const result = await runBroadcast(q.from.id, sourceMsgId, (text, done) => editButtonMessage(q, text, done ? undefined : resume));
-  if (result === 'busy') await safeApi('sendMessage', { chat_id: q.from.id, text: T.broadcastBusy });
-  if (result === 'done') await editButtonMessage(q, T.broadcastAlreadyDone);
+  await api.answerCallbackQuery({ callback_query_id: q.id, text: L.broadcastStartedToast }).catch(() => {});
+  const resume = { inline_keyboard: [[{ text: L.btnBroadcastResume, callback_data: `bc:${sourceMsgId}` }]] };
+  const result = await runBroadcast(q.from.id, sourceMsgId, (text, done) => editButtonMessage(q, text, done ? undefined : resume), L);
+  if (result === 'busy') await safeApi('sendMessage', { chat_id: q.from.id, text: L.broadcastBusy });
+  if (result === 'done') await editButtonMessage(q, L.broadcastAlreadyDone);
   return null;
 }
 
@@ -272,22 +292,24 @@ export default async function (q, ctx) {
   try {
     const [action, value = ''] = (q.data ?? '').split(':');
     const id = /^\d+$/.test(value) ? Number(value) : null;
-    if (action === 'k') answer = await onKindButton(q, value);
-    else if (action === 'x' && value === 'reset') answer = await onTextReset(q);
-    else if (action === 's') answer = await onSendAnother(q, value);
-    else if (action === 'n') answer = await onNewlink(q, value);
-    else if (action === 'd') answer = await onDelete(q, value);
-    else if (action === 'q') answer = await onQr(q);
-    else if (action === 'am') answer = await onDashboardButton(q, value);
-    else if (action === 'bc') answer = await onBroadcastButton(q, value);
-    else if (action === 'bu') answer = await onBansUnban(q, value);
+    const L = await textsFor(q.from);
+    if (action === 'k') answer = await onKindButton(q, value, L);
+    else if (action === 'x' && value === 'reset') answer = await onTextReset(q, L);
+    else if (action === 'c') answer = await onCancel(q, L);
+    else if (action === 's') answer = await onSendAnother(q, value, L);
+    else if (action === 'n') answer = await onNewlink(q, value, L);
+    else if (action === 'd') answer = await onDelete(q, value, L);
+    else if (action === 'q') answer = (await sendQr(await getOrCreateUser(q.from), L), {});
+    else if (action === 'am') answer = await onDashboardButton(q, value, L);
+    else if (action === 'bc') answer = await onBroadcastButton(q, value, L);
+    else if (action === 'bu') answer = await onBansUnban(q, value, L);
     else if (action === 'lang') answer = await onLanguage(q, value);
-    else if (action === 'st') answer = await onSettings(q, value);
+    else if (action === 'st') answer = await onSettings(q, value, L);
     else if (id === null) answer = {};
-    else if (['r', 'b', 'p'].includes(action)) answer = await onMessageButton(q, action, id);
-    else if (action === 'u') answer = await onUnsend(q, id);
-    else if (action === 'ub') answer = await onUnblock(q, id);
-    else if (['ab', 'ad', 'au'].includes(action)) answer = await onAdminButton(q, action, id);
+    else if (['r', 'b', 'p'].includes(action)) answer = await onMessageButton(q, action, id, L);
+    else if (action === 'u') answer = await onUnsend(q, id, L);
+    else if (action === 'ub') answer = await onUnblock(q, id, L);
+    else if (['ab', 'ad', 'au'].includes(action)) answer = await onAdminButton(q, action, id, L);
   } catch (e) {
     console.error('callback_query handler failed', e);
   } finally {

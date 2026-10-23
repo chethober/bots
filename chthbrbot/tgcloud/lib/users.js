@@ -1,6 +1,6 @@
 import { db } from 'sdk';
 import { eq } from 'sdk/db';
-import { users, states, messages, replies, blocks, reports } from '../schema.js';
+import { users, states, messages, replies, blocks, reports, chats } from '../schema.js';
 import { STATE_TTL_SEC } from './config.js';
 import { now, randomCode } from './util.js';
 
@@ -41,7 +41,7 @@ export async function getOrCreateUser(from) {
   return getUser(from.id);
 }
 
-// /newlink: a fresh code; the old link stops working. Returns the new code.
+// New link: a fresh code; the old link stops working. Returns the new code.
 export async function resetCode(id) {
   const code = await uniqueCode();
   await db.update(users).set({ code }).where(eq(users.id, id));
@@ -50,7 +50,7 @@ export async function resetCode(id) {
   return code;
 }
 
-// /delete: everything kept for this person as a link owner, plus their state.
+// Delete my data: everything kept for this person as a link owner, plus their state.
 // Rows where they are the *sender* (messages sent to others, blocks and bans
 // against them, reports about them) stay: they belong to the recipients and to
 // moderation, and deleting them would lift bans.
@@ -60,6 +60,7 @@ export async function deleteUserData(id) {
   await db.delete(blocks).where(eq(blocks.ownerId, id));
   await db.delete(messages).where(eq(messages.ownerId, id));
   await db.delete(states).where(eq(states.userId, id));
+  await db.delete(chats).where(eq(chats.id, id));
   await db.delete(users).where(eq(users.id, id));
 }
 
@@ -75,11 +76,6 @@ export async function setAccepts(id, kinds) {
 // null clears it (back to the default invitation).
 export async function setPrompt(id, prompt) {
   await db.update(users).set({ prompt }).where(eq(users.id, id));
-}
-
-// Chosen UI language (/language). null = auto-detect from Telegram.
-export async function setUserLocale(id, locale) {
-  await db.update(users).set({ locale }).where(eq(users.id, id));
 }
 
 // --- conversation state ---------------------------------------------------

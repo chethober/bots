@@ -1,5 +1,4 @@
 import { DEFAULT_KINDS, KINDS } from './config.js';
-import { KIND_LABELS } from './texts.js';
 
 // The kind of a Telegram message, or null if it's none of KINDS.
 // A GIF also carries `document`, so `animation` must be checked first.
@@ -23,14 +22,16 @@ export function toggleKind(owner, kind) {
   return next.length ? KINDS.filter((k) => next.includes(k)) : null;
 }
 
-// /types menu, two toggles per row; callback data is k:<kind>.
-export function typesKeyboard(owner) {
+// Message types menu, two toggles per row (callback data k:<kind>), then ⬅️ Back.
+// `L` is the owner's texts table.
+export function typesKeyboard(owner, L) {
   const on = acceptedKinds(owner);
   const buttons = KINDS.map((k) => ({
-    text: `${on.includes(k) ? '✅' : '⬜️'} ${KIND_LABELS[k]}`,
+    text: `${on.includes(k) ? '✅' : '⬜️'} ${L.kinds[k]}`,
     callback_data: `k:${k}`,
   }));
   const rows = [];
   for (let i = 0; i < buttons.length; i += 2) rows.push(buttons.slice(i, i + 2));
+  rows.push([{ text: L.btnBack, callback_data: 'st:home' }]);
   return { inline_keyboard: rows };
 }

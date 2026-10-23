@@ -4,39 +4,40 @@ import { messages, replies, blocks, bans } from '../schema.js';
 import { ALBUM_MAX, ALBUM_WINDOW_SEC } from './config.js';
 import { acceptedKinds, kindOf } from './content.js';
 import { isFiltered } from './filter.js';
-import { T } from './texts.js';
 import { getUser, setState } from './users.js';
 import { botUsername, now, safeApi } from './util.js';
+import { cancelRow, closeScreen, showScreen, textsFor, textsOf } from './chats.js';
 
-async function getLinkButton() {
-  return { text: T.btnGetLink, url: `https://t.me/${await botUsername()}` };
+// `L` below is the texts table of whoever the message or buttons are for.
+async function getLinkButton(L) {
+  return { text: L.btnGetLink, url: `https://t.me/${await botUsername()}` };
 }
 
 // Buttons under an anonymous message in the owner's chat.
-export async function ownerKeyboard(messageId) {
+export async function ownerKeyboard(messageId, L) {
   return {
     inline_keyboard: [
       [
-        { text: T.btnReply, callback_data: `r:${messageId}` },
-        { text: T.btnBlock, callback_data: `b:${messageId}` },
-        { text: T.btnReport, callback_data: `p:${messageId}` },
+        { text: L.btnReply, callback_data: `r:${messageId}` },
+        { text: L.btnBlock, callback_data: `b:${messageId}` },
+        { text: L.btnReport, callback_data: `p:${messageId}` },
       ],
-      [await getLinkButton()],
+      [await getLinkButton(L)],
     ],
   };
 }
 
 // Buttons under an owner's reply in the sender's chat.
-export async function replyKeyboard() {
-  return { inline_keyboard: [[await getLinkButton()]] };
+export async function replyKeyboard(L) {
+  return { inline_keyboard: [[await getLinkButton(L)]] };
 }
 
 // Buttons under the sender's "delivered" confirmation: unsend (u:<messageId>) and,
 // when they came through the link, send another (s:<code> — the code they opened,
 // so the button dies with the link after /newlink).
-export function senderKeyboard(messageId, code) {
-  const row = [{ text: T.btnUnsend, callback_data: `u:${messageId}` }];
-  if (code) row.push({ text: T.btnSendAnother, callback_data: `s:${code}` });
+export function senderKeyboard(messageId, code, L) {
+  const row = [{ text: L.btnUnsend, callback_data: `u:${messageId}` }];
+  if (code) row.push({ text: L.btnSendAnother, callback_data: `s:${code}` });
   return { inline_keyboard: [row] };
 }
 
@@ -54,6 +55,11 @@ async function recordAttempt(msg, owner, status) {
 }
 
 const notify = (chat_id, text, extra = {}) => safeApi('sendMessage', { chat_id, text, ...extra });
+
+// Notices to whoever is sending: they replace the open screen (the prompt). With
+// `stay`, the person is still expected to send, so the ✖️ Cancel button stays too.
+const notice = (chat_id, text, L, stay = false) =>
+  showScreen(chat_id, { text, ...(stay && { reply_markup: { inline_keyboard: [cancelRow(L)] } }) });
 
 const replyTo = (message_id) => message_id ? { reply_parameters: { message_id, allow_sending_without_reply: true } } : {};
 
@@ -99,7 +105,7 @@ export async function findAlbumStart(senderId, mediaGroupId) {
     .orderBy(asc(messages.id)).limit(1).get();
 }
 
-async function deliverAlbumItem(msg, owner, first) {
+async function deliverAlbumItem(msg, owner, first, Ls, Lo) {
   const items = await db.$count(messages,
     and(eq(messages.senderId, msg.from.id), eq(messages.mediaGroupId, msg.media_group_id)));
   if (items >= ALBUM_MAX || now() - first.createdAt > ALBUM_WINDOW_SEC) return;
@@ -107,7 +113,7 @@ async function deliverAlbumItem(msg, owner, first) {
   // Filter first, so a blocked sender gets the same answers as anyone else.
   if (isFiltered(msg.caption)) {
     await recordAttempt(msg, owner, 'filtered');
-    return notify(msg.chat.id, T.filtered);
+    return notice(msg.chat.id, Ls.filtered, Ls);
   }
   // Dropped albums stay dropped; 'failed' may just mean the first is still in flight.
   if (first.status !== 'delivered' && first.status !== 'failed') {
@@ -120,7 +126,7 @@ async function deliverAlbumItem(msg, owner, first) {
     chat_id: owner.id,
     from_chat_id: msg.chat.id,
     message_id: msg.message_id,
-    reply_markup: await ownerKeyboard(id),
+    reply_markup: await ownerKeyboard(id, Lo),
     ...replyTo(first.ownerMsgId),
   });
   if (copy) await db.update(messages).set({ status: 'delivered', ownerMsgId: copy.message_id }).where(eq(messages.id, id));
@@ -135,23 +141,25 @@ export async function deliverAnonymous(msg, ownerId, { replyToMsgId, keepState =
   const chatId = msg.chat.id;
   const senderId = msg.from.id;
   const endState = () => keepState || setState(senderId, 'idle');
+  const Ls = await textsFor(msg.from);
 
   const owner = await getUser(ownerId);
   if (!owner || owner.paused) {
     await endState();
-    return notify(chatId, owner ? T.ownerPaused(owner) : T.invalidLink);
+    return notice(chatId, owner ? Ls.ownerPaused(owner) : Ls.invalidLink, Ls);
   }
 
   // Wrong kind of message: say so and stay in send mode.
   const kind = kindOf(msg);
-  if (!kind) return notify(chatId, T.unsupported);
-  if (!acceptedKinds(owner).includes(kind)) return notify(chatId, T.kindNotAccepted(owner));
+  if (!kind) return notice(chatId, Ls.unsupported, Ls, !keepState);
+  if (!acceptedKinds(owner).includes(kind)) return notice(chatId, Ls.kindNotAccepted(owner), Ls, !keepState);
 
+  const Lo = await textsOf(owner.id);
   if (msg.media_group_id) {
     const first = await findAlbumStart(senderId, msg.media_group_id);
     if (first && first.ownerId === owner.id) {
       await endState();
-      return deliverAlbumItem(msg, owner, first);
+      return deliverAlbumItem(msg, owner, first, Ls, Lo);
     }
   }
 
@@ -163,27 +171,32 @@ export async function deliverAnonymous(msg, ownerId, { replyToMsgId, keepState =
   await endState();
 
   // Came through the link (not a native reply): offer to send another.
-  const confirm = { reply_markup: senderKeyboard(id, replyToMsgId ? null : owner.code) };
-  if (dropped) return notify(chatId, T.delivered(owner), confirm); // silently dropped
-  if (filtered) return notify(chatId, T.filtered);
+  // The prompt goes; the confirmation (with Unsend) stays in the chat.
+  const confirm = { reply_markup: senderKeyboard(id, replyToMsgId ? null : owner.code, Ls) };
+  const delivered = async () => {
+    await closeScreen(chatId);
+    return notify(chatId, Ls.delivered(owner), confirm);
+  };
+  if (dropped) return delivered(); // silently dropped
+  if (filtered) return notice(chatId, Ls.filtered, Ls);
 
   const header = await safeApi('sendMessage', {
     chat_id: owner.id,
-    text: T.newMessageHeader(owner),
+    text: Lo.newMessageHeader(owner),
     ...replyTo(replyToMsgId),
   });
   const copy = header && await safeApi('copyMessage', {
     chat_id: owner.id,
     from_chat_id: chatId,
     message_id: msg.message_id,
-    reply_markup: await ownerKeyboard(id),
+    reply_markup: await ownerKeyboard(id, Lo),
   });
-  if (!copy) return notify(chatId, T.deliveryFailed(owner));
+  if (!copy) return notice(chatId, Ls.deliveryFailed(owner), Ls);
 
   await db.update(messages)
     .set({ status: 'delivered', ownerMsgId: copy.message_id, ownerHeaderId: header.message_id })
     .where(eq(messages.id, id));
-  return notify(chatId, T.delivered(owner), confirm);
+  return delivered();
 }
 
 // Unsend: removes the header and copy (of every item, for an album) from the
@@ -210,27 +223,29 @@ export async function unsend(row) {
 // mode, or as a native reply to the copy (`keepState` leaves the state alone).
 export async function deliverReply(msg, messageId, { keepState = false } = {}) {
   const chatId = msg.chat.id;
-  if (!kindOf(msg)) return notify(chatId, T.unsupported); // stay in reply mode
+  const Lo = await textsFor(msg.from);
+  if (!kindOf(msg)) return notice(chatId, Lo.unsupported, Lo, !keepState); // stay in reply mode
 
   if (!keepState) await setState(msg.from.id, 'idle');
 
   const original = await db.select().from(messages).where(eq(messages.id, messageId)).get();
   if (!original || original.ownerId !== msg.from.id || original.status !== 'delivered') {
-    return notify(chatId, T.replyTargetGone);
+    return notice(chatId, Lo.replyTargetGone, Lo);
   }
 
+  const Ls = await textsOf(original.senderId);
   const header = await safeApi('sendMessage', {
     chat_id: original.senderChatId,
-    text: T.replyHeader(await getUser(msg.from.id)),
+    text: Ls.replyHeader(await getUser(msg.from.id)),
     ...replyTo(original.senderMsgId),
   });
   const copy = header && await safeApi('copyMessage', {
     chat_id: original.senderChatId,
     from_chat_id: chatId,
     message_id: msg.message_id,
-    reply_markup: await replyKeyboard(),
+    reply_markup: await replyKeyboard(Ls),
   });
-  if (!copy) return notify(chatId, T.replyFailed);
+  if (!copy) return notice(chatId, Lo.replyFailed, Lo);
 
   await db.insert(replies).values({
     messageId: original.id,
@@ -240,5 +255,5 @@ export async function deliverReply(msg, messageId, { keepState = false } = {}) {
     senderMsgId: copy.message_id,
     createdAt: now(),
   });
-  return notify(chatId, T.replySent);
+  return notice(chatId, Lo.replySent, Lo);
 }

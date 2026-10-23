@@ -3,7 +3,7 @@ import { table, integer, text, boolean, json, index, uniqueIndex, primaryKey } f
 // Privacy note: no message text, captions or media are ever stored — only Telegram
 // IDs, statuses, timestamps, and the owner's first name and own invitation text.
 // Reported messages are copied to the admin's chat by Telegram, not stored here.
-// Keep /privacy (lib/texts.js) in sync with this file.
+// Keep the privacy text (lib/texts.js) in sync with this file.
 // Timestamps are plain unix seconds so range queries stay simple.
 
 // One row per person who created a link (the "owner").
@@ -13,7 +13,7 @@ export const users = table('users', {
   name:      text('name'),                               // Telegram first name, refreshed on use
   prompt:    text('prompt'),                             // owner's own invitation text (/text); null = default
   accepts:   json('accepts'),                            // message kinds accepted (/types); null = DEFAULT_KINDS
-  locale:    text('locale'),                             // chosen UI language (/language); null = auto from Telegram
+  locale:    text('locale'),                             // legacy language choice; new choices go to chats.locale
   mode:      text('mode').deprecated('link modes removed; replaced by prompt'),
   paused:    boolean('paused').notNull().default(false),
   createdAt: integer('created_at').notNull(),
@@ -105,6 +105,16 @@ export const broadcasts = table('broadcasts', {
 }, (t) => ({
   srcIdx: uniqueIndex('uidx_broadcasts_source').on(t.adminId, t.sourceMsgId),
 }));
+
+// Per chat (the bot only works in private chats, so per person): their language
+// and the bot's two live menu messages, so stale ones can be deleted (clean chat).
+export const chats = table('chats', {
+  id:        integer('id').primaryKey(),               // Telegram user id = chat id
+  locale:    text('locale'),                           // chosen with 🌐 Language; null = auto
+  lang:      text('lang'),                             // from Telegram's language_code, refreshed on use
+  homeMsg:   integer('home_msg'),                      // the welcome message carrying the reply keyboard
+  screenMsg: integer('screen_msg'),                    // the screen a button opened last
+});
 
 // Conversation state per Telegram user.
 // mode: 'idle' | 'sending_to:<ownerId>' | 'replying_to:<messageId>' | 'setting_prompt' | 'broadcasting'
