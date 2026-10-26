@@ -2,6 +2,7 @@ import { db } from 'sdk';
 import { eq } from 'sdk/db';
 import { users, states, messages, replies, blocks, reports, chats } from '../schema.js';
 import { STATE_TTL_SEC } from './config.js';
+import { encodeState, parseState } from './state.js';
 import { now, randomCode } from './util.js';
 
 export async function getUser(id) {
@@ -78,24 +79,31 @@ export async function setPrompt(id, prompt) {
   await db.update(users).set({ prompt }).where(eq(users.id, id));
 }
 
+// The owner's hidden words; [] clears them.
+export async function setWords(id, words) {
+  await db.update(users).set({ words: words.length ? words : null }).where(eq(users.id, id));
+}
+
+// ⚙️ Settings → 🔧 Options: the owner's on/off switches.
+export const OPTIONS = ['blurMedia', 'protectReplies', 'seenReceipts', 'typingIndicator'];
+
+export async function setOption(id, option, on) {
+  if (!OPTIONS.includes(option)) return;
+  await db.update(users).set({ [option]: on }).where(eq(users.id, id));
+}
+
 // --- conversation state ---------------------------------------------------
 
 // Returns { kind: 'idle' } | { kind: 'sending_to', id } | { kind: 'replying_to', id }
-//       | { kind: 'setting_prompt' } | { kind: 'broadcasting' }
+//       | { kind: 'setting_prompt' } | { kind: 'setting_words' } | { kind: 'broadcasting' }
 // A state older than STATE_TTL_SEC reads as { kind: 'idle', expired: <old kind> }.
 export async function getState(userId) {
   const row = await db.select().from(states).where(eq(states.userId, userId)).get();
-  const [kind, id] = (row?.mode ?? 'idle').split(':');
-  if (kind !== 'idle' && row.updatedAt < now() - STATE_TTL_SEC) return { kind: 'idle', expired: kind };
-  if ((kind === 'sending_to' || kind === 'replying_to') && Number.isSafeInteger(Number(id))) {
-    return { kind, id: Number(id) };
-  }
-  if (kind === 'setting_prompt' || kind === 'broadcasting') return { kind };
-  return { kind: 'idle' };
+  return parseState(row, now(), STATE_TTL_SEC);
 }
 
 export async function setState(userId, kind, id) {
-  const mode = ['idle', 'setting_prompt', 'broadcasting'].includes(kind) ? kind : `${kind}:${id}`;
+  const mode = encodeState(kind, id);
   await db.insert(states)
     .values({ userId, mode, updatedAt: now() })
     .onConflictDoUpdate({ target: states.userId, set: { mode, updatedAt: now() } });

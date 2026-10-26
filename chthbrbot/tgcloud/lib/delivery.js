@@ -3,7 +3,7 @@ import { and, asc, eq } from 'sdk/db';
 import { messages, replies, blocks, bans } from '../schema.js';
 import { ALBUM_MAX, ALBUM_WINDOW_SEC } from './config.js';
 import { acceptedKinds, kindOf } from './content.js';
-import { isFiltered } from './filter.js';
+import { containsWord, isFiltered, ownerWords } from './filter.js';
 import { getUser, setState } from './users.js';
 import { botUsername, now, safeApi } from './util.js';
 import { cancelRow, closeScreen, showScreen, textsFor, textsOf } from './chats.js';
@@ -13,18 +13,39 @@ async function getLinkButton(L) {
   return { text: L.btnGetLink, url: `https://t.me/${await botUsername()}` };
 }
 
-// Buttons under an anonymous message in the owner's chat.
-export async function ownerKeyboard(messageId, L) {
-  return {
-    inline_keyboard: [
-      [
-        { text: L.btnReply, callback_data: `r:${messageId}` },
-        { text: L.btnBlock, callback_data: `b:${messageId}` },
-        { text: L.btnReport, callback_data: `p:${messageId}` },
-      ],
-      [await getLinkButton(L)],
-    ],
-  };
+// Buttons under an anonymous message in the owner's chat. 📣 Answer publicly
+// (a:<messageId>) only when `msg` (the sender's message) has text or a caption to quote.
+export async function ownerKeyboard(messageId, L, msg) {
+  const rows = [[
+    { text: L.btnReply, callback_data: `r:${messageId}` },
+    { text: L.btnBlock, callback_data: `b:${messageId}` },
+    { text: L.btnReport, callback_data: `p:${messageId}` },
+  ]];
+  if ((msg?.text ?? msg?.caption ?? '').trim()) rows.push([{ text: L.btnAnswerPublicly, callback_data: `a:${messageId}` }]);
+  rows.push([await getLinkButton(L)]);
+  return { inline_keyboard: rows };
+}
+
+// Copies `msg` into `chat_id` (copyMessage). With `spoiler`, a photo, video or GIF
+// is sent again by its file id under a spoiler instead — copyMessage can't add one.
+// → the sent Message, or null.
+const SPOILER_METHODS = { photo: 'sendPhoto', video: 'sendVideo', animation: 'sendAnimation' };
+
+export async function relay(msg, chat_id, extra, { spoiler = false } = {}) {
+  const kind = kindOf(msg);
+  if (spoiler && SPOILER_METHODS[kind]) {
+    const file = kind === 'photo' ? msg.photo.at(-1).file_id : msg[kind].file_id;
+    return safeApi(SPOILER_METHODS[kind], {
+      chat_id,
+      [kind]: file,
+      caption: msg.caption,
+      caption_entities: msg.caption_entities,
+      show_caption_above_media: msg.show_caption_above_media,
+      has_spoiler: true,
+      ...extra,
+    });
+  }
+  return safeApi('copyMessage', { chat_id, from_chat_id: msg.chat.id, message_id: msg.message_id, ...extra });
 }
 
 // Buttons under an owner's reply in the sender's chat.
@@ -120,15 +141,17 @@ async function deliverAlbumItem(msg, owner, first, Ls, Lo) {
     await recordAttempt(msg, owner, first.status);
     return;
   }
+  // An item hitting the owner's hidden words is dropped silently, on its own.
+  if (containsWord(msg.caption, ownerWords(owner))) {
+    await recordAttempt(msg, owner, 'muted');
+    return;
+  }
 
   const id = await recordAttempt(msg, owner, 'failed');
-  const copy = await safeApi('copyMessage', {
-    chat_id: owner.id,
-    from_chat_id: msg.chat.id,
-    message_id: msg.message_id,
-    reply_markup: await ownerKeyboard(id, Lo),
+  const copy = await relay(msg, owner.id, {
+    reply_markup: await ownerKeyboard(id, Lo, msg),
     ...replyTo(first.ownerMsgId),
-  });
+  }, { spoiler: owner.blurMedia });
   if (copy) await db.update(messages).set({ status: 'delivered', ownerMsgId: copy.message_id }).where(eq(messages.id, id));
 }
 
@@ -165,8 +188,11 @@ export async function deliverAnonymous(msg, ownerId, { replyToMsgId, keepState =
 
   // Record before ending the state, so later album items find this row.
   // Filter before the block check, so a blocked sender can't tell from the answers.
-  const filtered = isFiltered(msg.text ?? msg.caption);
-  const dropped = filtered ? null : await dropReason(owner.id, senderId);
+  // The owner's hidden words drop a message silently, like a block.
+  const text = msg.text ?? msg.caption;
+  const filtered = isFiltered(text);
+  const dropped = filtered ? null
+    : (await dropReason(owner.id, senderId)) ?? (containsWord(text, ownerWords(owner)) ? 'muted' : null);
   const id = await recordAttempt(msg, owner, dropped ?? (filtered ? 'filtered' : 'failed'));
   await endState();
 
@@ -185,12 +211,9 @@ export async function deliverAnonymous(msg, ownerId, { replyToMsgId, keepState =
     text: Lo.newMessageHeader(owner),
     ...replyTo(replyToMsgId),
   });
-  const copy = header && await safeApi('copyMessage', {
-    chat_id: owner.id,
-    from_chat_id: chatId,
-    message_id: msg.message_id,
-    reply_markup: await ownerKeyboard(id, Lo),
-  });
+  const copy = header && await relay(msg, owner.id, {
+    reply_markup: await ownerKeyboard(id, Lo, msg),
+  }, { spoiler: owner.blurMedia });
   if (!copy) return notice(chatId, Ls.deliveryFailed(owner), Ls);
 
   await db.update(messages)
@@ -233,17 +256,19 @@ export async function deliverReply(msg, messageId, { keepState = false } = {}) {
     return notice(chatId, Lo.replyTargetGone, Lo);
   }
 
+  // 🔐 Protect replies: the sender can't forward or save the reply.
+  const owner = await getUser(msg.from.id);
+  const protect = { protect_content: Boolean(owner?.protectReplies) };
   const Ls = await textsOf(original.senderId);
   const header = await safeApi('sendMessage', {
     chat_id: original.senderChatId,
-    text: Ls.replyHeader(await getUser(msg.from.id)),
+    text: Ls.replyHeader(owner),
     ...replyTo(original.senderMsgId),
+    ...protect,
   });
-  const copy = header && await safeApi('copyMessage', {
-    chat_id: original.senderChatId,
-    from_chat_id: chatId,
-    message_id: msg.message_id,
+  const copy = header && await relay(msg, original.senderChatId, {
     reply_markup: await replyKeyboard(Ls),
+    ...protect,
   });
   if (!copy) return notice(chatId, Lo.replyFailed, Lo);
 

@@ -1,12 +1,14 @@
 // handlers/message_reaction.js — mirrors reactions on relayed messages to the other chat:
 // the owner reacting to an anonymous message → on the sender's original; the sender
 // reacting to an owner's reply → on the owner's original. The bot shows up as the reactor,
-// so nobody's identity leaks.
+// so nobody's identity leaks. An owner's reaction also counts as having seen the
+// message (seen receipts, lib/receipts.js).
 
 import { db } from 'sdk';
 import { eq } from 'sdk/db';
 import { messages } from '../schema.js';
 import { dropReason, findOwnerCopy, findReplyCopy } from '../lib/delivery.js';
+import { markOneSeen, markSeen } from '../lib/receipts.js';
 import { safeApi } from '../lib/util.js';
 
 const emojis = (list) => (list ?? []).filter((r) => r.type === 'emoji').map((r) => r.emoji);
@@ -25,7 +27,10 @@ async function counterpart(r) {
   const chatId = r.chat.id;
 
   const received = await findOwnerCopy(chatId, r.message_id);
-  if (received) return { chat_id: received.senderChatId, message_id: received.senderMsgId };
+  if (received) {
+    await markOneSeen(received.id); // its 👀 would replace the owner's reaction
+    return { chat_id: received.senderChatId, message_id: received.senderMsgId };
+  }
 
   const answer = await findReplyCopy(chatId, r.message_id);
   if (!answer?.ownerMsgId) return null;
@@ -41,6 +46,7 @@ export default async function (r, ctx) {
   try {
     const target = await counterpart(r);
     if (target) await safeApi('setMessageReaction', { ...target, reaction: pick(r) });
+    await markSeen(r.user.id);
   } catch (e) {
     console.error('message_reaction handler failed', e);
   }

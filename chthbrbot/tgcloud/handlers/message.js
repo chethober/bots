@@ -2,14 +2,16 @@
 // (plain or with a link code), anonymous sends and replies, and the admin commands.
 // The only slash commands are /start and the admin ones; everything else is a button.
 
-import { PROMPT_MAX, SOURCE_URL } from '../lib/config.js';
+import { PROMPT_MAX, SOURCE_URL, WORDS_MAX, WORD_MAX_LEN } from '../lib/config.js';
 import { ban, bansView, dashboardView, isAdmin, recipientCount, sendOpenReports, unban } from '../lib/admin.js';
 import { cancelRow, closeScreen, drop, matchButton, showScreen, textsFor } from '../lib/chats.js';
 import { deliverAnonymous, deliverReply, findAlbumStart, findOwnerCopy, findReplyCopy } from '../lib/delivery.js';
-import { isFiltered } from '../lib/filter.js';
+import { isFiltered, ownerWords, parseWords } from '../lib/filter.js';
 import { languageKeyboard } from '../lib/i18n.js';
-import { linkView, sendHome, settingsView, statsView } from '../lib/manage.js';
-import { getOrCreateUser, getUser, getUserByCode, getState, setState, setPrompt } from '../lib/users.js';
+import { linkView, sendHome, settingsView, statsView, wordsView } from '../lib/manage.js';
+import { markSeen } from '../lib/receipts.js';
+import { maybePrune } from '../lib/retention.js';
+import { getOrCreateUser, getUser, getUserByCode, getState, setState, setPrompt, setWords } from '../lib/users.js';
 import { safeApi } from '../lib/util.js';
 
 const reply = (msg, text, extra = {}) => safeApi('sendMessage', { chat_id: msg.chat.id, text, ...extra });
@@ -78,6 +80,22 @@ async function onPromptMessage(msg, L) {
   if (!result.ok) return screen(msg, result.text, withCancel(L));
   await setState(user.id, 'idle');
   return screen(msg, result.text, { reply_markup: { inline_keyboard: [[{ text: L.btnBack, callback_data: 'st:home' }]] } });
+}
+
+// Messages after ⚙️ Settings → 🔤 Hidden words add words, until ⬅️ Back.
+async function onWordsMessage(msg, L) {
+  await drop(msg.chat.id, msg.message_id);
+  const user = await getOrCreateUser(msg.from);
+  await setState(user.id, 'setting_words'); // keeps the editor open
+  if (msg.text === undefined) return showScreen(msg.chat.id, wordsView(user, L, L.wordsNotText));
+  const existing = ownerWords(user);
+  const added = parseWords(msg.text, existing, WORD_MAX_LEN);
+  const room = Math.max(0, WORDS_MAX - existing.length);
+  const words = [...existing, ...added.slice(0, room)];
+  if (words.length > existing.length) await setWords(user.id, words);
+  const note = added.length > room ? L.wordsFull(WORDS_MAX)
+    : added.length ? L.wordsAdded(added.length) : L.wordsNoneAdded(WORD_MAX_LEN);
+  return showScreen(msg.chat.id, wordsView({ ...user, words }, L, note));
 }
 
 // --- admin (ADMIN_IDS) commands; to everyone else they don't exist -------------
@@ -161,6 +179,7 @@ export default async function (msg, ctx) {
   if (msg.chat?.type !== 'private' || !msg.from || msg.from.is_bot) return;
   try {
     const L = await textsFor(msg.from);
+    await markSeen(msg.from.id);
     const button = matchButton(msg.text);
     const parsed = button ? null : parseCommand(msg.text);
 
@@ -179,6 +198,7 @@ export default async function (msg, ctx) {
     if (state.kind === 'sending_to') return await deliverAnonymous(msg, state.id);
     if (state.kind === 'replying_to') return await deliverReply(msg, state.id);
     if (state.kind === 'setting_prompt') return await onPromptMessage(msg, L);
+    if (state.kind === 'setting_words') return await onWordsMessage(msg, L);
     if (state.kind === 'broadcasting') return await onBroadcastMessage(msg, L);
 
     // Idle: later items of an album arrive as separate updates, after the first
@@ -191,7 +211,7 @@ export default async function (msg, ctx) {
     // A send / reply / invitation-text edit that timed out (see STATE_TTL_SEC).
     const expired = {
       sending_to: L.sendExpired, replying_to: L.replyExpired, setting_prompt: L.textExpired,
-      broadcasting: L.broadcastExpired,
+      setting_words: L.wordsExpired, broadcasting: L.broadcastExpired,
     }[state.expired];
     if (expired) {
       await setState(msg.from.id, 'idle');
@@ -203,5 +223,7 @@ export default async function (msg, ctx) {
     return await screen(msg, L.help);
   } catch (e) {
     console.error('message handler failed', e);
+  } finally {
+    await maybePrune();
   }
 }

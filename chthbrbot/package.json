@@ -4,9 +4,11 @@
   "description": "Personal anonymous-message link bot for Telegram, running serverless on tgcloud",
   "license": "MIT",
   "private": true,
+  "type": "module",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/chethober/anonm.git"
+    "url": "git+https://github.com/chethober/bots.git",
+    "directory": "chthbrbot"
   },
   "keywords": [
     "telegram",
@@ -20,6 +22,7 @@
   "scripts": {
     "deploy": "tgcloud push",
     "status": "tgcloud status",
-    "run": "tgcloud run"
+    "run": "tgcloud run",
+    "test": "node --test \"test/*.test.js\""
   }
 }

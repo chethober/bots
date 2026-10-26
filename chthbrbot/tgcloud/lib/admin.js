@@ -5,7 +5,7 @@
 import { api, db, BotApiError } from 'sdk';
 import { and, desc, eq, ne, sql } from 'sdk/db';
 import { messages, reports, bans, broadcasts } from '../schema.js';
-import { ADMIN_IDS } from './config.js';
+import { ADMIN_IDS, AUTO_BAN_REPORTERS } from './config.js';
 import { getUser } from './users.js';
 import { isUnreachable, now, safeApi } from './util.js';
 import { textsOf } from './chats.js';
@@ -28,14 +28,15 @@ export function reportKeyboard(report, L) {
 
 // Copies the reported message to the admins (all, or `adminIds`) with Ban /
 // Dismiss buttons. copyMessage (not forward), so the sender's identity isn't
-// attached. `msg` is the messages row the report is about.
-export async function sendReport(report, msg, adminIds = ADMIN_IDS) {
+// attached. `msg` is the messages row the report is about; `autoBanned` = the
+// number of owners whose reports just got the sender banned (see maybeAutoBan).
+export async function sendReport(report, msg, { adminIds = ADMIN_IDS, autoBanned = 0 } = {}) {
   if (!adminIds.length) return;
   const owner = await getUser(report.ownerId);
   const prior = await db.$count(reports, and(eq(reports.senderId, report.senderId), ne(reports.id, report.id)));
   for (const chat_id of adminIds) {
     const L = await textsOf(chat_id);
-    const text = L.adminReport(report, owner, prior);
+    const text = L.adminReport(report, owner, prior, autoBanned);
     const reply_markup = reportKeyboard(report, L);
     if (!(await safeApi('sendMessage', { chat_id, text }))) continue;
     const copy = await safeApi('copyMessage', {
@@ -58,7 +59,7 @@ export async function sendOpenReports(chatId, L) {
   await safeApi('sendMessage', { chat_id: chatId, text: L.adminReportsHeader(Math.min(open.length, REPORTS_LIMIT), total) });
   for (const report of open.slice(0, REPORTS_LIMIT)) {
     const msg = await db.select().from(messages).where(eq(messages.id, report.messageId)).get();
-    if (msg) await sendReport(report, msg, [chatId]);
+    if (msg) await sendReport(report, msg, { adminIds: [chatId] });
   }
 }
 
@@ -77,6 +78,21 @@ export async function unban(senderId) {
   await db.update(reports).set({ status: 'dismissed' })
     .where(and(eq(reports.senderId, senderId), eq(reports.status, 'banned')));
   return res.rowsAffected > 0;
+}
+
+// A new report: once AUTO_BAN_REPORTERS different owners have reported this
+// sender (dismissed reports don't count), the sender is banned bot-wide and their
+// open reports read as banned. Unbanning dismisses those, so it doesn't re-trigger.
+// → the number of owners when it banned, else 0.
+export async function maybeAutoBan(report) {
+  if (!AUTO_BAN_REPORTERS) return 0;
+  const { n } = await db.get(sql`
+    SELECT COUNT(DISTINCT owner_id) AS n FROM reports
+    WHERE sender_id = ${report.senderId} AND status != 'dismissed'`);
+  if (n < AUTO_BAN_REPORTERS || !(await ban(report.senderId, report.id))) return 0;
+  await db.update(reports).set({ status: 'banned' })
+    .where(and(eq(reports.senderId, report.senderId), eq(reports.status, 'open')));
+  return n;
 }
 
 // bu:<createdAt>.<rank> → lifts that ban; true if there was one.

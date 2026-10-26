@@ -1,8 +1,10 @@
 // handlers/inline_query.js — "@bot" typed in any chat: share your anonymous link.
-// Whatever is typed after "@bot" becomes the invitation text. Needs inline mode
-// switched on in BotFather (/setinline).
+// Whatever is typed after "@bot" becomes the invitation text — unless it's a
+// 📣 Answer publicly query ("❓ question 💬 answer", lib/answer.js), which becomes a
+// question-and-answer card. Needs inline mode switched on in BotFather (/setinline).
 
 import { api } from 'sdk';
+import { parseAnswerQuery } from '../lib/answer.js';
 import { textsFor } from '../lib/chats.js';
 import { getOrCreateUser } from '../lib/users.js';
 import { personalLink } from '../lib/util.js';
@@ -27,7 +29,12 @@ export default async function (q, ctx) {
     });
 
     const results = [];
-    if (custom) results.push(article('custom', L.inlineCustomTitle, custom, custom));
+    const qa = parseAnswerQuery(q.query);
+    if (qa) {
+      results.push(qa.answer
+        ? article('answer', L.inlineAnswerTitle, qa.answer, L.answerCard(qa.question, qa.answer))
+        : article('question', L.inlineQuestionTitle, L.inlineAnswerHint, L.answerCard(qa.question, '')));
+    } else if (custom) results.push(article('custom', L.inlineCustomTitle, custom, custom));
     const inviteDesc = user.paused ? L.inlinePaused : L.invitation(user);
     results.push(article('invite', L.inlineShareTitle, inviteDesc, L.inlineInvite(user)));
     results.push(article('link', L.inlineLinkTitle, link, link));

@@ -1,7 +1,8 @@
 import { table, integer, text, boolean, json, index, uniqueIndex, primaryKey } from 'sdk/db';
 
 // Privacy note: no message text, captions or media are ever stored — only Telegram
-// IDs, statuses, timestamps, and the owner's first name and own invitation text.
+// IDs, statuses, timestamps, the owner's first name, own invitation text and own
+// hidden words.
 // Reported messages are copied to the admin's chat by Telegram, not stored here.
 // Keep the privacy text (lib/texts.js) in sync with this file.
 // Timestamps are plain unix seconds so range queries stay simple.
@@ -16,13 +17,20 @@ export const users = table('users', {
   locale:    text('locale'),                             // legacy language choice; new choices go to chats.locale
   mode:      text('mode').deprecated('link modes removed; replaced by prompt'),
   paused:    boolean('paused').notNull().default(false),
+  words:     json('words'),                              // owner's own hidden words (⚙️ → 🔤); null = none
+  blurMedia: boolean('blur_media').notNull().default(false),           // photos/videos/GIFs arrive under a spoiler
+  protectReplies: boolean('protect_replies').notNull().default(false), // replies can't be forwarded or saved
+  seenReceipts:   boolean('seen_receipts').notNull().default(false),   // senders get 👀 once the owner has seen
+  typingIndicator: boolean('typing_indicator').notNull().default(false), // senders see "typing…" on ↩️ Reply
   createdAt: integer('created_at').notNull(),
 }, (t) => ({
   codeIdx: uniqueIndex('uidx_users_code').on(t.code),
 }));
 
-// Every anonymous message attempt, including dropped ones.
-// status: 'delivered' | 'blocked' | 'banned' | 'filtered' | 'failed' | 'unsent'
+// Every anonymous message attempt, including dropped ones. Rows older than
+// RETENTION_DAYS are deleted unless a report still points at them (lib/retention.js).
+// status: 'delivered' | 'blocked' | 'banned' | 'filtered' | 'muted' (the owner's
+// hidden words) | 'failed' | 'unsent'
 export const messages = table('messages', {
   id:           integer('id').primaryKey({ autoIncrement: true }),
   ownerId:      integer('owner_id').notNull(),           // → users.id (not enforced)
@@ -34,8 +42,10 @@ export const messages = table('messages', {
   mediaGroupId: text('media_group_id'),                  // Telegram album id, so later album items follow the first
   mode:         text('mode').deprecated('link modes removed'),
   status:       text('status').notNull(),
+  seenAt:       integer('seen_at'),                      // when the owner was first active after it (seen receipts)
   createdAt:    integer('created_at').notNull(),
 }, (t) => ({
+  createdIdx: index('idx_messages_created').on(t.createdAt),
   rateIdx:   index('idx_messages_rate').on(t.senderId, t.ownerId, t.createdAt),
   ownerIdx:  index('idx_messages_owner_status').on(t.ownerId, t.status),
   copyIdx:   index('idx_messages_owner_copy').on(t.ownerId, t.ownerMsgId),
@@ -117,7 +127,8 @@ export const chats = table('chats', {
 });
 
 // Conversation state per Telegram user.
-// mode: 'idle' | 'sending_to:<ownerId>' | 'replying_to:<messageId>' | 'setting_prompt' | 'broadcasting'
+// mode: 'idle' | 'sending_to:<ownerId>' | 'replying_to:<messageId>' | 'setting_prompt'
+//     | 'setting_words' | 'broadcasting'  (parsed by lib/state.js)
 export const states = table('states', {
   userId:    integer('user_id').primaryKey(),
   mode:      text('mode').notNull().default('idle'),

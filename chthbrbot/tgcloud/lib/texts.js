@@ -6,6 +6,8 @@
 // owner's Telegram first name and may be null; `prompt` is their own invitation text,
 // or null for the default one.
 
+import { RETENTION_DAYS } from './config.js';
+
 const DIGITS = { fa: '۰۱۲۳۴۵۶۷۸۹', ar: '٠١٢٣٤٥٦٧٨٩' };
 
 // Helpers each table is built with: numbers in the locale's digits, "3 days ago",
@@ -77,7 +79,8 @@ const fa = (w) => {
       `پیامت رو همین الان بفرست.\n\n${who(owner)} نمی‌فهمه تو کی هستی.`,
 
     // Sending
-    delivered: (owner) => `پیامت به ${who(owner)} رسید ✅`,
+    delivered: (owner) => `پیامت به ${who(owner)} رسید ✅` +
+      (owner.seenReceipts ? `\nوقتی ${who(owner)} پیامت رو ببینه، روش 👀 می‌بینی.` : ''),
     btnUnsend: '🗑 پس گرفتن',
     btnSendAnother: '✉️ پیام بعدی',
     unsent: (owner) => `پیامت پس گرفته شد 🗑 دیگه توی چت ${who(owner)} نیست.`,
@@ -162,10 +165,11 @@ const fa = (w) => {
     deleted: 'اطلاعاتت پاک شد ✅ اگه دوباره لینک خواستی «🎭 لینک من» رو بزن.',
 
     // Admin (ADMIN_IDS) — reported messages
-    adminReport: (report, owner, priorReports) =>
+    adminReport: (report, owner, priorReports, autoBanned = 0) =>
       `⚠️ گزارش #${num(report.id)}\n` +
       `صاحب لینک: ${owner?.name ?? '—'} (${report.ownerId})\n` +
       `گزارش‌های قبلی علیه این فرستنده: ${num(priorReports)}\n\n` +
+      (autoBanned ? `⛔️ خودکار محروم شد: ${num(autoBanned)} نفر مختلف این فرستنده رو گزارش دادن.\n` : '') +
       `پیام گزارش‌شده زیر همینه 👇`,
     adminMessageGone: '(پیام گزارش‌شده دیگه در دسترس نیست.)',
     btnBan: '⛔️ محروم کردن فرستنده',
@@ -188,7 +192,7 @@ const fa = (w) => {
         `✉️ پیام‌ها\n` +
         `ارسال‌شده: ${m('delivered')} (امروز: ${num(s.deliveredDay)})\n` +
         `مسدود: ${m('blocked')} · محروم: ${m('banned')} · فیلترشده: ${m('filtered')}\n` +
-        `ناموفق: ${m('failed')} · پس گرفته‌شده: ${m('unsent')}\n` +
+        `ناموفق: ${m('failed')} · پس گرفته‌شده: ${m('unsent')} · پنهان‌شده: ${m('muted')}\n` +
         `پاسخ‌ها: ${num(s.replies)}\n\n` +
         `🛡 مدیریت\n` +
         `گزارش‌های باز: ${num(s.openReports)} از ${num(s.reports)}\n` +
@@ -241,13 +245,20 @@ const fa = (w) => {
 
     // Stats, privacy
     needLink: 'هنوز لینک نداری — «🎭 لینک من» رو بزن تا بسازیمش.',
-    stats: (owner, { received, replies, blocked, filtered }) =>
+    stats: (owner, s) =>
       `📊 آمار${owner.name ? ` ${owner.name}` : ''}\n\n` +
-      `پیام‌های دریافتی: ${num(received)}\n` +
-      `پاسخ‌های ارسالی: ${num(replies)}\n` +
-      `فرستنده‌های مسدود: ${num(blocked)}\n` +
-      `پیام‌های فیلترشده: ${num(filtered)}\n\n` +
-      `وضعیت: ${owner.paused ? 'متوقف' : 'در حال دریافت'}`,
+      `پیام‌های دریافتی: ${num(s.received)}\n` +
+      `امروز: ${num(s.day)} · این هفته: ${num(s.week)}\n` +
+      `فرستنده‌های مختلف: ${num(s.senders)}\n` +
+      `جواب‌داده‌شده: ${num(s.replied)} از ${num(s.received)}` +
+      (s.received ? ` (٪${num(Math.round((100 * s.replied) / s.received))})` : '') + '\n' +
+      (s.busiest === null ? '' : `شلوغ‌ترین روز: ${w.weekdays[s.busiest]}\n`) +
+      `\nپاسخ‌های ارسالی: ${num(s.replies)}\n` +
+      `فرستنده‌های مسدود: ${num(s.blocked)}\n` +
+      `پیام‌های فیلترشده: ${num(s.filtered)}\n` +
+      `پنهان‌شده با کلمات تو: ${num(s.muted)}\n\n` +
+      `وضعیت: ${owner.paused ? 'متوقف' : 'در حال دریافت'}` +
+      (s.retentionDays ? `\n\nآمار مربوط به ${num(s.retentionDays)} روز اخیره.` : ''),
     privacy:
       `🔒 حریم خصوصی\n\n` +
       `این ربات این‌ها رو ذخیره می‌کنه:\n` +
@@ -257,7 +268,9 @@ const fa = (w) => {
       `تا پیام‌های قدیمی منو پاک بشن.\n` +
       `• برای هر پیام ناشناس: شناسه‌ی کاربری فرستنده و صاحب لینک، شناسه‌های چت/پیام تلگرام که برای ` +
       `رسوندن پاسخ، ویرایش و پس گرفتن پیام لازمه، شناسه‌ی آلبوم تلگرام (اگه پیام چندتا عکس/ویدیو باشه)، ` +
-      `وضعیت (ارسال‌شده / مسدود / محروم / فیلترشده / ناموفق / پس گرفته‌شده) و زمان.\n` +
+      `وضعیت (ارسال‌شده / مسدود / محروم / فیلترشده / پنهان‌شده / ناموفق / پس گرفته‌شده) و زمان.\n` +
+      `• برای صاحب لینکی که ازشون استفاده کنه: کلمات پنهانش و کلیدهای 🔧 گزینه‌ها؛ و برای هر پیام، ` +
+      `زمانی که صاحب لینک دیدش (اگه اعلام دیده شدن رو روشن کرده باشه).\n` +
       `• مسدودی‌ها (شناسه‌ی صاحب لینک + فرستنده)، گزارش‌ها (شناسه‌ی پیام، صاحب لینک و فرستنده، و نتیجه‌ی بررسی)، ` +
       `محرومیت‌ها از کل ربات (شناسه‌ی فرستنده) و پاسخ‌ها (شناسه‌ی پیام و صاحب لینک، و شناسه‌های چت/پیام تلگرام که برای رسوندن ری‌اکشن‌ها و ریپلای‌ها لازمه).\n` +
       `• مرحله‌ای که الان توی ربات هستی (مثلاً «در حال نوشتن پیام برای <شناسه‌ی صاحب لینک>»).\n` +
@@ -268,6 +281,8 @@ const fa = (w) => {
       `ربات متن، کپشن یا فایل پیام‌های ناشناس رو ذخیره نمی‌کنه — تلگرام مستقیم اون‌ها رو بین چت‌ها کپی می‌کنه. ` +
       `وقتی پیامی گزارش بشه، یه کپی ازش (بدون هویت فرستنده، همراه با اسم و شناسه‌ی صاحب لینک) برای گرداننده‌ی ربات فرستاده می‌شه تا بررسیش کنه. ` +
       `گرداننده‌ی ربات از نظر فنی به اطلاعات ذخیره‌شده دسترسی داره.\n\n` +
+      (RETENTION_DAYS ? `سابقه‌ی پیام‌های ناشناس و پاسخ‌هاشون بعد از ${num(RETENTION_DAYS)} روز پاک می‌شه، ` +
+        `مگه اینکه گزارشی هنوز بهشون مربوط باشه.\n\n` : '') +
       `با ⚙️ تنظیمات ← 🗑 پاک کردن اطلاعاتم، لینکت، تنظیماتت، سابقه‌ی پیام‌های دریافتی و پاسخ‌هات، مسدودی‌هایی که انجام دادی و گزارش‌هایی که دادی پاک می‌شن. ` +
       `سابقه‌ی پیام‌هایی که خودت برای بقیه فرستادی و مسدودی/گزارش/محرومیت‌های علیه تو می‌مونن، ` +
       `چون مال گیرنده‌هاست و برای جلوگیری از مزاحمت لازمه.`,
@@ -285,6 +300,52 @@ const fa = (w) => {
     stDelete: '🗑 پاک کردن اطلاعاتم',
 
     // Language, source
+    stWords: '🔤 کلمات پنهان',
+    stOptions: '🔧 گزینه‌ها',
+    wordsMenu: (words, max, maxLen) =>
+      `🔤 کلمات پنهان\n\n` +
+      `پیام‌هایی که هر کدوم از این کلمه‌ها یا عبارت‌ها رو داشته باشن، بی‌صدا ازت پنهان می‌شن: ` +
+      `به فرستنده گفته می‌شه پیامش رسیده، درست مثل مسدود کردن. فقط متن و کپشن بررسی می‌شه.\n\n` +
+      (words.length ? words.map((x, i) => `${num(i + 1)}. ${x}`).join('\n') : 'هنوز کلمه‌ای اضافه نکردی.') +
+      `\n\nحالا کلمه‌هایی که می‌خوای اضافه کنی رو بفرست: هر کدوم توی یه خط یا با ویرگول جدا ` +
+      `(حداکثر ${num(max)} تا، هر کدوم تا ${num(maxLen)} حرف). برای حذف یه کلمه، روی دکمه‌اش بزن.`,
+    btnWordsClear: '🗑 حذف همه',
+    wordsRemovedToast: 'حذف شد',
+    wordsAdded: (n) => `✅ ${num(n)} تا اضافه شد.`,
+    wordsNoneAdded: (maxLen) => `چیز جدیدی برای اضافه کردن نبود (یا از قبل توی لیسته، یا بیشتر از ${num(maxLen)} حرفه).`,
+    wordsFull: (max) => `لیست پره (${num(max)} تا). برای اضافه کردن، چندتا رو حذف کن.`,
+    wordsNotText: 'لطفاً کلمه‌ها رو به صورت پیام متنی بفرست.',
+    wordsExpired: 'وقت اضافه کردن کلمات پنهان تموم شد ⌛️ دوباره از ⚙️ تنظیمات ← 🔤 کلمات پنهان شروع کن.',
+
+    options: {
+      blurMedia: '🙈 تار کردن عکس و ویدیو',
+      protectReplies: '🔐 محافظت از پاسخ‌هام',
+      seenReceipts: '👀 اعلام دیده شدن',
+      typingIndicator: '✍️ نشون دادن موقع پاسخ دادن',
+    },
+    optionsMenu: () =>
+      `🔧 گزینه‌ها\n\n` +
+      `🙈 تار کردن عکس و ویدیو: عکس‌ها، ویدیوها و گیف‌ها زیر اسپویلر میان؛ برای دیدنشون روشون بزن.\n\n` +
+      `🔐 محافظت از پاسخ‌هام: فرستنده‌ها نمی‌تونن پاسخ‌هات رو فوروارد یا ذخیره کنن.\n\n` +
+      `👀 اعلام دیده شدن: وقتی بعد از رسیدن یه پیام هر کاری توی این چت بکنی، فرستنده روی پیامش 👀 می‌بینه.\n\n` +
+      `✍️ نشون دادن موقع پاسخ دادن: وقتی «↩️ پاسخ» رو می‌زنی، فرستنده چند ثانیه «در حال نوشتن…» می‌بینه.\n\n` +
+      `برای روشن ✅ یا خاموش ⬜️ کردن، روی هر گزینه بزن.`,
+    optionOn: 'روشن',
+    optionOff: 'خاموش',
+
+    btnAnswerPublicly: '📣 جواب عمومی',
+    answerUnavailable: 'به این پیام نمی‌شه جواب عمومی داد (متن نداره یا دیگه در دسترس نیست).',
+    answerHowTo:
+      `📣 جواب عمومی\n\nدکمه رو بزن و یه چت، گروه یا کانال انتخاب کن. بعد جوابت رو بعد از 💬 بنویس ` +
+      `و روی کارتی که ظاهر می‌شه بزن. سؤال همراه جوابت و یه دکمه به لینکت فرستاده می‌شه — ` +
+      `هیچ‌وقت با هویت فرستنده.`,
+    btnAnswerPost: '📣 انتخاب چت',
+    answerCard: (question, answer) => `❓ ${question}` + (answer ? `\n\n💬 ${answer}` : ''),
+    answerForwardToast: 'کارت بالا رو هر جا که می‌خوای جوابش رو بدی فوروارد کن.',
+    inlineAnswerTitle: '📣 فرستادن سؤال با جوابم',
+    inlineQuestionTitle: '📣 فرستادن سؤال',
+    inlineAnswerHint: 'جوابت رو بعد از 💬 بنویس تا اضافه بشه',
+
     chooseLanguage: '🌐 زبان خود را انتخاب کنید:',
     languageSet: (name) => `✅ زبان به ${name} تغییر کرد.`,
     sourceHere: '📦 کد منبع:',
@@ -348,7 +409,8 @@ const en = (w) => {
       (owner.prompt ? `«${owner.prompt}»\n— ${who(owner)}\n\n` : `✉️ You're sending ${who(owner)} an anonymous message.\n\n`) +
       `Send your message now.\n\n${who(owner)} won't know who you are.`,
 
-    delivered: (owner) => `Your message reached ${who(owner)} ✅`,
+    delivered: (owner) => `Your message reached ${who(owner)} ✅` +
+      (owner.seenReceipts ? `\nYou'll see 👀 on your message once ${who(owner)} has seen it.` : ''),
     btnUnsend: '🗑 Unsend',
     btnSendAnother: '✉️ Send another',
     unsent: (owner) => `Your message was unsent 🗑 It's no longer in ${who(owner)}'s chat.`,
@@ -426,10 +488,11 @@ const en = (w) => {
     btnDeleteYes: '🗑 Yes, delete',
     deleted: 'Your data was deleted ✅ Tap «🎭 My link» if you want a link again.',
 
-    adminReport: (report, owner, priorReports) =>
+    adminReport: (report, owner, priorReports, autoBanned = 0) =>
       `⚠️ Report #${num(report.id)}\n` +
       `Link owner: ${owner?.name ?? '—'} (${report.ownerId})\n` +
       `Earlier reports against this sender: ${num(priorReports)}\n\n` +
+      (autoBanned ? `⛔️ Banned automatically: ${num(autoBanned)} different people reported this sender.\n` : '') +
       `The reported message is below 👇`,
     adminMessageGone: '(The reported message is no longer available.)',
     btnBan: '⛔️ Ban the sender',
@@ -451,7 +514,7 @@ const en = (w) => {
         `✉️ Messages\n` +
         `Delivered: ${m('delivered')} (today: ${num(s.deliveredDay)})\n` +
         `Blocked: ${m('blocked')} · Banned: ${m('banned')} · Filtered: ${m('filtered')}\n` +
-        `Failed: ${m('failed')} · Unsent: ${m('unsent')}\n` +
+        `Failed: ${m('failed')} · Unsent: ${m('unsent')} · Hidden: ${m('muted')}\n` +
         `Replies: ${num(s.replies)}\n\n` +
         `🛡 Moderation\n` +
         `Open reports: ${num(s.openReports)} of ${num(s.reports)}\n` +
@@ -502,13 +565,20 @@ const en = (w) => {
     typesLastOne: 'At least one kind has to stay on',
 
     needLink: "You don't have a link yet — tap «🎭 My link» to make one.",
-    stats: (owner, { received, replies, blocked, filtered }) =>
+    stats: (owner, s) =>
       `📊 Stats${owner.name ? ` for ${owner.name}` : ''}\n\n` +
-      `Messages received: ${num(received)}\n` +
-      `Replies sent: ${num(replies)}\n` +
-      `Blocked senders: ${num(blocked)}\n` +
-      `Filtered messages: ${num(filtered)}\n\n` +
-      `Status: ${owner.paused ? 'paused' : 'receiving'}`,
+      `Messages received: ${num(s.received)}\n` +
+      `Today: ${num(s.day)} · This week: ${num(s.week)}\n` +
+      `Different senders: ${num(s.senders)}\n` +
+      `Answered: ${num(s.replied)} of ${num(s.received)}` +
+      (s.received ? ` (${num(Math.round((100 * s.replied) / s.received))}%)` : '') + '\n' +
+      (s.busiest === null ? '' : `Busiest day: ${w.weekdays[s.busiest]}\n`) +
+      `\nReplies sent: ${num(s.replies)}\n` +
+      `Blocked senders: ${num(s.blocked)}\n` +
+      `Filtered messages: ${num(s.filtered)}\n` +
+      `Hidden by your words: ${num(s.muted)}\n\n` +
+      `Status: ${owner.paused ? 'paused' : 'receiving'}` +
+      (s.retentionDays ? `\n\nCounts cover the last ${num(s.retentionDays)} days.` : ''),
     privacy:
       `🔒 Privacy\n\n` +
       `This bot stores:\n` +
@@ -518,7 +588,9 @@ const en = (w) => {
       `menu messages in their chat, so old menus can be removed.\n` +
       `• For each anonymous message: the sender's and link owner's user ids, the Telegram chat/message ids needed to ` +
       `deliver replies, edits and unsends, the Telegram album id (for multi-photo/video messages), ` +
-      `the status (delivered / blocked / banned / filtered / failed / unsent) and the time.\n` +
+      `the status (delivered / blocked / banned / filtered / hidden / failed / unsent) and the time.\n` +
+      `• For link owners who use them: their hidden words and their 🔧 Options switches; and for each message, ` +
+      `when the link owner saw it (if they turned on seen receipts).\n` +
       `• Blocks (link owner + sender ids), reports (message, link owner and sender ids, and the outcome), ` +
       `bot-wide bans (sender id) and replies (message and link owner ids, and the Telegram chat/message ids needed to relay reactions and replies).\n` +
       `• The step you're at in the bot (e.g. "writing a message to <link owner id>").\n` +
@@ -529,6 +601,8 @@ const en = (w) => {
       `The bot doesn't store the text, captions or files of anonymous messages — Telegram copies them between chats directly. ` +
       `When a message is reported, a copy of it (without the sender's identity, with the link owner's name and id) is sent to the bot's operator for review. ` +
       `The operator technically has access to the stored data.\n\n` +
+      (RETENTION_DAYS ? `Records of anonymous messages and their replies are deleted after ${num(RETENTION_DAYS)} days, ` +
+        `unless a report still concerns them.\n\n` : '') +
       `⚙️ Settings → 🗑 Delete my data removes your link, settings, the record of messages you received and your replies, the blocks you made and the reports you filed. ` +
       `The record of messages you sent to others and blocks/reports/bans against you stay, ` +
       `because they belong to the recipients and are needed to prevent abuse.`,
@@ -543,6 +617,52 @@ const en = (w) => {
     stBlocked: '🚫 Blocked senders',
     stNewlink: '🔄 New link',
     stDelete: '🗑 Delete my data',
+
+    stWords: '🔤 Hidden words',
+    stOptions: '🔧 Options',
+    wordsMenu: (words, max, maxLen) =>
+      `🔤 Hidden words\n\n` +
+      `Messages containing any of these words or phrases are hidden from you, quietly: ` +
+      `the sender is told it was delivered, as with a block. Only text and captions are checked.\n\n` +
+      (words.length ? words.map((x, i) => `${num(i + 1)}. ${x}`).join('\n') : 'No hidden words yet.') +
+      `\n\nSend words to add now: one per line or separated by commas ` +
+      `(up to ${num(max)}, ${num(maxLen)} characters each). Tap a word below to remove it.`,
+    btnWordsClear: '🗑 Remove all',
+    wordsRemovedToast: 'Removed',
+    wordsAdded: (n) => `✅ Added ${num(n)}.`,
+    wordsNoneAdded: (maxLen) => `Nothing new to add (already on the list, or longer than ${num(maxLen)} characters).`,
+    wordsFull: (max) => `The list is full (${num(max)}). Remove some words to add new ones.`,
+    wordsNotText: 'Please send the words as a text message.',
+    wordsExpired: 'Time to add hidden words ran out ⌛️ Start again from ⚙️ Settings → 🔤 Hidden words.',
+
+    options: {
+      blurMedia: '🙈 Blur photos and videos',
+      protectReplies: '🔐 Protect my replies',
+      seenReceipts: '👀 Seen receipts',
+      typingIndicator: '✍️ Show when I reply',
+    },
+    optionsMenu: () =>
+      `🔧 Options\n\n` +
+      `🙈 Blur photos and videos: photos, videos and GIFs arrive under a spoiler; tap to see them.\n\n` +
+      `🔐 Protect my replies: senders can't forward or save your replies.\n\n` +
+      `👀 Seen receipts: once you do anything in this chat after a message arrived, the sender sees 👀 on it.\n\n` +
+      `✍️ Show when I reply: when you tap «↩️ Reply», the sender sees "typing…" for a few seconds.\n\n` +
+      `Tap to turn on ✅ or off ⬜️.`,
+    optionOn: 'On',
+    optionOff: 'Off',
+
+    btnAnswerPublicly: '📣 Answer publicly',
+    answerUnavailable: "This message can't be answered publicly (it has no text, or it's no longer available).",
+    answerHowTo:
+      `📣 Answer publicly\n\nTap the button and pick a chat, group or channel. Then type your answer after 💬 ` +
+      `and tap the card that appears. The question is posted with your answer and a button to your link — ` +
+      `never with who sent it.`,
+    btnAnswerPost: '📣 Choose a chat',
+    answerCard: (question, answer) => `❓ ${question}` + (answer ? `\n\n💬 ${answer}` : ''),
+    answerForwardToast: 'Forward the card above wherever you want to answer it.',
+    inlineAnswerTitle: '📣 Post the question with my answer',
+    inlineQuestionTitle: '📣 Post the question',
+    inlineAnswerHint: 'Type your answer after 💬 to add it',
 
     chooseLanguage: '🌐 Choose your language:',
     languageSet: (name) => `✅ Language set to ${name}.`,
@@ -606,7 +726,8 @@ const ar = (w) => {
       (owner.prompt ? `«${owner.prompt}»\n— ${who(owner)}\n\n` : `✉️ أنت ترسل رسالة مجهولة إلى ${who(owner)}.\n\n`) +
       `أرسل رسالتك الآن.\n\nلن يعرف ${who(owner)} من أنت.`,
 
-    delivered: (owner) => `وصلت رسالتك إلى ${who(owner)} ✅`,
+    delivered: (owner) => `وصلت رسالتك إلى ${who(owner)} ✅` +
+      (owner.seenReceipts ? `\nسترى 👀 على رسالتك عندما يشاهدها ${who(owner)}.` : ''),
     btnUnsend: '🗑 استرجاع',
     btnSendAnother: '✉️ رسالة أخرى',
     unsent: (owner) => `تم استرجاع رسالتك 🗑 لم تعد في محادثة ${who(owner)}.`,
@@ -684,10 +805,11 @@ const ar = (w) => {
     btnDeleteYes: '🗑 نعم، احذف',
     deleted: 'تم حذف بياناتك ✅ اضغط «🎭 رابطي» إذا أردت رابطًا من جديد.',
 
-    adminReport: (report, owner, priorReports) =>
+    adminReport: (report, owner, priorReports, autoBanned = 0) =>
       `⚠️ بلاغ #${num(report.id)}\n` +
       `صاحب الرابط: ${owner?.name ?? '—'} (${report.ownerId})\n` +
       `بلاغات سابقة ضد هذا المرسل: ${num(priorReports)}\n\n` +
+      (autoBanned ? `⛔️ مُنع تلقائيًا: أبلغ عن هذا المرسل ${num(autoBanned)} أشخاص مختلفين.\n` : '') +
       `الرسالة المُبلّغ عنها بالأسفل 👇`,
     adminMessageGone: '(الرسالة المُبلّغ عنها لم تعد متاحة.)',
     btnBan: '⛔️ منع المرسل',
@@ -709,7 +831,7 @@ const ar = (w) => {
         `✉️ الرسائل\n` +
         `مُرسلة: ${m('delivered')} (اليوم: ${num(s.deliveredDay)})\n` +
         `محظورة: ${m('blocked')} · ممنوعة: ${m('banned')} · مُرشّحة: ${m('filtered')}\n` +
-        `فاشلة: ${m('failed')} · مُسترجعة: ${m('unsent')}\n` +
+        `فاشلة: ${m('failed')} · مُسترجعة: ${m('unsent')} · مخفية: ${m('muted')}\n` +
         `الردود: ${num(s.replies)}\n\n` +
         `🛡 الإشراف\n` +
         `بلاغات مفتوحة: ${num(s.openReports)} من ${num(s.reports)}\n` +
@@ -760,13 +882,20 @@ const ar = (w) => {
     typesLastOne: 'يجب أن يبقى نوع واحد مفعّلًا على الأقل',
 
     needLink: 'ليس لديك رابط بعد — اضغط «🎭 رابطي» لإنشائه.',
-    stats: (owner, { received, replies, blocked, filtered }) =>
+    stats: (owner, s) =>
       `📊 إحصاءات${owner.name ? ` ${owner.name}` : ''}\n\n` +
-      `الرسائل المستلمة: ${num(received)}\n` +
-      `الردود المرسلة: ${num(replies)}\n` +
-      `المرسلون المحظورون: ${num(blocked)}\n` +
-      `الرسائل المُرشّحة: ${num(filtered)}\n\n` +
-      `الحالة: ${owner.paused ? 'متوقف' : 'يستقبل'}`,
+      `الرسائل المستلمة: ${num(s.received)}\n` +
+      `اليوم: ${num(s.day)} · هذا الأسبوع: ${num(s.week)}\n` +
+      `مرسلون مختلفون: ${num(s.senders)}\n` +
+      `تم الرد عليها: ${num(s.replied)} من ${num(s.received)}` +
+      (s.received ? ` (${num(Math.round((100 * s.replied) / s.received))}٪)` : '') + '\n' +
+      (s.busiest === null ? '' : `أكثر الأيام نشاطًا: ${w.weekdays[s.busiest]}\n`) +
+      `\nالردود المرسلة: ${num(s.replies)}\n` +
+      `المرسلون المحظورون: ${num(s.blocked)}\n` +
+      `الرسائل المُرشّحة: ${num(s.filtered)}\n` +
+      `أخفتها كلماتك: ${num(s.muted)}\n\n` +
+      `الحالة: ${owner.paused ? 'متوقف' : 'يستقبل'}` +
+      (s.retentionDays ? `\n\nتشمل الأرقام آخر ${num(s.retentionDays)} يومًا.` : ''),
     privacy:
       `🔒 الخصوصية\n\n` +
       `يحفظ هذا البوت:\n` +
@@ -776,7 +905,9 @@ const ar = (w) => {
       `لحذف القوائم القديمة.\n` +
       `• لكل رسالة مجهولة: معرّفا المرسل وصاحب الرابط، ومعرّفات المحادثة/الرسالة اللازمة ` +
       `لإيصال الردود والتعديلات والاسترجاع، ومعرّف ألبوم تيليجرام (للرسائل متعددة الصور/الفيديو)، ` +
-      `والحالة (مُرسلة / محظورة / ممنوعة / مُرشّحة / فاشلة / مُسترجعة) والوقت.\n` +
+      `والحالة (مُرسلة / محظورة / ممنوعة / مُرشّحة / مخفية / فاشلة / مُسترجعة) والوقت.\n` +
+      `• لصاحب الرابط الذي يستخدمها: كلماته المخفية ومفاتيح 🔧 خيارات؛ ولكل رسالة، ` +
+      `وقت مشاهدة صاحب الرابط لها (إن فعّل إشعار المشاهدة).\n` +
       `• الحظر (معرّفا صاحب الرابط والمرسل)، والبلاغات (معرّفات الرسالة وصاحب الرابط والمرسل، ونتيجة المراجعة)، ` +
       `والمنع من البوت بالكامل (معرّف المرسل)، والردود (معرّفا الرسالة وصاحب الرابط، ومعرّفات المحادثة/الرسالة اللازمة لنقل التفاعلات والردود).\n` +
       `• الخطوة التي أنت فيها حاليًا (مثلًا «يكتب رسالة إلى <معرّف صاحب الرابط>»).\n` +
@@ -787,6 +918,8 @@ const ar = (w) => {
       `لا يحفظ البوت نص الرسائل المجهولة أو تعليقاتها أو ملفاتها — تيليجرام ينسخها بين المحادثات مباشرة. ` +
       `عند الإبلاغ عن رسالة، تُرسل نسخة منها (دون هوية المرسل، مع اسم صاحب الرابط ومعرّفه) إلى مشغّل البوت لمراجعتها. ` +
       `لمشغّل البوت تقنيًا وصول إلى البيانات المحفوظة.\n\n` +
+      (RETENTION_DAYS ? `يُحذف سجل الرسائل المجهولة وردودها بعد ${num(RETENTION_DAYS)} يومًا، ` +
+        `ما لم يكن هناك بلاغ لا يزال يخصها.\n\n` : '') +
       `عبر ⚙️ الإعدادات ← 🗑 حذف بياناتي يُحذف رابطك وإعداداتك وسجل الرسائل المستلمة وردودك والحظر الذي أجريته والبلاغات التي قدمتها. ` +
       `يبقى سجل الرسائل التي أرسلتها للآخرين والحظر/البلاغات/المنع ضدك، ` +
       `لأنها تخص المستلمين ولازمة لمنع الإزعاج.`,
@@ -801,6 +934,52 @@ const ar = (w) => {
     stBlocked: '🚫 المحظورون',
     stNewlink: '🔄 رابط جديد',
     stDelete: '🗑 حذف بياناتي',
+
+    stWords: '🔤 الكلمات المخفية',
+    stOptions: '🔧 خيارات',
+    wordsMenu: (words, max, maxLen) =>
+      `🔤 الكلمات المخفية\n\n` +
+      `الرسائل التي تحتوي على أي من هذه الكلمات أو العبارات تُخفى عنك بصمت: ` +
+      `يُقال للمرسل إنها وصلت، كما في الحظر. يُفحص النص والتعليقات فقط.\n\n` +
+      (words.length ? words.map((x, i) => `${num(i + 1)}. ${x}`).join('\n') : 'لا توجد كلمات مخفية بعد.') +
+      `\n\nأرسل الآن الكلمات التي تريد إضافتها: كل واحدة في سطر أو مفصولة بفواصل ` +
+      `(حتى ${num(max)}، و${num(maxLen)} حرفًا لكل منها). اضغط على كلمة بالأسفل لإزالتها.`,
+    btnWordsClear: '🗑 إزالة الكل',
+    wordsRemovedToast: 'أُزيلت',
+    wordsAdded: (n) => `✅ أُضيف ${num(n)}.`,
+    wordsNoneAdded: (maxLen) => `لا جديد لإضافته (موجود في القائمة أو أطول من ${num(maxLen)} حرفًا).`,
+    wordsFull: (max) => `القائمة ممتلئة (${num(max)}). أزل بعض الكلمات لإضافة غيرها.`,
+    wordsNotText: 'أرسل الكلمات في رسالة نصية من فضلك.',
+    wordsExpired: 'انتهى وقت إضافة الكلمات المخفية ⌛️ ابدأ من جديد من ⚙️ الإعدادات ← 🔤 الكلمات المخفية.',
+
+    options: {
+      blurMedia: '🙈 تمويه الصور والفيديو',
+      protectReplies: '🔐 حماية ردودي',
+      seenReceipts: '👀 إشعار المشاهدة',
+      typingIndicator: '✍️ إظهار أنني أرد',
+    },
+    optionsMenu: () =>
+      `🔧 خيارات\n\n` +
+      `🙈 تمويه الصور والفيديو: تصل الصور والفيديوهات وملفات GIF مموّهة؛ اضغط لرؤيتها.\n\n` +
+      `🔐 حماية ردودي: لا يستطيع المرسلون إعادة توجيه ردودك أو حفظها.\n\n` +
+      `👀 إشعار المشاهدة: عندما تفعل أي شيء في هذه المحادثة بعد وصول رسالة، يرى المرسل 👀 عليها.\n\n` +
+      `✍️ إظهار أنني أرد: عند الضغط على «↩️ رد»، يرى المرسل «يكتب…» لبضع ثوانٍ.\n\n` +
+      `اضغط للتفعيل ✅ أو الإيقاف ⬜️.`,
+    optionOn: 'مُفعّل',
+    optionOff: 'متوقف',
+
+    btnAnswerPublicly: '📣 رد علني',
+    answerUnavailable: 'لا يمكن الرد علنًا على هذه الرسالة (لا تحتوي على نص أو لم تعد متاحة).',
+    answerHowTo:
+      `📣 رد علني\n\nاضغط الزر واختر محادثة أو مجموعة أو قناة. ثم اكتب ردك بعد 💬 ` +
+      `واضغط على البطاقة التي تظهر. يُنشر السؤال مع ردك وزر إلى رابطك — ` +
+      `ولا يُنشر أبدًا من أرسله.`,
+    btnAnswerPost: '📣 اختر محادثة',
+    answerCard: (question, answer) => `❓ ${question}` + (answer ? `\n\n💬 ${answer}` : ''),
+    answerForwardToast: 'أعد توجيه البطاقة أعلاه إلى حيث تريد الرد عليها.',
+    inlineAnswerTitle: '📣 انشر السؤال مع ردي',
+    inlineQuestionTitle: '📣 انشر السؤال',
+    inlineAnswerHint: 'اكتب ردك بعد 💬 لإضافته',
 
     chooseLanguage: '🌐 اختر لغتك:',
     languageSet: (name) => `✅ تم ضبط اللغة على ${name}.`,
@@ -864,7 +1043,8 @@ const ru = (w) => {
       (owner.prompt ? `«${owner.prompt}»\n— ${who(owner)}\n\n` : `✉️ Анонимное сообщение. Получатель: ${who(owner)}.\n\n`) +
       `Отправь своё сообщение прямо сейчас.\n\nПолучатель не узнает, кто ты.`,
 
-    delivered: (owner) => `Сообщение доставлено ✅ Получатель: ${who(owner)}`,
+    delivered: (owner) => `Сообщение доставлено ✅ Получатель: ${who(owner)}` +
+      (owner.seenReceipts ? `\nКогда ${who(owner)} увидит сообщение, на нём появится 👀.` : ''),
     btnUnsend: '🗑 Отозвать',
     btnSendAnother: '✉️ Ещё сообщение',
     unsent: () => `Сообщение отозвано 🗑 У получателя его больше нет.`,
@@ -942,10 +1122,11 @@ const ru = (w) => {
     btnDeleteYes: '🗑 Да, удалить',
     deleted: 'Твои данные удалены ✅ Нажми «🎭 Моя ссылка», если снова понадобится ссылка.',
 
-    adminReport: (report, owner, priorReports) =>
+    adminReport: (report, owner, priorReports, autoBanned = 0) =>
       `⚠️ Жалоба #${num(report.id)}\n` +
       `Владелец ссылки: ${owner?.name ?? '—'} (${report.ownerId})\n` +
       `Прежних жалоб на этого отправителя: ${num(priorReports)}\n\n` +
+      (autoBanned ? `⛔️ Забанен автоматически: на отправителя пожаловались разные люди (${num(autoBanned)}).\n` : '') +
       `Сообщение, на которое пожаловались, ниже 👇`,
     adminMessageGone: '(Сообщение, на которое пожаловались, больше недоступно.)',
     btnBan: '⛔️ Забанить отправителя',
@@ -967,7 +1148,7 @@ const ru = (w) => {
         `✉️ Сообщения\n` +
         `Доставлено: ${m('delivered')} (сегодня: ${num(s.deliveredDay)})\n` +
         `Заблокировано: ${m('blocked')} · Забанено: ${m('banned')} · Отфильтровано: ${m('filtered')}\n` +
-        `Не доставлено: ${m('failed')} · Отозвано: ${m('unsent')}\n` +
+        `Не доставлено: ${m('failed')} · Отозвано: ${m('unsent')} · Скрыто: ${m('muted')}\n` +
         `Ответы: ${num(s.replies)}\n\n` +
         `🛡 Модерация\n` +
         `Открытые жалобы: ${num(s.openReports)} из ${num(s.reports)}\n` +
@@ -1018,13 +1199,20 @@ const ru = (w) => {
     typesLastOne: 'Хотя бы один тип должен остаться включённым',
 
     needLink: 'У тебя ещё нет ссылки — нажми «🎭 Моя ссылка», чтобы создать её.',
-    stats: (owner, { received, replies, blocked, filtered }) =>
+    stats: (owner, s) =>
       `📊 Статистика${owner.name ? ` — ${owner.name}` : ''}\n\n` +
-      `Получено сообщений: ${num(received)}\n` +
-      `Отправлено ответов: ${num(replies)}\n` +
-      `Заблокировано отправителей: ${num(blocked)}\n` +
-      `Отфильтровано сообщений: ${num(filtered)}\n\n` +
-      `Статус: ${owner.paused ? 'на паузе' : 'принимаю'}`,
+      `Получено сообщений: ${num(s.received)}\n` +
+      `Сегодня: ${num(s.day)} · За неделю: ${num(s.week)}\n` +
+      `Разных отправителей: ${num(s.senders)}\n` +
+      `С ответом: ${num(s.replied)} из ${num(s.received)}` +
+      (s.received ? ` (${num(Math.round((100 * s.replied) / s.received))}%)` : '') + '\n' +
+      (s.busiest === null ? '' : `Самый активный день: ${w.weekdays[s.busiest]}\n`) +
+      `\nОтправлено ответов: ${num(s.replies)}\n` +
+      `Заблокировано отправителей: ${num(s.blocked)}\n` +
+      `Отфильтровано сообщений: ${num(s.filtered)}\n` +
+      `Скрыто твоими словами: ${num(s.muted)}\n\n` +
+      `Статус: ${owner.paused ? 'на паузе' : 'принимаю'}` +
+      (s.retentionDays ? `\n\nУчтены последние ${num(s.retentionDays)} дн.` : ''),
     privacy:
       `🔒 Конфиденциальность\n\n` +
       `Бот хранит:\n` +
@@ -1034,7 +1222,9 @@ const ru = (w) => {
       `чтобы удалять старые меню.\n` +
       `• Для каждого анонимного сообщения: id отправителя и владельца ссылки, id чатов/сообщений Telegram, нужные для ` +
       `ответов, правок и отзыва, id альбома Telegram (для сообщений из нескольких фото/видео), ` +
-      `статус (доставлено / заблокировано / забанено / отфильтровано / не доставлено / отозвано) и время.\n` +
+      `статус (доставлено / заблокировано / забанено / отфильтровано / скрыто / не доставлено / отозвано) и время.\n` +
+      `• Для владельцев ссылок, которые ими пользуются: их скрытые слова и переключатели 🔧 Параметров; ` +
+      `а для каждого сообщения — когда владелец его увидел (если включена отметка «просмотрено»).\n` +
       `• Блокировки (id владельца ссылки и отправителя), жалобы (id сообщения, владельца и отправителя, итог проверки), ` +
       `баны во всём боте (id отправителя) и ответы (id сообщения и владельца, а также id чатов/сообщений Telegram для передачи реакций и реплаев).\n` +
       `• Шаг, на котором ты сейчас в боте (например, «пишет сообщение для <id владельца>»).\n` +
@@ -1045,6 +1235,8 @@ const ru = (w) => {
       `Бот не хранит текст, подписи и файлы анонимных сообщений — Telegram копирует их между чатами напрямую. ` +
       `Когда на сообщение жалуются, его копия (без данных отправителя, с именем и id владельца ссылки) отправляется оператору бота на проверку. ` +
       `Технически у оператора есть доступ к сохранённым данным.\n\n` +
+      (RETENTION_DAYS ? `Записи об анонимных сообщениях и ответах на них удаляются через ${num(RETENTION_DAYS)} дн., ` +
+        `если их не касается жалоба.\n\n` : '') +
       `⚙️ Настройки → 🗑 Удалить мои данные удаляет твою ссылку, настройки, историю полученных сообщений и ответов, твои блокировки и жалобы. ` +
       `История сообщений, которые ты отправлял(а) другим, и блокировки/жалобы/баны против тебя остаются, ` +
       `потому что они принадлежат получателям и нужны для защиты от злоупотреблений.`,
@@ -1059,6 +1251,52 @@ const ru = (w) => {
     stBlocked: '🚫 Заблокированные',
     stNewlink: '🔄 Новая ссылка',
     stDelete: '🗑 Удалить мои данные',
+
+    stWords: '🔤 Скрытые слова',
+    stOptions: '🔧 Параметры',
+    wordsMenu: (words, max, maxLen) =>
+      `🔤 Скрытые слова\n\n` +
+      `Сообщения с любым из этих слов или фраз тихо скрываются от тебя: ` +
+      `отправитель видит, что сообщение доставлено, как при блокировке. Проверяются только текст и подписи.\n\n` +
+      (words.length ? words.map((x, i) => `${num(i + 1)}. ${x}`).join('\n') : 'Скрытых слов пока нет.') +
+      `\n\nОтправь слова, которые хочешь добавить: по одному в строке или через запятую ` +
+      `(до ${num(max)}, не длиннее ${num(maxLen)} символов). Нажми на слово ниже, чтобы убрать его.`,
+    btnWordsClear: '🗑 Убрать все',
+    wordsRemovedToast: 'Убрано',
+    wordsAdded: (n) => `✅ Добавлено: ${num(n)}.`,
+    wordsNoneAdded: (maxLen) => `Нечего добавить (уже в списке или длиннее ${num(maxLen)} символов).`,
+    wordsFull: (max) => `Список заполнен (${num(max)}). Убери несколько слов, чтобы добавить новые.`,
+    wordsNotText: 'Отправь слова текстовым сообщением.',
+    wordsExpired: 'Время добавления скрытых слов вышло ⌛️ Начни заново: ⚙️ Настройки → 🔤 Скрытые слова.',
+
+    options: {
+      blurMedia: '🙈 Размывать фото и видео',
+      protectReplies: '🔐 Защищать мои ответы',
+      seenReceipts: '👀 Отметка «просмотрено»',
+      typingIndicator: '✍️ Показывать, что я отвечаю',
+    },
+    optionsMenu: () =>
+      `🔧 Параметры\n\n` +
+      `🙈 Размывать фото и видео: фото, видео и GIF приходят под спойлером; нажми, чтобы посмотреть.\n\n` +
+      `🔐 Защищать мои ответы: отправители не смогут переслать или сохранить твои ответы.\n\n` +
+      `👀 Отметка «просмотрено»: когда ты что-то делаешь в этом чате после прихода сообщения, отправитель видит на нём 👀.\n\n` +
+      `✍️ Показывать, что я отвечаю: когда ты нажимаешь «↩️ Ответить», отправитель несколько секунд видит «печатает…».\n\n` +
+      `Нажми, чтобы включить ✅ или выключить ⬜️.`,
+    optionOn: 'Вкл',
+    optionOff: 'Выкл',
+
+    btnAnswerPublicly: '📣 Ответить публично',
+    answerUnavailable: 'На это сообщение нельзя ответить публично (в нём нет текста или оно больше недоступно).',
+    answerHowTo:
+      `📣 Ответить публично\n\nНажми кнопку и выбери чат, группу или канал. Затем допиши ответ после 💬 ` +
+      `и нажми на появившуюся карточку. Вопрос будет опубликован с твоим ответом и кнопкой на твою ссылку — ` +
+      `без того, кто его прислал.`,
+    btnAnswerPost: '📣 Выбрать чат',
+    answerCard: (question, answer) => `❓ ${question}` + (answer ? `\n\n💬 ${answer}` : ''),
+    answerForwardToast: 'Перешли карточку выше туда, где хочешь на неё ответить.',
+    inlineAnswerTitle: '📣 Опубликовать вопрос с ответом',
+    inlineQuestionTitle: '📣 Опубликовать вопрос',
+    inlineAnswerHint: 'Допиши ответ после 💬, чтобы добавить его',
 
     chooseLanguage: '🌐 Выберите язык:',
     languageSet: (name) => `✅ Язык изменён на ${name}.`,
@@ -1122,7 +1360,8 @@ const es = (w) => {
       (owner.prompt ? `«${owner.prompt}»\n— ${who(owner)}\n\n` : `✉️ Estás enviando un mensaje anónimo a ${who(owner)}.\n\n`) +
       `Envía tu mensaje ahora.\n\n${who(owner)} no sabrá quién eres.`,
 
-    delivered: (owner) => `Tu mensaje llegó a ${who(owner)} ✅`,
+    delivered: (owner) => `Tu mensaje llegó a ${who(owner)} ✅` +
+      (owner.seenReceipts ? `\nVerás 👀 en tu mensaje cuando ${who(owner)} lo haya visto.` : ''),
     btnUnsend: '🗑 Retirar',
     btnSendAnother: '✉️ Enviar otro',
     unsent: (owner) => `Tu mensaje fue retirado 🗑 Ya no está en el chat de ${who(owner)}.`,
@@ -1200,10 +1439,11 @@ const es = (w) => {
     btnDeleteYes: '🗑 Sí, borrar',
     deleted: 'Tus datos se borraron ✅ Pulsa «🎭 Mi enlace» si quieres un enlace otra vez.',
 
-    adminReport: (report, owner, priorReports) =>
+    adminReport: (report, owner, priorReports, autoBanned = 0) =>
       `⚠️ Reporte #${num(report.id)}\n` +
       `Dueño del enlace: ${owner?.name ?? '—'} (${report.ownerId})\n` +
       `Reportes anteriores contra este remitente: ${num(priorReports)}\n\n` +
+      (autoBanned ? `⛔️ Vetado automáticamente: ${num(autoBanned)} personas distintas reportaron a este remitente.\n` : '') +
       `El mensaje reportado está abajo 👇`,
     adminMessageGone: '(El mensaje reportado ya no está disponible.)',
     btnBan: '⛔️ Bloquear al remitente en el bot',
@@ -1225,7 +1465,7 @@ const es = (w) => {
         `✉️ Mensajes\n` +
         `Entregados: ${m('delivered')} (hoy: ${num(s.deliveredDay)})\n` +
         `Bloqueados: ${m('blocked')} · Vetados: ${m('banned')} · Filtrados: ${m('filtered')}\n` +
-        `Fallidos: ${m('failed')} · Retirados: ${m('unsent')}\n` +
+        `Fallidos: ${m('failed')} · Retirados: ${m('unsent')} · Ocultos: ${m('muted')}\n` +
         `Respuestas: ${num(s.replies)}\n\n` +
         `🛡 Moderación\n` +
         `Reportes abiertos: ${num(s.openReports)} de ${num(s.reports)}\n` +
@@ -1276,13 +1516,20 @@ const es = (w) => {
     typesLastOne: 'Al menos un tipo debe quedar activado',
 
     needLink: 'Aún no tienes enlace — pulsa «🎭 Mi enlace» para crearlo.',
-    stats: (owner, { received, replies, blocked, filtered }) =>
+    stats: (owner, s) =>
       `📊 Estadísticas${owner.name ? ` de ${owner.name}` : ''}\n\n` +
-      `Mensajes recibidos: ${num(received)}\n` +
-      `Respuestas enviadas: ${num(replies)}\n` +
-      `Remitentes bloqueados: ${num(blocked)}\n` +
-      `Mensajes filtrados: ${num(filtered)}\n\n` +
-      `Estado: ${owner.paused ? 'en pausa' : 'recibiendo'}`,
+      `Mensajes recibidos: ${num(s.received)}\n` +
+      `Hoy: ${num(s.day)} · Esta semana: ${num(s.week)}\n` +
+      `Remitentes distintos: ${num(s.senders)}\n` +
+      `Respondidos: ${num(s.replied)} de ${num(s.received)}` +
+      (s.received ? ` (${num(Math.round((100 * s.replied) / s.received))} %)` : '') + '\n' +
+      (s.busiest === null ? '' : `Día más activo: ${w.weekdays[s.busiest]}\n`) +
+      `\nRespuestas enviadas: ${num(s.replies)}\n` +
+      `Remitentes bloqueados: ${num(s.blocked)}\n` +
+      `Mensajes filtrados: ${num(s.filtered)}\n` +
+      `Ocultos por tus palabras: ${num(s.muted)}\n\n` +
+      `Estado: ${owner.paused ? 'en pausa' : 'recibiendo'}` +
+      (s.retentionDays ? `\n\nLas cifras cubren los últimos ${num(s.retentionDays)} días.` : ''),
     privacy:
       `🔒 Privacidad\n\n` +
       `Este bot guarda:\n` +
@@ -1292,7 +1539,9 @@ const es = (w) => {
       `para poder borrar los menús antiguos.\n` +
       `• De cada mensaje anónimo: los ids del remitente y del dueño del enlace, los ids de chat/mensaje de Telegram necesarios para ` +
       `entregar respuestas, ediciones y retiradas, el id del álbum de Telegram (para mensajes con varias fotos/vídeos), ` +
-      `el estado (entregado / bloqueado / vetado / filtrado / fallido / retirado) y la hora.\n` +
+      `el estado (entregado / bloqueado / vetado / filtrado / oculto / fallido / retirado) y la hora.\n` +
+      `• De los dueños que los usan: sus palabras ocultas y los interruptores de 🔧 Opciones; y de cada mensaje, ` +
+      `cuándo lo vio el dueño (si activó la confirmación de visto).\n` +
       `• Bloqueos (ids del dueño y del remitente), reportes (ids del mensaje, del dueño y del remitente, y el resultado), ` +
       `vetos en todo el bot (id del remitente) y respuestas (ids del mensaje y del dueño, y los ids de chat/mensaje de Telegram para transmitir reacciones y respuestas).\n` +
       `• El paso en el que estás en el bot (p. ej. «escribiendo un mensaje para <id del dueño>»).\n` +
@@ -1303,6 +1552,8 @@ const es = (w) => {
       `El bot no guarda el texto, los pies de foto ni los archivos de los mensajes anónimos — Telegram los copia directamente entre chats. ` +
       `Cuando se reporta un mensaje, se envía una copia (sin la identidad del remitente, con el nombre e id del dueño) al operador del bot para revisarla. ` +
       `El operador tiene acceso técnico a los datos guardados.\n\n` +
+      (RETENTION_DAYS ? `Los registros de mensajes anónimos y sus respuestas se borran a los ${num(RETENTION_DAYS)} días, ` +
+        `salvo que un reporte siga afectándolos.\n\n` : '') +
       `⚙️ Ajustes → 🗑 Borrar mis datos elimina tu enlace, tus ajustes, el registro de mensajes recibidos y tus respuestas, los bloqueos que hiciste y los reportes que enviaste. ` +
       `El registro de los mensajes que enviaste a otros y los bloqueos/reportes/vetos en tu contra se mantienen, ` +
       `porque pertenecen a los destinatarios y son necesarios para evitar abusos.`,
@@ -1317,6 +1568,52 @@ const es = (w) => {
     stBlocked: '🚫 Bloqueados',
     stNewlink: '🔄 Enlace nuevo',
     stDelete: '🗑 Borrar mis datos',
+
+    stWords: '🔤 Palabras ocultas',
+    stOptions: '🔧 Opciones',
+    wordsMenu: (words, max, maxLen) =>
+      `🔤 Palabras ocultas\n\n` +
+      `Los mensajes que contengan alguna de estas palabras o frases se te ocultan sin avisar: ` +
+      `al remitente se le dice que se entregó, como con un bloqueo. Solo se revisan textos y pies de foto.\n\n` +
+      (words.length ? words.map((x, i) => `${num(i + 1)}. ${x}`).join('\n') : 'Aún no hay palabras ocultas.') +
+      `\n\nEnvía ahora las palabras que quieras añadir: una por línea o separadas por comas ` +
+      `(hasta ${num(max)}, de ${num(maxLen)} caracteres como máximo). Toca una palabra abajo para quitarla.`,
+    btnWordsClear: '🗑 Quitar todas',
+    wordsRemovedToast: 'Quitada',
+    wordsAdded: (n) => `✅ Añadidas: ${num(n)}.`,
+    wordsNoneAdded: (maxLen) => `Nada nuevo que añadir (ya están en la lista o superan ${num(maxLen)} caracteres).`,
+    wordsFull: (max) => `La lista está llena (${num(max)}). Quita algunas palabras para añadir otras.`,
+    wordsNotText: 'Envía las palabras como mensaje de texto.',
+    wordsExpired: 'Se acabó el tiempo para añadir palabras ocultas ⌛️ Vuelve a empezar desde ⚙️ Ajustes → 🔤 Palabras ocultas.',
+
+    options: {
+      blurMedia: '🙈 Difuminar fotos y vídeos',
+      protectReplies: '🔐 Proteger mis respuestas',
+      seenReceipts: '👀 Confirmación de visto',
+      typingIndicator: '✍️ Mostrar cuando respondo',
+    },
+    optionsMenu: () =>
+      `🔧 Opciones\n\n` +
+      `🙈 Difuminar fotos y vídeos: las fotos, vídeos y GIF llegan bajo un spoiler; tócalos para verlos.\n\n` +
+      `🔐 Proteger mis respuestas: los remitentes no pueden reenviar ni guardar tus respuestas.\n\n` +
+      `👀 Confirmación de visto: cuando haces cualquier cosa en este chat después de que llegue un mensaje, el remitente ve 👀 en él.\n\n` +
+      `✍️ Mostrar cuando respondo: al tocar «↩️ Responder», el remitente ve «escribiendo…» unos segundos.\n\n` +
+      `Toca para activar ✅ o desactivar ⬜️.`,
+    optionOn: 'Activado',
+    optionOff: 'Desactivado',
+
+    btnAnswerPublicly: '📣 Responder en público',
+    answerUnavailable: 'Este mensaje no se puede responder en público (no tiene texto o ya no está disponible).',
+    answerHowTo:
+      `📣 Responder en público\n\nToca el botón y elige un chat, grupo o canal. Luego escribe tu respuesta después de 💬 ` +
+      `y toca la tarjeta que aparece. La pregunta se publica con tu respuesta y un botón a tu enlace — ` +
+      `nunca con quién la envió.`,
+    btnAnswerPost: '📣 Elegir un chat',
+    answerCard: (question, answer) => `❓ ${question}` + (answer ? `\n\n💬 ${answer}` : ''),
+    answerForwardToast: 'Reenvía la tarjeta de arriba a donde quieras responderla.',
+    inlineAnswerTitle: '📣 Publicar la pregunta con mi respuesta',
+    inlineQuestionTitle: '📣 Publicar la pregunta',
+    inlineAnswerHint: 'Escribe tu respuesta después de 💬 para añadirla',
 
     chooseLanguage: '🌐 Elige tu idioma:',
     languageSet: (name) => `✅ Idioma cambiado a ${name}.`,
@@ -1335,6 +1632,7 @@ const es = (w) => {
 // Words the helpers need, per locale.
 const WORDS = {
   fa: {
+    weekdays: ['یکشنبه', 'دوشنبه', 'سه‌شنبه', 'چهارشنبه', 'پنجشنبه', 'جمعه', 'شنبه'],
     now: 'همین الان', minutes: (n) => `${n} دقیقه پیش`, hours: (n) => `${n} ساعت پیش`, days: (n) => `${n} روز پیش`,
     owner: 'صاحب این لینک', invite: (who) => `به ${who} پیام ناشناس بده 🤫`, comma: '، ',
     kinds: {
@@ -1343,6 +1641,7 @@ const WORDS = {
     },
   },
   en: {
+    weekdays: ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'],
     now: 'just now', minutes: (n) => `${n} min ago`, hours: (n) => `${n} h ago`, days: (n) => `${n} days ago`,
     owner: 'the link owner', invite: (who) => `Send ${who} an anonymous message 🤫`, comma: ', ',
     kinds: {
@@ -1351,6 +1650,7 @@ const WORDS = {
     },
   },
   ar: {
+    weekdays: ['الأحد', 'الاثنين', 'الثلاثاء', 'الأربعاء', 'الخميس', 'الجمعة', 'السبت'],
     now: 'الآن', minutes: (n) => `قبل ${n} دقيقة`, hours: (n) => `قبل ${n} ساعة`, days: (n) => `قبل ${n} يوم`,
     owner: 'صاحب هذا الرابط', invite: (who) => `أرسل إلى ${who} رسالة مجهولة 🤫`, comma: '، ',
     kinds: {
@@ -1359,6 +1659,7 @@ const WORDS = {
     },
   },
   ru: {
+    weekdays: ['воскресенье', 'понедельник', 'вторник', 'среда', 'четверг', 'пятница', 'суббота'],
     now: 'только что', minutes: (n) => `${n} мин назад`, hours: (n) => `${n} ч назад`, days: (n) => `${n} дн. назад`,
     owner: 'владелец ссылки', invite: (who) => `Анонимное сообщение — ${who} 🤫`, comma: ', ',
     kinds: {
@@ -1367,6 +1668,7 @@ const WORDS = {
     },
   },
   es: {
+    weekdays: ['domingo', 'lunes', 'martes', 'miércoles', 'jueves', 'viernes', 'sábado'],
     now: 'ahora mismo', minutes: (n) => `hace ${n} min`, hours: (n) => `hace ${n} h`, days: (n) => `hace ${n} días`,
     owner: 'el dueño del enlace', invite: (who) => `Envía a ${who} un mensaje anónimo 🤫`, comma: ', ',
     kinds: {

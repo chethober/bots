@@ -1,9 +1,11 @@
 // handlers/callback_query.js — inline buttons:
-//   owner, under a received message: Reply / Block / Report  r:/b:/p:<messageId>
+//   owner, under a received message: Reply / Block / Report  r:/b:/p:<messageId>,
+//                                    Answer publicly a:<messageId>
 //   sender, under "delivered":       Unsend u:<messageId>, Send another s:<code>
 //   any prompt:                      Cancel c:x
 //   ⚙️ Settings st:<op> (st:home = back to it), message types k:<kind>,
-//   invitation reset x:reset, unblock ub:<rowid>, new link n:yes|no,
+//   invitation reset x:reset, hidden words w:<index>|all, options o:<option>,
+//   unblock ub:<rowid>, new link n:yes|no,
 //   delete d:yes|no, QR code q:me, language lang:<code>
 //   admin, under a report:           Ban / Dismiss / Unban  ab:/ad:/au:<reportId>
 //   admin, /admin dashboard am:refresh|reports|bans, /bans unban bu:<createdAt>.<rank>,
@@ -14,19 +16,24 @@ import { eq } from 'sdk/db';
 import { messages, blocks, reports } from '../schema.js';
 import { KINDS, UNSEND_WINDOW_SEC } from '../lib/config.js';
 import {
-  ban, bansView, dashboardView, isAdmin, reportKeyboard, runBroadcast, sendOpenReports, sendReport, unban, unbanAt,
+  ban, bansView, dashboardView, isAdmin, maybeAutoBan, reportKeyboard, runBroadcast, sendOpenReports, sendReport, unban,
+  unbanAt,
 } from '../lib/admin.js';
+import { answerQuery } from '../lib/answer.js';
 import { cancelRow, closeScreen, drop, isScreen, setLocale, showScreen, textsFor } from '../lib/chats.js';
 import { toggleKind } from '../lib/content.js';
+import { ownerWords } from '../lib/filter.js';
 import { unsend } from '../lib/delivery.js';
 import { LOCALE_NAMES } from '../lib/i18n.js';
 import {
-  blockedView, confirmView, sendHome, sendQr, settingsView, textView, typesView, unblock,
+  blockedView, confirmView, optionsView, sendHome, sendQr, settingsView, textView, typesView, unblock, wordsView,
 } from '../lib/manage.js';
+import { markAllSeenQuietly, markSeen, showTyping } from '../lib/receipts.js';
 import {
-  deleteUserData, getOrCreateUser, getUser, getUserByCode, resetCode, setAccepts, setPaused, setPrompt, setState,
+  deleteUserData, getOrCreateUser, getUser, getUserByCode, OPTIONS, resetCode, setAccepts, setOption, setPaused,
+  setPrompt, setState, setWords,
 } from '../lib/users.js';
-import { now, personalLink, safeApi } from '../lib/util.js';
+import { now, personalLink, safeApi, supportsInline } from '../lib/util.js';
 
 // Replaces the text (and buttons) of the message the button was on.
 async function editButtonMessage(q, text, reply_markup) {
@@ -74,15 +81,20 @@ async function onMessageButton(q, action, messageId, L) {
   const msg = await db.select().from(messages).where(eq(messages.id, messageId)).get();
   if (!msg || msg.ownerId !== userId) return { text: L.notYourMessage };
 
+  const underIt = q.message && { reply_parameters: { message_id: q.message.message_id, allow_sending_without_reply: true } };
+
   if (action === 'r') {
     await setState(userId, 'replying_to', msg.id);
     await showScreen(userId, {
       text: L.replyPrompt,
       reply_markup: { inline_keyboard: [cancelRow(L)] },
-      ...(q.message && { reply_parameters: { message_id: q.message.message_id, allow_sending_without_reply: true } }),
+      ...underIt,
     });
+    await showTyping(await getUser(userId), msg.senderChatId);
     return {};
   }
+
+  if (action === 'a') return onAnswerPublicly(q, msg, underIt, L);
 
   if (action === 'b') {
     await db.insert(blocks)
@@ -99,11 +111,36 @@ async function onMessageButton(q, action, messageId, L) {
       .returning();
     if (!report) return { text: L.alreadyReported };
     await showScreen(userId, { text: L.reported });
-    await sendReport(report, msg);
+    const autoBanned = await maybeAutoBan(report);
+    await sendReport(autoBanned ? { ...report, status: 'banned' } : report, msg, { autoBanned });
     return { text: L.reportedToast };
   }
 
   return {};
+}
+
+// a:<messageId> — the question is the text or caption of the message the button
+// is under (see lib/answer.js). With inline mode: a button that opens the chat
+// picker with the question prefilled. Without: a card to forward, question only.
+async function onAnswerPublicly(q, msg, underIt, L) {
+  const question = (q.message?.text ?? q.message?.caption ?? '').trim();
+  if (!question || msg.status !== 'delivered') return { text: L.answerUnavailable, show_alert: true };
+  const owner = await getUser(q.from.id);
+  if (await supportsInline()) {
+    await showScreen(q.from.id, {
+      text: L.answerHowTo,
+      reply_markup: { inline_keyboard: [[{ text: L.btnAnswerPost, switch_inline_query: answerQuery(question) }], cancelRow(L)] },
+      ...underIt,
+    });
+    return {};
+  }
+  await safeApi('sendMessage', {
+    chat_id: q.from.id,
+    text: L.answerCard(question, ''),
+    link_preview_options: { is_disabled: true },
+    reply_markup: { inline_keyboard: [[{ text: L.btnSendAnon(owner), url: await personalLink(owner.code) }]] },
+  });
+  return { text: L.answerForwardToast, show_alert: true };
 }
 
 // --- sender: buttons under "delivered" ----------------------------------------
@@ -160,6 +197,27 @@ async function onTextReset(q, L) {
   return { text: L.textResetToast };
 }
 
+// Hidden words: w:<index> removes one, w:all all of them. The editor stays open.
+async function onWordButton(q, value, L) {
+  const user = await getOrCreateUser(q.from);
+  const words = ownerWords(user);
+  const next = value === 'all' ? [] : words.filter((_, i) => String(i) !== value);
+  await setWords(user.id, next);
+  await openScreen(q, wordsView({ ...user, words: next }, L));
+  return { text: L.wordsRemovedToast };
+}
+
+// Options: o:<option> toggles it.
+async function onOption(q, option, L) {
+  if (!OPTIONS.includes(option)) return {};
+  const user = await getOrCreateUser(q.from);
+  const on = !user[option];
+  await setOption(user.id, option, on);
+  if (option === 'seenReceipts' && on) await markAllSeenQuietly(user.id);
+  await openScreen(q, optionsView({ ...user, [option]: on }, L));
+  return { text: on ? L.optionOn : L.optionOff };
+}
+
 // Unblock: ub:<rowid>
 async function onUnblock(q, rowid, L) {
   await unblock(q.from.id, rowid);
@@ -202,6 +260,7 @@ async function onSettings(q, op, L) {
   switch (op) {
     case 'home':    await openScreen(q, settingsView(user, L)); break;
     case 'types':   await openScreen(q, typesView(user, L)); break;
+    case 'options': await openScreen(q, optionsView(user, L)); break;
     case 'blocked': await openScreen(q, await blockedView(user.id, L)); break;
     case 'qr':      await sendQr(user, L); break;
     case 'newlink': await openScreen(q, confirmView(L.newlinkConfirm, 'n', L.btnNewlinkYes, L)); break;
@@ -209,6 +268,10 @@ async function onSettings(q, op, L) {
     case 'text':
       await setState(user.id, 'setting_prompt');
       await openScreen(q, textView(user, L));
+      break;
+    case 'words':
+      await setState(user.id, 'setting_words');
+      await openScreen(q, wordsView(user, L));
       break;
   }
   return {};
@@ -293,7 +356,10 @@ export default async function (q, ctx) {
     const [action, value = ''] = (q.data ?? '').split(':');
     const id = /^\d+$/.test(value) ? Number(value) : null;
     const L = await textsFor(q.from);
+    await markSeen(q.from.id);
     if (action === 'k') answer = await onKindButton(q, value, L);
+    else if (action === 'w') answer = await onWordButton(q, value, L);
+    else if (action === 'o') answer = await onOption(q, value, L);
     else if (action === 'x' && value === 'reset') answer = await onTextReset(q, L);
     else if (action === 'c') answer = await onCancel(q, L);
     else if (action === 's') answer = await onSendAnother(q, value, L);
@@ -306,7 +372,7 @@ export default async function (q, ctx) {
     else if (action === 'lang') answer = await onLanguage(q, value);
     else if (action === 'st') answer = await onSettings(q, value, L);
     else if (id === null) answer = {};
-    else if (['r', 'b', 'p'].includes(action)) answer = await onMessageButton(q, action, id, L);
+    else if (['r', 'b', 'p', 'a'].includes(action)) answer = await onMessageButton(q, action, id, L);
     else if (action === 'u') answer = await onUnsend(q, id, L);
     else if (action === 'ub') answer = await onUnblock(q, id, L);
     else if (['ab', 'ad', 'au'].includes(action)) answer = await onAdminButton(q, action, id, L);
