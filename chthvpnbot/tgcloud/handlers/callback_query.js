@@ -1,7 +1,7 @@
 // handlers/callback_query.js — inline buttons:
 //   anyone:  directory page dir:<page>, card v:<id>:<page>, join j:<invite code>, report rp:<id> → rr:<id>:<reason>,
 //            My VPNs joined, a membership my:<mid>, details again sh:<mid>, leave lv:<mid> → lvy:<mid>,
-//            prompt cancel c:x, language lang:<code>
+//            how to connect g:<id|0>[:<page>], prompt cancel c:x, language lang:<code>
 //   adding:  add, name an:keep, country ac:<CC|none>, visibility av:pub|priv, no password ap:none
 //   owners:  My servers mine, panel m:<id>, edit prompt me:<id>:<field>, remove description mdr:<id>,
 //            country mc:<id> → mcs:<id>:<CC|none>, public/private mv:<id>, pause mp:<id>,
@@ -27,12 +27,12 @@ import {
 } from '../lib/servers.js';
 import { join, notifyMembers, removeMember, sendDetails } from '../lib/members.js';
 import {
-  addReport, banOwner, closeReports, deleteVpn, getMember, getReport, getState, getVpn, getVpnByCode, newCode,
-  ownedVpns, setState, updateVpn,
+  addReport, banOwner, closeReports, deleteVpn, getMember, getReport, getState, getVpn, getVpnByCode, membership,
+  newCode, ownedVpns, setState, updateVpn,
 } from '../lib/store.js';
 import { safeApi } from '../lib/util.js';
 import {
-  confirmView, countryView, directoryView, joinedView, manageView, memberView, membersView, ownedView,
+  confirmView, countryView, directoryView, guideView, joinedView, manageView, memberView, membersView, ownedView,
   reportReasonsView, sendHome,
 } from '../lib/views.js';
 
@@ -279,6 +279,13 @@ async function route(q, L) {
       if (!report) return { text: L.alreadyReported };
       await sendReport(report, vpn);
       return { text: L.reported };
+    }
+    case 'g': {
+      // a private VPN's name and protocols only for its owner and members
+      let vpn = num(a) ? await getVpn(num(a)) : null;
+      if (vpn && !vpn.public && vpn.ownerId !== userId && (await membership(vpn.id, userId))?.status !== 'active') vpn = null;
+      await openScreen(q, guideView(vpn, b ?? '', L));
+      return {};
     }
     case 'joined':
       await openScreen(q, await joinedView(userId, L));

@@ -3,6 +3,7 @@
 
 import { DIR_PAGE, MEMBERS_PAGE, SOURCE_URL, XTUNE_URL } from './config.js';
 import { mainKeyboard, showHome } from './chats.js';
+import { GUIDE_DEVICES, GUIDE_PAGES, ownApps } from './guide.js';
 import { COUNTRIES, flag } from './sources.js';
 import { ownedServers } from './servers.js';
 import { activeMembers, directory, joinedVpns, ownedVpns } from './store.js';
@@ -72,6 +73,7 @@ export function memberView(vpn, member, L) {
     reply_markup: {
       inline_keyboard: [
         [btn(L.btnShow, `sh:${member.id}`)],
+        [btn(L.guide.btn, `g:${vpn.id}`)],
         [btn(L.btnLeave, `lv:${member.id}`), btn(L.btnReport, `rp:${vpn.id}`)],
         [btn(L.btnBack, 'joined')],
       ],
@@ -147,7 +149,32 @@ export function confirmView(text, yes, no, L) {
 export function aboutView(L) {
   return {
     text: L.about,
-    reply_markup: { inline_keyboard: [[{ text: L.btnXtune, url: XTUNE_URL }], [{ text: L.btnSourceCode, url: SOURCE_URL }]] },
+    reply_markup: {
+      inline_keyboard: [[btn(L.guide.btn, 'g:0')], [{ text: L.btnXtune, url: XTUNE_URL }], [{ text: L.btnSourceCode, url: SOURCE_URL }]],
+    },
+  };
+}
+
+// 📖 How to connect, for a VPN the viewer may see (its protocols pick the own-app pages) or in
+// general (vpn null). page: '' for the start, or one of GUIDE_PAGES.
+export function guideView(vpn, page, L) {
+  const G = L.guide;
+  const home = `g:${vpn?.id ?? 0}`;
+  if (GUIDE_PAGES.includes(page)) return { text: G.pages[page], reply_markup: { inline_keyboard: [[btn(L.btnBack, home)]] } };
+  const own = ownApps(vpn);
+  const text = [
+    G.btn,
+    '',
+    vpn?.protocols?.length ? G.uses(vpn.name, vpn.protocols.join(' · ')) : null,
+    G.intro,
+    own.length ? `\n${G.ownApps}` : null,
+  ].filter((l) => l !== null).join('\n');
+  const go = (k) => btn(G.btns[k], `${home}:${k}`);
+  return {
+    text,
+    reply_markup: {
+      inline_keyboard: [...rows(GUIDE_DEVICES.map(go), 2), [go('xray')], ...rows(own.map(go), 3)],
+    },
   };
 }
 

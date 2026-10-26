@@ -70,3 +70,20 @@ test('server management texts exist in every language and render', () => {
     }
   }
 });
+
+test('the connection guide has every page in every language', async () => {
+  const { GUIDE_PAGES, ownApps } = await import('../tgcloud/lib/guide.js');
+  const en = texts('en').guide;
+  for (const loc of LOCALES) {
+    const G = texts(loc).guide;
+    assert.deepEqual(Object.keys(G.btns).sort(), Object.keys(en.btns).sort(), `${loc}: guide buttons differ`);
+    for (const p of GUIDE_PAGES) {
+      assert.equal(G.steps[p]?.length ?? en.pick.length, en.steps[p]?.length ?? en.pick.length, `${loc}: ${p} has another number of steps`);
+      assert.ok(G.pages[p] && !G.pages[p].includes('undefined'), `${loc}: page ${p}`);
+    }
+    assert.equal(G.pick.length, en.pick.length, `${loc}: pick`);
+  }
+  assert.deepEqual(ownApps({ kind: 'xtune', protocols: ['VLESS REALITY', 'AmneziaWG', 'WireGuard', 'DNS tunnel'] }), ['wg', 'awg', 'dns']);
+  assert.deepEqual(ownApps({ kind: 'links', protocols: ['WireGuard'] }), []);
+  assert.equal(ownApps(null).length, 6);
+});

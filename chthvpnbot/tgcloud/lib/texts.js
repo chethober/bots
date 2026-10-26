@@ -6,6 +6,7 @@
 //
 // `v` arguments are rows of the vpns table.
 
+import { GUIDE_DEVICES, GUIDE_OWN_APPS } from './guide.js';
 import { flag } from './sources.js';
 
 export const DEFAULT_LOCALE = 'en';
@@ -32,6 +33,7 @@ function compose(locale, w) {
   return {
     ...w, num,
     srv: composeSrv(locale, SRV[locale], num, ago),
+    guide: composeGuide(num, GUIDE[locale]),
 
     card: (v) => [
       title(v),
@@ -1266,6 +1268,534 @@ const srvEs = {
   removeConfirm: (s) => `¿Quitar ${s.name} del bot? El enlace sigue funcionando en el servidor hasta que ejecutes xtune manage token.`,
   removed: 'Quitado.',
 };
+
+// --------------------------------------------------------------- how to connect
+// Steps are numbered and the pages put together in composeGuide; app names and their menu
+// items stay in English, as the apps show them.
+
+function composeGuide(num, g) {
+  const page = (title, steps, note) =>
+    [title, '', ...steps.map((s, i) => `${num(i + 1)}. ${s}`), ...(note ? ['', `💡 ${note}`] : [])].join('\n');
+  const pages = { xray: [g.btns.xray, '', g.pickIntro, '', ...g.pick.map((s) => `• ${s}`), '', g.pickOutro].join('\n') };
+  for (const k of GUIDE_DEVICES) pages[k] = page(g.btns[k], g.steps[k], g.tip);
+  for (const k of GUIDE_OWN_APPS) pages[k] = page(g.btns[k], g.steps[k], k === 'wg' || k === 'awg' ? g.oneDevice : null);
+  return { ...g, pages };
+}
+
+const PICK_NAMES = ['VLESS REALITY', 'VLESS Encryption', 'Hysteria2', 'Shadowsocks', 'CDN', 'CF Worker'];
+const pick = (descs) => PICK_NAMES.map((n, i) => `${n}: ${descs[i]}`);
+
+const guideEn = {
+  btn: '📖 How to connect',
+  intro: 'Pick your device for step-by-step instructions. One app takes your link with all its configs.',
+  uses: (name, p) => `🔌 ${name}: ${p}`,
+  ownApps: 'These protocols need their own app instead, with a file from your 🌐 Usage page:',
+  btns: {
+    android: '🤖 Android', ios: '🍏 iPhone / iPad', windows: '🪟 Windows', mac: '💻 Mac', linux: '🐧 Linux',
+    xray: '🔌 Which config to pick',
+    wg: '🛡 WireGuard', awg: '🥷 AmneziaWG', ovpn: '🔐 OpenVPN', ikev2: '📱 IKEv2', ssh: '🖥 SSH', dns: '🧬 DNS tunnel',
+  },
+  steps: {
+    android: [
+      'Install v2rayNG from Google Play or github.com/2dust/v2rayNG/releases. Happ and Hiddify work too.',
+      'Copy your link: long-press it in the message with your connection details → Copy.',
+      'In v2rayNG: ☰ → Subscription group setting → ➕. Paste the link into URL, type any name in Remarks, tap ✔️. ' +
+        '(Share links instead? Copy them all, then on the main screen tap ➕ → Import config from clipboard.)',
+      'On the main screen: ⋮ → Update subscription, then ⋮ → Real delay all configuration.',
+      'Tap the config with the lowest delay, then ▶️ at the bottom. Allow the VPN request.',
+    ],
+    ios: [
+      'Install Streisand or Happ from the App Store (both free).',
+      'Copy your link: long-press it in the message with your connection details → Copy.',
+      'In the app, tap ＋ and add from the clipboard. Subscription and share links both work; on another device, scan the QR code instead.',
+      'Test the delays and pick the config with the lowest one.',
+      'Turn it on, and tap Allow when iOS asks to add a VPN configuration.',
+    ],
+    windows: [
+      'Download v2rayN from github.com/2dust/v2rayN/releases (the windows-64 zip), unzip it and run v2rayN.exe. Hiddify works too.',
+      'Copy your link: right-click it in Telegram → Copy Link.',
+      'In v2rayN: Subscription group → Subscription group settings → Add. Paste the link into Url, type any name in Remarks, Confirm. ' +
+        '(Share links instead? Copy them all and press Ctrl+V in the main window.)',
+      'Subscription group → Update subscriptions without proxy.',
+      'Select all configs (Ctrl+A), right-click → Test real delay. Select the fastest and press Enter to use it.',
+      'At the bottom, set System proxy to "Set system proxy". For apps that ignore it, turn on Enable Tun instead (run v2rayN as administrator).',
+    ],
+    mac: [
+      'A Mac with an Apple chip (M1 or newer): install Streisand or Happ from the App Store. Any Mac: v2rayN for macOS from github.com/2dust/v2rayN/releases.',
+      'Copy your link: right-click it in Telegram → Copy Link.',
+      'Streisand or Happ: click ＋ and add from the clipboard. v2rayN: Subscription group → Subscription group settings → Add, paste the link into Url, ' +
+        'then Subscription group → Update subscriptions without proxy.',
+      'Test the delays and pick the config with the lowest one.',
+      'Turn it on (v2rayN: System proxy → Set system proxy). Allow the VPN configuration if macOS asks.',
+    ],
+    linux: [
+      'Download v2rayN for Linux from github.com/2dust/v2rayN/releases (the .deb, or the linux-64 zip). Hiddify (AppImage) works too.',
+      'Copy your link.',
+      'In v2rayN: Subscription group → Subscription group settings → Add. Paste the link into Url, type any name in Remarks, Confirm.',
+      'Subscription group → Update subscriptions without proxy. Select all configs, right-click → Test real delay.',
+      'Select the fastest, press Enter, and set System proxy to "Set system proxy" (or turn on Enable Tun).',
+    ],
+    wg: [
+      'Install the WireGuard app: App Store, Google Play, or wireguard.com/install.',
+      'Tap 🌐 Usage page under your connection details and download the "WireGuard app" file (.conf).',
+      'In the app: ＋ → Import from file, and pick the file.',
+      'Turn the tunnel on.',
+    ],
+    awg: [
+      'Install AmneziaWG (Google Play, App Store) or AmneziaVPN (amnezia.org). The plain WireGuard app can\'t use these files.',
+      'Tap 🌐 Usage page under your connection details and download an "AmneziaWG / AmneziaVPN app" file (.conf).',
+      'AmneziaWG: ＋ → Import from file. AmneziaVPN: ＋ → File with connection settings.',
+      'Connect. If there are several files and one doesn\'t connect, try another.',
+    ],
+    ovpn: [
+      'Install OpenVPN Connect: App Store, Google Play, or openvpn.net.',
+      'Tap 🌐 Usage page under your connection details and download the "OpenVPN" file (.ovpn).',
+      'Open the file with OpenVPN Connect (or in the app: ＋ → Upload file) to import it.',
+      'Log in with the name and password shown on your usage page, and connect.',
+    ],
+    ikev2: [
+      'iPhone, iPad, Mac: open your 🌐 Usage page in Safari and download the "iPhone / iPad / Mac" file. Then Settings → Profile Downloaded → Install ' +
+        '(Mac: System Settings → Privacy & Security → Profiles).',
+      'Turn it on in Settings → VPN.',
+      'Android: install strongSwan VPN Client from Google Play, download the "strongSwan app" file (.sswan) from the usage page, then in strongSwan: ⋮ → Import VPN profile.',
+      'Tap the profile to connect. If it asks, log in with the name and password from the usage page.',
+    ],
+    ssh: [
+      'Install an SSH tunnel app, such as HTTP Injector or NetMod on Android. NekoBox and Hiddify also take the ssh:// link in your subscription.',
+      'Tap 🌐 Usage page under your connection details and download the "SSH apps" file (.txt): it has the server, the port and the settings.',
+      'In the app, make an SSH connection with those settings and the name and password from the usage page.',
+      'Connect.',
+    ],
+    dns: [
+      'Install an app with a DNS tunnel (SlowDNS / dnstt), such as HTTP Injector or NetMod on Android.',
+      'Tap 🌐 Usage page under your connection details and download the "DNS tunnel" file (.txt): it has the name server domain, the public key, a DNS resolver and an SSH login.',
+      'In the app, choose the DNS tunnel (SlowDNS) mode and fill those in.',
+      'Connect. It\'s slow: use it for messages when nothing else gets through.',
+    ],
+  },
+  tip: 'Stopped working? Update the subscription first (the owner may have new configs), then try another config.',
+  oneDevice: 'A file is for one device at a time. On a second device, use another protocol.',
+  pickIntro: 'Your app shows a config per protocol (and per server). They all reach the same VPN; they differ in how they get past blocking:',
+  pick: pick([
+    'looks like a visit to a big website. Usually the fastest: try it first.',
+    'encrypted with nothing for a filter to recognize. Needs an up-to-date app.',
+    'over UDP, fast on poor connections. Doesn\'t work where UDP is blocked.',
+    'simple and light.',
+    'through Cloudflare. Slower, but works when the server\'s address is blocked.',
+    'through a Cloudflare Worker, for when even the CDN is blocked.',
+  ]),
+  pickOutro: 'Test the delays in your app and use the lowest. When one stops working, switch to another or update the subscription.',
+};
+
+const guideFa = {
+  btn: '📖 آموزش اتصال',
+  intro: 'دستگاهت رو انتخاب کن تا قدم‌به‌قدم بهت بگم. یه برنامه لینکت رو با همه‌ی کانفیگ‌هاش می‌گیره.',
+  uses: (name, p) => `🔌 ${name}: ${p}`,
+  ownApps: 'این پروتکل‌ها برنامه‌ی خودشون رو می‌خوان، با یه فایل از 🌐 صفحه‌ی مصرف:',
+  btns: {
+    android: '🤖 اندروید', ios: '🍏 آیفون / آیپد', windows: '🪟 ویندوز', mac: '💻 مک', linux: '🐧 لینوکس',
+    xray: '🔌 کدوم کانفیگ رو انتخاب کنم',
+    wg: '🛡 WireGuard', awg: '🥷 AmneziaWG', ovpn: '🔐 OpenVPN', ikev2: '📱 IKEv2', ssh: '🖥 SSH', dns: '🧬 تونل DNS',
+  },
+  steps: {
+    android: [
+      'v2rayNG رو از گوگل‌پلی یا github.com/2dust/v2rayNG/releases نصب کن. Happ و Hiddify هم کار می‌کنن.',
+      'لینکت رو کپی کن: توی پیام اطلاعات اتصال، انگشتت رو روش نگه دار ← Copy.',
+      'توی v2rayNG: ☰ ← Subscription group setting ← ➕. لینک رو توی URL بچسبون، یه اسم دلخواه توی Remarks بنویس و ✔️ رو بزن. ' +
+        '(به‌جاش لینک‌های اشتراکی داری؟ همه رو کپی کن و توی صفحه‌ی اصلی ➕ ← Import config from clipboard رو بزن.)',
+      'توی صفحه‌ی اصلی: ⋮ ← Update subscription، بعد ⋮ ← Real delay all configuration.',
+      'کانفیگی که کمترین تأخیر رو داره بزن، بعد ▶️ پایین صفحه. درخواست VPN رو قبول کن.',
+    ],
+    ios: [
+      'Streisand یا Happ رو از اپ‌استور نصب کن (هر دو رایگانن).',
+      'لینکت رو کپی کن: توی پیام اطلاعات اتصال، انگشتت رو روش نگه دار ← Copy.',
+      'توی برنامه ＋ رو بزن و از کلیپ‌بورد اضافه کن. لینک سابسکریپشن و لینک‌های اشتراکی هر دو کار می‌کنن؛ روی یه دستگاه دیگه کیوآر کد رو اسکن کن.',
+      'تأخیرها رو تست کن و کانفیگی که کمترین تأخیر رو داره انتخاب کن.',
+      'روشنش کن و وقتی iOS برای اضافه کردن پیکربندی VPN پرسید، Allow رو بزن.',
+    ],
+    windows: [
+      'v2rayN رو از github.com/2dust/v2rayN/releases دانلود کن (فایل zip مربوط به windows-64)، از حالت فشرده درش بیار و v2rayN.exe رو اجرا کن. Hiddify هم کار می‌کنه.',
+      'لینکت رو کپی کن: توی تلگرام روش راست‌کلیک کن ← Copy Link.',
+      'توی v2rayN: Subscription group ← Subscription group settings ← Add. لینک رو توی Url بچسبون، یه اسم دلخواه توی Remarks بنویس و Confirm رو بزن. ' +
+        '(لینک‌های اشتراکی داری؟ همه رو کپی کن و توی پنجره‌ی اصلی Ctrl+V بزن.)',
+      'Subscription group ← Update subscriptions without proxy.',
+      'همه‌ی کانفیگ‌ها رو انتخاب کن (Ctrl+A)، راست‌کلیک ← Test real delay. سریع‌ترین رو انتخاب کن و Enter بزن.',
+      'پایین پنجره، System proxy رو روی «Set system proxy» بذار. برای برنامه‌هایی که پروکسی رو نادیده می‌گیرن، به‌جاش Enable Tun رو روشن کن (v2rayN رو با Run as administrator اجرا کن).',
+    ],
+    mac: [
+      'مک با تراشه‌ی اپل (M1 یا جدیدتر): Streisand یا Happ رو از اپ‌استور نصب کن. هر مکی: v2rayN نسخه‌ی macOS از github.com/2dust/v2rayN/releases.',
+      'لینکت رو کپی کن: توی تلگرام روش راست‌کلیک کن ← Copy Link.',
+      'Streisand یا Happ: ＋ رو بزن و از کلیپ‌بورد اضافه کن. v2rayN: Subscription group ← Subscription group settings ← Add، لینک رو توی Url بچسبون، ' +
+        'بعد Subscription group ← Update subscriptions without proxy.',
+      'تأخیرها رو تست کن و کانفیگی که کمترین تأخیر رو داره انتخاب کن.',
+      'روشنش کن (v2rayN: System proxy ← Set system proxy). اگه macOS پرسید، پیکربندی VPN رو قبول کن.',
+    ],
+    linux: [
+      'v2rayN نسخه‌ی لینوکس رو از github.com/2dust/v2rayN/releases دانلود کن (فایل .deb یا zip مربوط به linux-64). Hiddify (AppImage) هم کار می‌کنه.',
+      'لینکت رو کپی کن.',
+      'توی v2rayN: Subscription group ← Subscription group settings ← Add. لینک رو توی Url بچسبون، یه اسم دلخواه توی Remarks بنویس و Confirm رو بزن.',
+      'Subscription group ← Update subscriptions without proxy. همه‌ی کانفیگ‌ها رو انتخاب کن، راست‌کلیک ← Test real delay.',
+      'سریع‌ترین رو انتخاب کن، Enter بزن و System proxy رو روی «Set system proxy» بذار (یا Enable Tun رو روشن کن).',
+    ],
+    wg: [
+      'برنامه‌ی WireGuard رو نصب کن: اپ‌استور، گوگل‌پلی یا wireguard.com/install.',
+      'زیر اطلاعات اتصالت 🌐 صفحه‌ی مصرف رو بزن و فایل «WireGuard app» (.conf) رو دانلود کن.',
+      'توی برنامه: ＋ ← Import from file و فایل رو انتخاب کن.',
+      'تونل رو روشن کن.',
+    ],
+    awg: [
+      'AmneziaWG (گوگل‌پلی، اپ‌استور) یا AmneziaVPN (amnezia.org) رو نصب کن. برنامه‌ی معمولی WireGuard این فایل‌ها رو نمی‌شناسه.',
+      'زیر اطلاعات اتصالت 🌐 صفحه‌ی مصرف رو بزن و یه فایل «AmneziaWG / AmneziaVPN app» (.conf) دانلود کن.',
+      'AmneziaWG: ＋ ← Import from file. AmneziaVPN: ＋ ← File with connection settings.',
+      'وصل شو. اگه چند تا فایل هست و یکی وصل نشد، یکی دیگه رو امتحان کن.',
+    ],
+    ovpn: [
+      'OpenVPN Connect رو نصب کن: اپ‌استور، گوگل‌پلی یا openvpn.net.',
+      'زیر اطلاعات اتصالت 🌐 صفحه‌ی مصرف رو بزن و فایل «OpenVPN» (.ovpn) رو دانلود کن.',
+      'فایل رو با OpenVPN Connect باز کن (یا توی برنامه: ＋ ← Upload file) تا وارد بشه.',
+      'با نام کاربری و رمزی که توی صفحه‌ی مصرفت هست وارد شو و وصل شو.',
+    ],
+    ikev2: [
+      'آیفون، آیپد، مک: صفحه‌ی مصرفت رو توی Safari باز کن و فایل «iPhone / iPad / Mac» رو دانلود کن. بعد Settings ← Profile Downloaded ← Install ' +
+        '(مک: System Settings ← Privacy & Security ← Profiles).',
+      'از Settings ← VPN روشنش کن.',
+      'اندروید: strongSwan VPN Client رو از گوگل‌پلی نصب کن، فایل «strongSwan app» (.sswan) رو از صفحه‌ی مصرف دانلود کن، بعد توی strongSwan: ⋮ ← Import VPN profile.',
+      'روی پروفایل بزن تا وصل بشی. اگه پرسید، نام کاربری و رمز صفحه‌ی مصرف رو وارد کن.',
+    ],
+    ssh: [
+      'یه برنامه‌ی تونل SSH نصب کن، مثل HTTP Injector یا NetMod روی اندروید. NekoBox و Hiddify هم لینک ssh:// توی سابسکریپشنت رو می‌گیرن.',
+      'زیر اطلاعات اتصالت 🌐 صفحه‌ی مصرف رو بزن و فایل «SSH apps» (.txt) رو دانلود کن: سرور، پورت و تنظیمات توشه.',
+      'توی برنامه یه اتصال SSH با همین تنظیمات و نام کاربری و رمز صفحه‌ی مصرف بساز.',
+      'وصل شو.',
+    ],
+    dns: [
+      'یه برنامه با تونل DNS (SlowDNS / dnstt) نصب کن، مثل HTTP Injector یا NetMod روی اندروید.',
+      'زیر اطلاعات اتصالت 🌐 صفحه‌ی مصرف رو بزن و فایل «DNS tunnel» (.txt) رو دانلود کن: دامنه‌ی نیم‌سرور، کلید عمومی، یه DNS resolver و ورود SSH توشه.',
+      'توی برنامه حالت تونل DNS (SlowDNS) رو انتخاب کن و این‌ها رو وارد کن.',
+      'وصل شو. کنده: وقتی هیچ چیز دیگه‌ای وصل نمی‌شه، برای پیام‌رسان ازش استفاده کن.',
+    ],
+  },
+  tip: 'قطع شد؟ اول سابسکریپشن رو آپدیت کن (شاید صاحب سرور کانفیگ‌ها رو عوض کرده)، بعد یه کانفیگ دیگه رو امتحان کن.',
+  oneDevice: 'هر فایل هم‌زمان فقط برای یه دستگاهه. روی دستگاه دوم از یه پروتکل دیگه استفاده کن.',
+  pickIntro: 'برنامه‌ات برای هر پروتکل (و هر سرور) یه کانفیگ نشون می‌ده. همه به همون VPN وصل می‌شن؛ فرقشون توی روش رد شدن از فیلتره:',
+  pick: pick([
+    'شبیه باز کردن یه سایت بزرگه. معمولاً سریع‌ترینه: اول این رو امتحان کن.',
+    'رمزنگاری‌شده و بدون نشونه‌ای که فیلتر بشناسه. برنامه‌ی به‌روز می‌خواد.',
+    'روی UDP، روی اینترنت ضعیف سریعه. جایی که UDP بسته‌ست کار نمی‌کنه.',
+    'ساده و سبک.',
+    'از طریق Cloudflare. کندتره، ولی وقتی آی‌پی سرور فیلتر شده کار می‌کنه.',
+    'از طریق یه Cloudflare Worker، برای وقتی که CDN هم بسته‌ست.',
+  ]),
+  pickOutro: 'تأخیرها رو توی برنامه‌ات تست کن و کمترین رو بزن. اگه یکی قطع شد، یکی دیگه رو بزن یا سابسکریپشن رو آپدیت کن.',
+};
+
+const guideAr = {
+  btn: '📖 طريقة الاتصال',
+  intro: 'اختر جهازك لتحصل على الخطوات بالتفصيل. تطبيق واحد يأخذ رابطك مع كل إعداداته.',
+  uses: (name, p) => `🔌 ${name}: ${p}`,
+  ownApps: 'هذه البروتوكولات تحتاج تطبيقها الخاص، مع ملف من 🌐 صفحة الاستهلاك:',
+  btns: {
+    android: '🤖 أندرويد', ios: '🍏 آيفون / آيباد', windows: '🪟 ويندوز', mac: '💻 ماك', linux: '🐧 لينكس',
+    xray: '🔌 أي إعداد أختار',
+    wg: '🛡 WireGuard', awg: '🥷 AmneziaWG', ovpn: '🔐 OpenVPN', ikev2: '📱 IKEv2', ssh: '🖥 SSH', dns: '🧬 نفق DNS',
+  },
+  steps: {
+    android: [
+      'ثبّت v2rayNG من Google Play أو من github.com/2dust/v2rayNG/releases. يعمل Happ و Hiddify أيضًا.',
+      'انسخ رابطك: اضغط مطولًا عليه في رسالة بيانات الاتصال ← Copy.',
+      'في v2rayNG: ☰ ← Subscription group setting ← ➕. الصق الرابط في URL، واكتب أي اسم في Remarks، واضغط ✔️. ' +
+        '(لديك روابط مشاركة بدلًا منه؟ انسخها كلها، ثم في الشاشة الرئيسية اضغط ➕ ← Import config from clipboard.)',
+      'في الشاشة الرئيسية: ⋮ ← Update subscription، ثم ⋮ ← Real delay all configuration.',
+      'اضغط على الإعداد ذي أقل تأخير، ثم ▶️ في الأسفل. وافق على طلب VPN.',
+    ],
+    ios: [
+      'ثبّت Streisand أو Happ من App Store (كلاهما مجاني).',
+      'انسخ رابطك: اضغط مطولًا عليه في رسالة بيانات الاتصال ← Copy.',
+      'في التطبيق اضغط ＋ وأضِف من الحافظة. روابط الاشتراك والمشاركة كلاهما يعمل؛ وعلى جهاز آخر امسح رمز QR.',
+      'اختبر التأخير واختر الإعداد ذا أقل تأخير.',
+      'شغّله، واضغط Allow عندما يطلب iOS إضافة إعداد VPN.',
+    ],
+    windows: [
+      'نزّل v2rayN من github.com/2dust/v2rayN/releases (ملف zip الخاص بـ windows-64)، وفك ضغطه وشغّل v2rayN.exe. يعمل Hiddify أيضًا.',
+      'انسخ رابطك: انقر عليه بالزر الأيمن في تيليجرام ← Copy Link.',
+      'في v2rayN: Subscription group ← Subscription group settings ← Add. الصق الرابط في Url، واكتب أي اسم في Remarks، ثم Confirm. ' +
+        '(لديك روابط مشاركة؟ انسخها كلها واضغط Ctrl+V في النافذة الرئيسية.)',
+      'Subscription group ← Update subscriptions without proxy.',
+      'حدد كل الإعدادات (Ctrl+A)، زر أيمن ← Test real delay. حدد الأسرع واضغط Enter لاستخدامه.',
+      'في الأسفل، اجعل System proxy على «Set system proxy». للتطبيقات التي تتجاهله، فعّل Enable Tun بدلًا منه (شغّل v2rayN كمسؤول).',
+    ],
+    mac: [
+      'ماك بشريحة Apple (M1 أو أحدث): ثبّت Streisand أو Happ من App Store. أي ماك: v2rayN لنظام macOS من github.com/2dust/v2rayN/releases.',
+      'انسخ رابطك: انقر عليه بالزر الأيمن في تيليجرام ← Copy Link.',
+      'Streisand أو Happ: انقر ＋ وأضِف من الحافظة. v2rayN: Subscription group ← Subscription group settings ← Add، والصق الرابط في Url، ' +
+        'ثم Subscription group ← Update subscriptions without proxy.',
+      'اختبر التأخير واختر الإعداد ذا أقل تأخير.',
+      'شغّله (v2rayN: System proxy ← Set system proxy). وافق على إعداد VPN إن سأل macOS.',
+    ],
+    linux: [
+      'نزّل v2rayN للينكس من github.com/2dust/v2rayN/releases (ملف .deb أو zip الخاص بـ linux-64). يعمل Hiddify (AppImage) أيضًا.',
+      'انسخ رابطك.',
+      'في v2rayN: Subscription group ← Subscription group settings ← Add. الصق الرابط في Url، واكتب أي اسم في Remarks، ثم Confirm.',
+      'Subscription group ← Update subscriptions without proxy. حدد كل الإعدادات، زر أيمن ← Test real delay.',
+      'حدد الأسرع، واضغط Enter، واجعل System proxy على «Set system proxy» (أو فعّل Enable Tun).',
+    ],
+    wg: [
+      'ثبّت تطبيق WireGuard: App Store أو Google Play أو wireguard.com/install.',
+      'اضغط 🌐 صفحة الاستهلاك تحت بيانات اتصالك ونزّل ملف «WireGuard app» (.conf).',
+      'في التطبيق: ＋ ← Import from file، واختر الملف.',
+      'شغّل النفق.',
+    ],
+    awg: [
+      'ثبّت AmneziaWG (Google Play، App Store) أو AmneziaVPN (amnezia.org). تطبيق WireGuard العادي لا يقبل هذه الملفات.',
+      'اضغط 🌐 صفحة الاستهلاك تحت بيانات اتصالك ونزّل ملف «AmneziaWG / AmneziaVPN app» (.conf).',
+      'AmneziaWG: ＋ ← Import from file. AmneziaVPN: ＋ ← File with connection settings.',
+      'اتصل. إن كانت هناك عدة ملفات ولم يتصل أحدها، جرّب غيره.',
+    ],
+    ovpn: [
+      'ثبّت OpenVPN Connect: App Store أو Google Play أو openvpn.net.',
+      'اضغط 🌐 صفحة الاستهلاك تحت بيانات اتصالك ونزّل ملف «OpenVPN» (.ovpn).',
+      'افتح الملف بـ OpenVPN Connect (أو في التطبيق: ＋ ← Upload file) لاستيراده.',
+      'سجّل الدخول بالاسم وكلمة المرور الظاهرين في صفحة الاستهلاك، واتصل.',
+    ],
+    ikev2: [
+      'آيفون، آيباد، ماك: افتح صفحة الاستهلاك في Safari ونزّل ملف «iPhone / iPad / Mac». ثم Settings ← Profile Downloaded ← Install ' +
+        '(ماك: System Settings ← Privacy & Security ← Profiles).',
+      'شغّله من Settings ← VPN.',
+      'أندرويد: ثبّت strongSwan VPN Client من Google Play، ونزّل ملف «strongSwan app» (.sswan) من صفحة الاستهلاك، ثم في strongSwan: ⋮ ← Import VPN profile.',
+      'اضغط على الملف الشخصي للاتصال. إن طُلب منك، أدخل الاسم وكلمة المرور من صفحة الاستهلاك.',
+    ],
+    ssh: [
+      'ثبّت تطبيق نفق SSH، مثل HTTP Injector أو NetMod على أندرويد. يقبل NekoBox و Hiddify أيضًا رابط ssh:// في اشتراكك.',
+      'اضغط 🌐 صفحة الاستهلاك تحت بيانات اتصالك ونزّل ملف «SSH apps» (.txt): فيه الخادم والمنفذ والإعدادات.',
+      'في التطبيق، أنشئ اتصال SSH بهذه الإعدادات وبالاسم وكلمة المرور من صفحة الاستهلاك.',
+      'اتصل.',
+    ],
+    dns: [
+      'ثبّت تطبيقًا فيه نفق DNS (SlowDNS / dnstt)، مثل HTTP Injector أو NetMod على أندرويد.',
+      'اضغط 🌐 صفحة الاستهلاك تحت بيانات اتصالك ونزّل ملف «DNS tunnel» (.txt): فيه نطاق خادم الأسماء والمفتاح العام وخادم DNS وبيانات دخول SSH.',
+      'في التطبيق، اختر وضع نفق DNS (SlowDNS) وأدخلها.',
+      'اتصل. إنه بطيء: استخدمه للرسائل حين لا يعمل شيء آخر.',
+    ],
+  },
+  tip: 'توقف عن العمل؟ حدّث الاشتراك أولًا (ربما غيّر المالك الإعدادات)، ثم جرّب إعدادًا آخر.',
+  oneDevice: 'كل ملف لجهاز واحد في نفس الوقت. على جهاز ثانٍ استخدم بروتوكولًا آخر.',
+  pickIntro: 'يعرض تطبيقك إعدادًا لكل بروتوكول (ولكل خادم). كلها تصل إلى نفس VPN؛ تختلف في طريقة تجاوز الحجب:',
+  pick: pick([
+    'يبدو كزيارة لموقع كبير. عادةً الأسرع: جرّبه أولًا.',
+    'مشفّر ولا شيء فيه يتعرّف عليه الفلتر. يحتاج تطبيقًا محدّثًا.',
+    'عبر UDP، سريع على الاتصالات الضعيفة. لا يعمل حيث يُحجب UDP.',
+    'بسيط وخفيف.',
+    'عبر Cloudflare. أبطأ، لكنه يعمل حين يُحجب عنوان الخادم.',
+    'عبر Cloudflare Worker، لحين يُحجب حتى الـ CDN.',
+  ]),
+  pickOutro: 'اختبر التأخير في تطبيقك واستخدم الأقل. حين يتوقف أحدها، انتقل إلى غيره أو حدّث الاشتراك.',
+};
+
+const guideRu = {
+  btn: '📖 Как подключиться',
+  intro: 'Выберите устройство, чтобы получить пошаговую инструкцию. Одно приложение принимает вашу ссылку со всеми конфигами.',
+  uses: (name, p) => `🔌 ${name}: ${p}`,
+  ownApps: 'Этим протоколам нужно своё приложение и файл со 🌐 страницы расхода:',
+  btns: {
+    android: '🤖 Android', ios: '🍏 iPhone / iPad', windows: '🪟 Windows', mac: '💻 Mac', linux: '🐧 Linux',
+    xray: '🔌 Какой конфиг выбрать',
+    wg: '🛡 WireGuard', awg: '🥷 AmneziaWG', ovpn: '🔐 OpenVPN', ikev2: '📱 IKEv2', ssh: '🖥 SSH', dns: '🧬 DNS-туннель',
+  },
+  steps: {
+    android: [
+      'Установите v2rayNG из Google Play или с github.com/2dust/v2rayNG/releases. Happ и Hiddify тоже подойдут.',
+      'Скопируйте ссылку: долгое нажатие на неё в сообщении с данными подключения → Copy.',
+      'В v2rayNG: ☰ → Subscription group setting → ➕. Вставьте ссылку в URL, впишите любое имя в Remarks, нажмите ✔️. ' +
+        '(У вас ссылки на конфиги? Скопируйте их все и на главном экране нажмите ➕ → Import config from clipboard.)',
+      'На главном экране: ⋮ → Update subscription, затем ⋮ → Real delay all configuration.',
+      'Выберите конфиг с наименьшей задержкой и нажмите ▶️ внизу. Разрешите запрос VPN.',
+    ],
+    ios: [
+      'Установите Streisand или Happ из App Store (оба бесплатные).',
+      'Скопируйте ссылку: долгое нажатие на неё в сообщении с данными подключения → Copy.',
+      'В приложении нажмите ＋ и добавьте из буфера обмена. Подходят и ссылка подписки, и ссылки на конфиги; на другом устройстве отсканируйте QR-код.',
+      'Проверьте задержки и выберите конфиг с наименьшей.',
+      'Включите его и нажмите Allow, когда iOS попросит добавить конфигурацию VPN.',
+    ],
+    windows: [
+      'Скачайте v2rayN с github.com/2dust/v2rayN/releases (zip для windows-64), распакуйте и запустите v2rayN.exe. Hiddify тоже подойдёт.',
+      'Скопируйте ссылку: правый клик по ней в Telegram → Copy Link.',
+      'В v2rayN: Subscription group → Subscription group settings → Add. Вставьте ссылку в Url, впишите любое имя в Remarks, Confirm. ' +
+        '(Ссылки на конфиги? Скопируйте их все и нажмите Ctrl+V в главном окне.)',
+      'Subscription group → Update subscriptions without proxy.',
+      'Выделите все конфиги (Ctrl+A), правый клик → Test real delay. Выберите самый быстрый и нажмите Enter.',
+      'Внизу выставьте System proxy в «Set system proxy». Для приложений, которые его игнорируют, включите Enable Tun (запустите v2rayN от администратора).',
+    ],
+    mac: [
+      'Mac с чипом Apple (M1 и новее): установите Streisand или Happ из App Store. Любой Mac: v2rayN для macOS с github.com/2dust/v2rayN/releases.',
+      'Скопируйте ссылку: правый клик по ней в Telegram → Copy Link.',
+      'Streisand или Happ: нажмите ＋ и добавьте из буфера обмена. v2rayN: Subscription group → Subscription group settings → Add, вставьте ссылку в Url, ' +
+        'затем Subscription group → Update subscriptions without proxy.',
+      'Проверьте задержки и выберите конфиг с наименьшей.',
+      'Включите его (v2rayN: System proxy → Set system proxy). Разрешите конфигурацию VPN, если macOS спросит.',
+    ],
+    linux: [
+      'Скачайте v2rayN для Linux с github.com/2dust/v2rayN/releases (.deb или zip для linux-64). Hiddify (AppImage) тоже подойдёт.',
+      'Скопируйте ссылку.',
+      'В v2rayN: Subscription group → Subscription group settings → Add. Вставьте ссылку в Url, впишите любое имя в Remarks, Confirm.',
+      'Subscription group → Update subscriptions without proxy. Выделите все конфиги, правый клик → Test real delay.',
+      'Выберите самый быстрый, нажмите Enter и выставьте System proxy в «Set system proxy» (или включите Enable Tun).',
+    ],
+    wg: [
+      'Установите приложение WireGuard: App Store, Google Play или wireguard.com/install.',
+      'Нажмите 🌐 Страница расхода под данными подключения и скачайте файл «WireGuard app» (.conf).',
+      'В приложении: ＋ → Import from file, выберите файл.',
+      'Включите туннель.',
+    ],
+    awg: [
+      'Установите AmneziaWG (Google Play, App Store) или AmneziaVPN (amnezia.org). Обычное приложение WireGuard эти файлы не примет.',
+      'Нажмите 🌐 Страница расхода под данными подключения и скачайте файл «AmneziaWG / AmneziaVPN app» (.conf).',
+      'AmneziaWG: ＋ → Import from file. AmneziaVPN: ＋ → File with connection settings.',
+      'Подключитесь. Если файлов несколько и один не подключается, попробуйте другой.',
+    ],
+    ovpn: [
+      'Установите OpenVPN Connect: App Store, Google Play или openvpn.net.',
+      'Нажмите 🌐 Страница расхода под данными подключения и скачайте файл «OpenVPN» (.ovpn).',
+      'Откройте файл в OpenVPN Connect (или в приложении: ＋ → Upload file), чтобы импортировать.',
+      'Войдите с именем и паролем со страницы расхода и подключитесь.',
+    ],
+    ikev2: [
+      'iPhone, iPad, Mac: откройте страницу расхода в Safari и скачайте файл «iPhone / iPad / Mac». Затем Settings → Profile Downloaded → Install ' +
+        '(Mac: System Settings → Privacy & Security → Profiles).',
+      'Включите в Settings → VPN.',
+      'Android: установите strongSwan VPN Client из Google Play, скачайте файл «strongSwan app» (.sswan) со страницы расхода, затем в strongSwan: ⋮ → Import VPN profile.',
+      'Нажмите на профиль, чтобы подключиться. Если спросит, введите имя и пароль со страницы расхода.',
+    ],
+    ssh: [
+      'Установите приложение для SSH-туннеля, например HTTP Injector или NetMod на Android. NekoBox и Hiddify также принимают ссылку ssh:// из подписки.',
+      'Нажмите 🌐 Страница расхода под данными подключения и скачайте файл «SSH apps» (.txt): в нём сервер, порт и настройки.',
+      'В приложении создайте SSH-подключение с этими настройками, именем и паролем со страницы расхода.',
+      'Подключитесь.',
+    ],
+    dns: [
+      'Установите приложение с DNS-туннелем (SlowDNS / dnstt), например HTTP Injector или NetMod на Android.',
+      'Нажмите 🌐 Страница расхода под данными подключения и скачайте файл «DNS tunnel» (.txt): в нём домен NS-сервера, публичный ключ, DNS-резолвер и вход SSH.',
+      'В приложении выберите режим DNS-туннеля (SlowDNS) и введите эти данные.',
+      'Подключитесь. Это медленно: для мессенджеров, когда больше ничего не работает.',
+    ],
+  },
+  tip: 'Перестало работать? Сначала обновите подписку (владелец мог сменить конфиги), затем попробуйте другой конфиг.',
+  oneDevice: 'Один файл — для одного устройства одновременно. На втором устройстве используйте другой протокол.',
+  pickIntro: 'Приложение показывает конфиг на каждый протокол (и сервер). Все ведут в один VPN; отличаются тем, как обходят блокировки:',
+  pick: pick([
+    'выглядит как заход на крупный сайт. Обычно самый быстрый: начните с него.',
+    'зашифрован, и фильтру не за что зацепиться. Нужно свежее приложение.',
+    'по UDP, быстрый на плохой связи. Не работает там, где UDP заблокирован.',
+    'простой и лёгкий.',
+    'через Cloudflare. Медленнее, но работает, когда адрес сервера заблокирован.',
+    'через Cloudflare Worker, на случай когда заблокирован даже CDN.',
+  ]),
+  pickOutro: 'Проверьте задержки в приложении и выберите наименьшую. Если конфиг перестал работать, переключитесь на другой или обновите подписку.',
+};
+
+const guideEs = {
+  btn: '📖 Cómo conectarse',
+  intro: 'Elige tu dispositivo para ver los pasos. Una sola app recibe tu enlace con todas sus configuraciones.',
+  uses: (name, p) => `🔌 ${name}: ${p}`,
+  ownApps: 'Estos protocolos necesitan su propia app, con un archivo de tu 🌐 página de consumo:',
+  btns: {
+    android: '🤖 Android', ios: '🍏 iPhone / iPad', windows: '🪟 Windows', mac: '💻 Mac', linux: '🐧 Linux',
+    xray: '🔌 Qué configuración elegir',
+    wg: '🛡 WireGuard', awg: '🥷 AmneziaWG', ovpn: '🔐 OpenVPN', ikev2: '📱 IKEv2', ssh: '🖥 SSH', dns: '🧬 Túnel DNS',
+  },
+  steps: {
+    android: [
+      'Instala v2rayNG desde Google Play o github.com/2dust/v2rayNG/releases. Happ y Hiddify también sirven.',
+      'Copia tu enlace: mantenlo pulsado en el mensaje con tus datos de conexión → Copy.',
+      'En v2rayNG: ☰ → Subscription group setting → ➕. Pega el enlace en URL, escribe cualquier nombre en Remarks y pulsa ✔️. ' +
+        '(¿Tienes enlaces de configuración? Cópialos todos y en la pantalla principal pulsa ➕ → Import config from clipboard.)',
+      'En la pantalla principal: ⋮ → Update subscription, luego ⋮ → Real delay all configuration.',
+      'Toca la configuración con menos retardo y luego ▶️ abajo. Acepta la solicitud de VPN.',
+    ],
+    ios: [
+      'Instala Streisand o Happ desde la App Store (ambas gratis).',
+      'Copia tu enlace: mantenlo pulsado en el mensaje con tus datos de conexión → Copy.',
+      'En la app, toca ＋ y añade desde el portapapeles. Sirven el enlace de suscripción y los de configuración; en otro dispositivo, escanea el código QR.',
+      'Prueba los retardos y elige la configuración con el menor.',
+      'Actívala y toca Allow cuando iOS pida añadir una configuración VPN.',
+    ],
+    windows: [
+      'Descarga v2rayN de github.com/2dust/v2rayN/releases (el zip windows-64), descomprímelo y ejecuta v2rayN.exe. Hiddify también sirve.',
+      'Copia tu enlace: clic derecho sobre él en Telegram → Copy Link.',
+      'En v2rayN: Subscription group → Subscription group settings → Add. Pega el enlace en Url, cualquier nombre en Remarks, Confirm. ' +
+        '(¿Enlaces de configuración? Cópialos todos y pulsa Ctrl+V en la ventana principal.)',
+      'Subscription group → Update subscriptions without proxy.',
+      'Selecciona todas (Ctrl+A), clic derecho → Test real delay. Selecciona la más rápida y pulsa Enter.',
+      'Abajo, pon System proxy en «Set system proxy». Para apps que lo ignoran, activa Enable Tun (ejecuta v2rayN como administrador).',
+    ],
+    mac: [
+      'Mac con chip de Apple (M1 o posterior): instala Streisand o Happ desde la App Store. Cualquier Mac: v2rayN para macOS de github.com/2dust/v2rayN/releases.',
+      'Copia tu enlace: clic derecho sobre él en Telegram → Copy Link.',
+      'Streisand o Happ: haz clic en ＋ y añade desde el portapapeles. v2rayN: Subscription group → Subscription group settings → Add, pega el enlace en Url, ' +
+        'luego Subscription group → Update subscriptions without proxy.',
+      'Prueba los retardos y elige la configuración con el menor.',
+      'Actívala (v2rayN: System proxy → Set system proxy). Acepta la configuración VPN si macOS lo pide.',
+    ],
+    linux: [
+      'Descarga v2rayN para Linux de github.com/2dust/v2rayN/releases (el .deb o el zip linux-64). Hiddify (AppImage) también sirve.',
+      'Copia tu enlace.',
+      'En v2rayN: Subscription group → Subscription group settings → Add. Pega el enlace en Url, cualquier nombre en Remarks, Confirm.',
+      'Subscription group → Update subscriptions without proxy. Selecciona todas, clic derecho → Test real delay.',
+      'Selecciona la más rápida, pulsa Enter y pon System proxy en «Set system proxy» (o activa Enable Tun).',
+    ],
+    wg: [
+      'Instala la app WireGuard: App Store, Google Play o wireguard.com/install.',
+      'Toca 🌐 Página de consumo bajo tus datos de conexión y descarga el archivo «WireGuard app» (.conf).',
+      'En la app: ＋ → Import from file, y elige el archivo.',
+      'Activa el túnel.',
+    ],
+    awg: [
+      'Instala AmneziaWG (Google Play, App Store) o AmneziaVPN (amnezia.org). La app normal de WireGuard no acepta estos archivos.',
+      'Toca 🌐 Página de consumo bajo tus datos de conexión y descarga un archivo «AmneziaWG / AmneziaVPN app» (.conf).',
+      'AmneziaWG: ＋ → Import from file. AmneziaVPN: ＋ → File with connection settings.',
+      'Conéctate. Si hay varios archivos y uno no conecta, prueba otro.',
+    ],
+    ovpn: [
+      'Instala OpenVPN Connect: App Store, Google Play u openvpn.net.',
+      'Toca 🌐 Página de consumo bajo tus datos de conexión y descarga el archivo «OpenVPN» (.ovpn).',
+      'Abre el archivo con OpenVPN Connect (o en la app: ＋ → Upload file) para importarlo.',
+      'Inicia sesión con el nombre y la contraseña de tu página de consumo y conéctate.',
+    ],
+    ikev2: [
+      'iPhone, iPad, Mac: abre tu página de consumo en Safari y descarga el archivo «iPhone / iPad / Mac». Luego Settings → Profile Downloaded → Install ' +
+        '(Mac: System Settings → Privacy & Security → Profiles).',
+      'Actívalo en Settings → VPN.',
+      'Android: instala strongSwan VPN Client desde Google Play, descarga el archivo «strongSwan app» (.sswan) de la página de consumo y en strongSwan: ⋮ → Import VPN profile.',
+      'Toca el perfil para conectarte. Si lo pide, usa el nombre y la contraseña de la página de consumo.',
+    ],
+    ssh: [
+      'Instala una app de túnel SSH, como HTTP Injector o NetMod en Android. NekoBox y Hiddify también aceptan el enlace ssh:// de tu suscripción.',
+      'Toca 🌐 Página de consumo bajo tus datos de conexión y descarga el archivo «SSH apps» (.txt): tiene el servidor, el puerto y los ajustes.',
+      'En la app, crea una conexión SSH con esos ajustes y el nombre y la contraseña de la página de consumo.',
+      'Conéctate.',
+    ],
+    dns: [
+      'Instala una app con túnel DNS (SlowDNS / dnstt), como HTTP Injector o NetMod en Android.',
+      'Toca 🌐 Página de consumo bajo tus datos de conexión y descarga el archivo «DNS tunnel» (.txt): tiene el dominio del servidor de nombres, la clave pública, un resolver DNS y un acceso SSH.',
+      'En la app, elige el modo túnel DNS (SlowDNS) y rellena esos datos.',
+      'Conéctate. Es lento: úsalo para mensajes cuando nada más funciona.',
+    ],
+  },
+  tip: '¿Dejó de funcionar? Primero actualiza la suscripción (el dueño puede haber cambiado las configuraciones) y luego prueba otra configuración.',
+  oneDevice: 'Cada archivo es para un dispositivo a la vez. En un segundo dispositivo, usa otro protocolo.',
+  pickIntro: 'Tu app muestra una configuración por protocolo (y por servidor). Todas llegan a la misma VPN; cambian en cómo esquivan los bloqueos:',
+  pick: pick([
+    'parece una visita a un sitio web grande. Suele ser la más rápida: pruébala primero.',
+    'cifrada y sin nada que un filtro reconozca. Necesita una app actualizada.',
+    'por UDP, rápida en conexiones malas. No funciona donde UDP está bloqueado.',
+    'simple y ligera.',
+    'a través de Cloudflare. Más lenta, pero funciona cuando la dirección del servidor está bloqueada.',
+    'a través de un Cloudflare Worker, para cuando incluso el CDN está bloqueado.',
+  ]),
+  pickOutro: 'Prueba los retardos en tu app y usa el menor. Cuando una deje de funcionar, cambia a otra o actualiza la suscripción.',
+};
+
+const GUIDE = { en: guideEn, fa: guideFa, ar: guideAr, ru: guideRu, es: guideEs };
 
 const SRV = { en: srvEn, fa: srvFa, ar: srvAr, ru: srvRu, es: srvEs };
 const TABLES = { en, fa, ar, ru, es };

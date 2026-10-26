@@ -29,6 +29,11 @@ Slash commands are only `/start` and the admin commands.
 | 📡 Subscription | any subscription URL (Marzban, 3x-ui, Hiddify, …) | the same subscription URL as everyone else |
 | 🔗 Share links | `vless://`, `hysteria2://`, `ss://`, … links, up to 20 | the same links as everyone else |
 
+Under the connection details, **📖 How to connect** opens a step-by-step guide: one page per device (Android,
+iPhone/iPad, Windows, Mac, Linux) for adding the link to an app, a page on which config to pick, and, for xtune
+servers, a page for each protocol that needs its own app (WireGuard, AmneziaWG, OpenVPN, IKEv2, SSH, DNS tunnel), with
+the file to download from the member's usage page. The guide is also under ℹ️ About.
+
 ### Why xtune works best
 
 [xtune](https://github.com/chethober/xtune) finds the Xray configs that get through *your* network, deploys them and

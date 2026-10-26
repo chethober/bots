@@ -35,7 +35,9 @@ export async function join(vpn, userId, existing = null) {
 // Sends the connection details as content (kept in the chat): xtune and
 // subscription VPNs as a QR code of the link, share links as text.
 export async function sendDetails(chatId, vpn, member, L, details = null) {
-  const leave = { inline_keyboard: [[{ text: L.btnLeave, callback_data: `lv:${member.id}` }]] };
+  const leave = {
+    inline_keyboard: [[{ text: L.guide.btn, callback_data: `g:${vpn.id}` }], [{ text: L.btnLeave, callback_data: `lv:${member.id}` }]],
+  };
   if (vpn.kind === 'links') {
     return safeApi('sendMessage', {
       chat_id: chatId, text: L.detailsLinks(vpn, vpn.source), reply_markup: leave,
