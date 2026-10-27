@@ -1,19 +1,19 @@
-# chthapibot
+<h1 align="center">chthapibot</h1>
 
-A multi-utility Telegram bot that runs entirely on [Telegram Serverless](https://core.telegram.org/bots/serverless).
-It covers crypto prices and alerts, scores and match alerts for about 50 competitions, recipes and
-coffee tools, dice, discovery and trivia, and a configurable daily briefing.
+<p align="center">
+  A multi-utility Telegram bot: crypto prices and alerts, scores for about 50 competitions, recipes and coffee tools, random pickers and trivia, and a daily briefing.<br>
+  Runs serverless on <a href="https://core.telegram.org/bots/serverless">Telegram Serverless (tgcloud)</a>, Telegram's platform for bots. No server to host.
+</p>
 
-To try it, open **[@chthapibot](https://t.me/chthapibot)** and send `/start`.
+<p align="center">
+  <a href="https://t.me/chthapibot">Try it: @chthapibot</a> · <a href="LICENSE">MIT License</a>
+</p>
+
+---
 
 The bot uses only free, public APIs, most of them listed in
 [public-apis/public-apis](https://github.com/public-apis/public-apis). Each one was tested from
 the Telegram Serverless runtime itself. See [API sources](#api-sources).
-
-## Features
-
-Features are grouped into four hubs. Each hub has ♥ **saved items**, ⭐ **follows** where they
-make sense, and 🔔 **notifications**: alerts, scheduled pushes and reminders.
 
 In private chats the bot follows the [shared interface](../README.md#how-they-work). A persistent
 keyboard under the text field opens 💰 Crypto, 🏆 Sports, 🍽 Food & drinks, 🎲 Random, ☀️ Daily
@@ -27,6 +27,11 @@ shortcuts, but private chats have no command menu.
 
 Groups use buttons attached to messages throughout, and keep the command menu, because with
 privacy mode on, Telegram doesn't deliver keyboard taps from groups to the bot.
+
+## Features
+
+Features are grouped into four hubs. Each hub has ♥ **saved items**, ⭐ **follows** where they
+make sense, and 🔔 **notifications**: alerts, scheduled pushes and reminders.
 
 | Hub | What's in it |
 |---|---|
@@ -46,65 +51,9 @@ Across the bot:
 
 `/help` lists every shortcut command.
 
-## How it works
+## Run your own
 
-The bot is a set of JavaScript modules that Telegram runs in a V8 isolate. There is no server.
-
-```
-tgcloud/
-  schema.js                 SQLite tables: prefs, follows, saved_items, notifications, pending_input,
-                            config, cache, portfolio, shopping_list, brew_log, trivia_scores
-  handlers/                 one module per Telegram update type
-    message.js              commands, replies to prompts, location messages, barcodes
-    callback_query.js       inline buttons
-    poll_answer.js          trivia quiz answers → scores and streaks
-  endpoints/                CLI-only functions (they refuse Mini App calls)
-    tick.js                 one scheduler run: alerts, schedules, reminders, match events
-    healthcheck.js          probes every upstream API from the platform; warms search indexes
-    setConfig.js            bot configuration (TMDB key, admin chat id)
-  lib/
-    hubs/                   index.js routes commands, callbacks (`prefix:…`) and typed input;
-                            main.js, crypto.js, sports.js, food.js, random.js, saved.js
-    notify.js               notification kinds registry and schedules
-    scheduler.js            evaluates due notifications (mute, quiet hours, DB claims, time budget)
-    daily.js                the ☀️ briefing
-    store.js                config, cache, prefs, follows, saved items, pending input, portfolio
-    time.js                 time zones, schedules, quiet-hour windows
-    ui.js                   in-place menus, prompts, group-admin checks
-    rng.js                  crypto-backed randomness, dice notation, cards, teams
-    http.js                 JSON fetch with one retry
-    apis/                   upstream clients: crypto, espn, f1, food, fun, random, weather
-    health.js               the probe list used by the healthcheck
-```
-
-Design notes:
-
-- **Notifications are rows; kinds are code.** Each hub registers its notification kinds (`price`,
-  `pct`, `fng`, `team`, `event`, …), each with a `describe` and an `evaluate` function. The
-  scheduler loads due rows, skips muted categories, holds alerts during quiet hours, and asks each
-  kind what should fire. It records each send in the database before sending, so overlapping runs
-  never send twice. When you follow a team, the first run only records what has already happened,
-  so you don't get yesterday's results.
-- **The platform has no cron.** [`chthapibot-tick.yml`](../.github/workflows/chthapibot-tick.yml) runs `tgcloud run endpoints/tick`
-  every 10 minutes, so all times are approximate.
-- **It stays within free tiers.** Upstream responses are cached in the `cache` table, and
-  CoinGecko falls back to Coinlore and Binance. Some catalogues can't be filtered fully on free
-  keys (TheMealDB, TheCocktailDB) or are spread across many endpoints (ESPN team lists), so they
-  are indexed weekly and searched locally.
-
-### Runtime facts (measured on Telegram Serverless)
-
-- `setTimeout`, `URL`, `atob` and `AbortController` don't exist. Full `Intl` time zones and
-  `crypto.getRandomValues` are available.
-- Each fetch is aborted after about 5 s, and `lib/http.js` retries once. A run gets about 3 s of
-  CPU and about 30 s of wall time. `Date.now()` doesn't advance during synchronous code. The
-  scheduler stops starting new sends after 20 s and leaves the rest for the next run.
-- `site.api.espn.com` returns 403 to the platform; `site.web.api.espn.com` works. Kitsu requires
-  `Accept: application/vnd.api+json`. CheapShark and Radio Browser want a descriptive `User-Agent`.
-
-## Run your own copy
-
-You need a bot linked to Telegram Serverless, and Node.js 20 or later.
+You need Node.js 20+ and a bot linked to Telegram Serverless.
 
 ```sh
 git clone https://github.com/chethober/bots && cd bots/chthapibot
@@ -130,21 +79,75 @@ npx tgcloud run endpoints/setConfig '{}'
 
 **Scheduling:** add a repository secret `CHTHAPIBOT_TGCLOUD_TOKEN` containing your project token.
 The workflows live at the repository root: `chthapibot-tick.yml` runs the scheduler every 10 minutes,
-and `chthapibot-health.yml` runs the API healthcheck daily, both from the default branch. GitHub pauses scheduled workflows after 60 days without repository
-activity. Any other timer works too, such as a crontab line that runs
-`npx tgcloud run endpoints/tick '{}'`.
+and `chthapibot-health.yml` runs the API healthcheck daily, both from the default branch. GitHub pauses
+scheduled workflows after 60 days without repository activity. Any other timer works too, such as a
+crontab line that runs `npx tgcloud run endpoints/tick '{}'`.
 
 > `tgcloud push` (CLI 0.2.0) may crash *after* uploading, while it saves its local snapshot. The
 > deploy itself succeeds; run `npx tgcloud fetch` to re-sync.
 
-## Testing
+## Tests
 
 [`scripts/e2e.js`](scripts/e2e.js) drives the real handlers on the platform, against the real
 database, with Bot API calls stubbed out so nothing is sent to Telegram. It checks the HTML and
 button data of every outgoing message, runs the scheduler, and cleans up after itself. It covers
 about 270 scenarios in 12 parts; the header of the file explains how to run it.
 
-## API sources
+## How it works
+
+The bot is a set of JavaScript modules that Telegram runs in a V8 isolate. There is no server.
+
+```
+tgcloud/
+├── schema.js              SQLite tables: prefs, follows, saved_items, notifications, pending_input,
+│                          config, cache, portfolio, shopping_list, brew_log, trivia_scores
+├── handlers/              one module per Telegram update type
+│   ├── message.js         commands, replies to prompts, location messages, barcodes
+│   ├── callback_query.js  inline buttons
+│   └── poll_answer.js     trivia quiz answers → scores and streaks
+├── endpoints/             CLI-only functions (they refuse Mini App calls)
+│   ├── tick.js            one scheduler run: alerts, schedules, reminders, match events
+│   ├── healthcheck.js     probes every upstream API from the platform; warms search indexes
+│   └── setConfig.js       bot configuration (TMDB key, admin chat id)
+└── lib/
+    ├── hubs/              index.js routes commands, callbacks (`prefix:…`) and typed input;
+    │                      main.js, crypto.js, sports.js, food.js, random.js, saved.js
+    ├── notify.js          notification kinds registry and schedules
+    ├── scheduler.js       evaluates due notifications (mute, quiet hours, DB claims, time budget)
+    ├── daily.js           the ☀️ briefing
+    ├── store.js           config, cache, prefs, follows, saved items, pending input, portfolio
+    ├── time.js            time zones, schedules, quiet-hour windows
+    ├── ui.js              in-place menus, prompts, group-admin checks
+    ├── rng.js             crypto-backed randomness, dice notation, cards, teams
+    ├── http.js            JSON fetch with one retry
+    ├── apis/              upstream clients: crypto, espn, f1, food, fun, random, weather
+    └── health.js          the probe list used by the healthcheck
+```
+
+- **Notifications are rows; kinds are code.** Each hub registers its notification kinds (`price`,
+  `pct`, `fng`, `team`, `event`, …), each with a `describe` and an `evaluate` function. The
+  scheduler loads due rows, skips muted categories, holds alerts during quiet hours, and asks each
+  kind what should fire. It records each send in the database before sending, so overlapping runs
+  never send twice. When you follow a team, the first run only records what has already happened,
+  so you don't get yesterday's results.
+- **The platform has no cron.** [`chthapibot-tick.yml`](../.github/workflows/chthapibot-tick.yml) runs `tgcloud run endpoints/tick`
+  every 10 minutes, so all times are approximate.
+- **It stays within free tiers.** Upstream responses are cached in the `cache` table, and
+  CoinGecko falls back to Coinlore and Binance. Some catalogues can't be filtered fully on free
+  keys (TheMealDB, TheCocktailDB) or are spread across many endpoints (ESPN team lists), so they
+  are indexed weekly and searched locally.
+
+### Runtime facts (measured on Telegram Serverless)
+
+- `setTimeout`, `URL`, `atob` and `AbortController` don't exist. Full `Intl` time zones and
+  `crypto.getRandomValues` are available.
+- Each fetch is aborted after about 5 s, and `lib/http.js` retries once. A run gets about 3 s of
+  CPU and about 30 s of wall time. `Date.now()` doesn't advance during synchronous code. The
+  scheduler stops starting new sends after 20 s and leaves the rest for the next run.
+- `site.api.espn.com` returns 403 to the platform; `site.web.api.espn.com` works. Kitsu requires
+  `Accept: application/vnd.api+json`. CheapShark and Radio Browser want a descriptive `User-Agent`.
+
+### API sources
 
 | Area | APIs |
 |---|---|
@@ -157,12 +160,13 @@ about 270 scenarios in 12 parts; the header of the file explains how to run it.
 The data belongs to its providers; check each API's terms before heavy use. This project isn't
 affiliated with any of them.
 
+See [`AGENTS.md`](AGENTS.md) for the platform's module rules and [`docs/tgcloud-sdk.md`](docs/tgcloud-sdk.md) for the SDK reference.
+The original design and rollout plan is in [`docs/PLAN.md`](docs/PLAN.md).
+
 ## Contributing
 
 Issues and pull requests are welcome; see [CONTRIBUTING.md](CONTRIBUTING.md). To report a
-security issue, see [SECURITY.md](SECURITY.md). The original design and rollout plan is in
-[docs/PLAN.md](docs/PLAN.md). [AGENTS.md](AGENTS.md) and [docs/tgcloud-sdk.md](docs/tgcloud-sdk.md)
-describe the platform SDK.
+security issue, see [SECURITY.md](SECURITY.md).
 
 ## License
 

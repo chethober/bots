@@ -1,8 +1,19 @@
-# Telegram Games
+<p align="center">
+  <img src="assets/avatar.png" alt="Telegram Games" width="160">
+</p>
 
-Casino, poker and party games for Telegram, built on
-[Telegram Serverless](https://core.telegram.org/bots/serverless). There's no server to run:
-the bot's code, the database and the Mini App are all hosted by Telegram.
+<h1 align="center">Telegram Games</h1>
+
+<p align="center">
+  Casino, poker and party games for Telegram: chat games, inline mode and a graphic Mini App. Play money only.<br>
+  Runs serverless on <a href="https://core.telegram.org/bots/serverless">Telegram Serverless (tgcloud)</a>, Telegram's platform for bots. The bot's code, the database and the Mini App are all hosted by Telegram.
+</p>
+
+<p align="center">
+  <a href="https://t.me/chthgamesbot">Try it: @chthgamesbot</a> · <a href="LICENSE">MIT License</a>
+</p>
+
+---
 
 - **20 games:** Texas Hold'em, video poker, blackjack, slots, roulette, crash, plinko, mines,
   duels, trivia, hangman and more.
@@ -14,22 +25,22 @@ the bot's code, the database and the Mini App are all hosted by Telegram.
   buttons, so rules and chip handling can't drift apart.
 - **Play money only.** Chips are free, earn-only and can't be transferred, bought or cashed out.
 
-Try it: [@chthgamesbot](https://t.me/chthgamesbot)
-
-<p>
+<p align="center">
   <img src="docs/screenshots/home.png" width="180" alt="Game hub">
   <img src="docs/screenshots/poker.png" width="180" alt="Texas Hold'em">
   <img src="docs/screenshots/roulette.png" width="180" alt="Roulette">
   <img src="docs/screenshots/blackjack.png" width="180" alt="Blackjack">
 </p>
-<p>
+<p align="center">
   <img src="docs/screenshots/slots.png" width="180" alt="Slots">
   <img src="docs/screenshots/mines.png" width="180" alt="Mines">
   <img src="docs/screenshots/crash.png" width="180" alt="Crash">
   <img src="docs/screenshots/tictactoe.png" width="180" alt="Tic-tac-toe">
 </p>
 
-## Games
+## Features
+
+### Games
 
 | Group | Games | Inline mode (`@yourbot …`) |
 |---|---|---|
@@ -46,15 +57,17 @@ Try it: [@chthgamesbot](https://t.me/chthgamesbot)
 - Multiplayer games in the app use rooms that you share with an invite link.
 - In any chat, type `@yourbot [game] [stake]` to drop a game lobby in.
 
-**In the private chat everything is a button**, in English, Persian, Arabic, Russian or Spanish
+**In the private chat everything is a button** ([shared style](../README.md#how-they-work)), in English, Persian, Arabic, Russian or Spanish
 (the player's Telegram language, or 🌐 Language): 🎮 Games · 🕹 Game hub · 💰 Balance ·
 🎁 Daily chips (a free bonus every 20 hours) · 🏆 Top players · 🌐 Language · 🔗 Source code.
 Button taps are deleted and each menu replaces the previous one; game messages stay. In groups,
 send `/start@yourbot` (or add the bot) for the games menu, or use inline mode. `/start` and the
 admin commands are the only slash commands. Game messages are written in the language of whoever
-started them; the Mini App is English. After updating, run `npm run migrate` (new player columns).
+started them; the Mini App is English.
 
-**Fairness.** Every house game returns less than 100%, and `npm test` checks this exactly:
+### Fairness
+
+Every house game returns less than 100%, and `npm test` checks this exactly:
 
 | Game | Return to player |
 |---|---|
@@ -67,24 +80,82 @@ started them; the Mini App is English. After updating, run `npm run migrate` (ne
 All randomness comes from `crypto.getRandomValues` on the server. The client only animates
 results the server has already decided.
 
+## Admins
+
+The ids in `ADMIN_IDS` get these commands in their own command menu; `/admin` lists them.
+
+| Command | What it does |
+|---|---|
+| `/stats` | Players, chips in circulation, activity |
+| `/user <id>` | Player details (or reply to their message) |
+| `/grant <id> <±amount>` · `/setchips <id> <amount>` | Change a player's chips |
+| `/resetdaily <id>` | Make the daily bonus claimable now |
+| `/ban <id>` · `/unban <id>` | A banned player is blocked in chat, inline mode and the Mini App |
+| `/broadcast <text>` | Sends to 40 players per run; add `from=<id>` to continue |
+
+## Run your own
+
+You need Node.js 18+ and a bot from [@BotFather](https://t.me/BotFather).
+
+1. **Turn on Serverless.** In @BotFather, open your bot → Serverless → enable. Then copy the
+   **CLI access token** (`app<id>:<secret>`). This is not the bot token.
+2. **Clone and install:**
+   ```sh
+   git clone https://github.com/chethober/bots && cd bots/chthgamesbot
+   npm install
+   cp secrets.example.js tgcloud/lib/secrets.js   # set BUTTON_SECRET and ADMIN_IDS
+   ```
+3. **Point the config at your bot:** set `BOT_USERNAME` in `tgcloud/lib/config.js`.
+4. **Deploy:**
+   ```sh
+   npx tgcloud login           # paste the CLI token
+   npm run deploy              # prints your Mini App URL
+   npm run migrate             # creates the tables
+   ```
+   Put the printed URL in `WEBAPP_URL` in `tgcloud/lib/config.js`, then run `npm run deploy` again.
+5. **Set up the profile:** the name, descriptions, command menus, 🎮 Play menu button and
+   avatar. The command in the header of `scripts/setup.js` runs it once without deploying it.
+6. **Finish in @BotFather:**
+   - `/setinline` to enable inline mode
+   - Bot Settings → Configure Mini App, using your app URL
+   - Leave group privacy on. Bots still receive `/command@yourbot` in groups.
+
+After updating, run `npm run migrate` (new player columns).
+
+The npm scripts set `NODE_USE_ENV_PROXY=1`, so the CLI uses `https_proxy` when you have one set.
+
+## Tests
+
+```sh
+npm test                 # rules, Telegram limits, house edge, poker, hidden-state leaks, fuzzing
+npm run test:ui          # every Mini App screen in headless Chromium, with two players
+UI_BASE=https://app<id>.tgcloud.ai/ npm run test:live-ui   # same, against your deployed site
+```
+
+The UI tests use `playwright-core`. Either install its browser with
+`npx playwright-core install chromium-headless-shell`, or set `CHROME_PATH`. Add `-- --shots`
+to save screenshots to `test/shots/`.
+
 ## How it works
 
 ```
 tgcloud/
-  schema.js              players (wallet + stats), sessions (all game state), games (legacy)
-  handlers/              message (commands) · callback_query (every button) · inline_query
-  endpoints/             play (every game, for the Mini App) · wallet · crash · plinko
-  lib/engine.js          wallet, versioned session storage, message edits, the game `ctx`
-  lib/games/*.js         one pure module per game, plus factories (table, solo, duel, pot, board)
-  lib/poker.js           hand evaluator, video poker pay table
-  lib/admin.js           /admin commands
-public/                  the Mini App: plain ES modules, no build step
-  js/app.js              shell: wallet, home, navigation, rooms
-  js/kit.js              shared UI: cards, dice, stake picker, lobby buttons
-  js/games/*.js          one screen per game
-test/validate.js         rules, limits, house edge, leaks, chip conservation (no network)
-test/ui.js               headless-browser run through every Mini App screen
-scripts/setup.js         one-off bot profile setup (name, description, commands, avatar)
+├── schema.js              players (wallet + stats), sessions (all game state), games (legacy)
+├── handlers/              message (commands) · callback_query (every button) · inline_query
+├── endpoints/             play (every game, for the Mini App) · wallet · crash · plinko
+└── lib/
+    ├── engine.js          wallet, versioned session storage, message edits, the game `ctx`
+    ├── games/*.js         one pure module per game, plus factories (table, solo, duel, pot, board)
+    ├── poker.js           hand evaluator, video poker pay table
+    └── admin.js           /admin commands
+public/                    the Mini App: plain ES modules, no build step
+├── js/app.js              shell: wallet, home, navigation, rooms
+├── js/kit.js              shared UI: cards, dice, stake picker, lobby buttons
+└── js/games/*.js          one screen per game
+test/
+├── validate.js            rules, limits, house edge, leaks, chip conservation (no network)
+└── ui.js                  headless-browser run through every Mini App screen
+scripts/setup.js           one-off bot profile setup (name, description, commands, avatar)
 ```
 
 **Game modules are pure.** They never import the SDK. They talk to the platform through a
@@ -114,63 +185,11 @@ small `ctx` object: session, create, mutate, debit, credit, refund, edit and ans
 The tests fuzz every game and fail if any of these leak. In chat, Hold'em hole cards are
 shown only in a private "👀 My cards" popup.
 
-## Run your own
-
-You need Node.js 18 or later and a bot from [@BotFather](https://t.me/BotFather).
-
-1. **Turn on Serverless.** In @BotFather, open your bot → Serverless → enable. Then copy the
-   **CLI access token** (`app<id>:<secret>`). This is not the bot token.
-2. **Clone and install:**
-   ```sh
-   git clone https://github.com/chethober/games && cd games
-   npm install
-   cp secrets.example.js tgcloud/lib/secrets.js   # set BUTTON_SECRET and ADMIN_IDS
-   ```
-3. **Point the config at your bot:** set `BOT_USERNAME` in `tgcloud/lib/config.js`.
-4. **Deploy:**
-   ```sh
-   npx tgcloud login           # paste the CLI token
-   npm run deploy              # prints your Mini App URL
-   npm run migrate             # creates the tables
-   ```
-   Put the printed URL in `WEBAPP_URL` in `tgcloud/lib/config.js`, then run `npm run deploy` again.
-5. **Set up the profile:** the name, descriptions, command menus, 🎮 Play menu button and
-   avatar. The command in the header of `scripts/setup.js` runs it once without deploying it.
-6. **Finish in @BotFather:**
-   - `/setinline` to enable inline mode
-   - Bot Settings → Configure Mini App, using your app URL
-   - Leave group privacy on. Bots still receive `/command@yourbot` in groups.
-
-The npm scripts set `NODE_USE_ENV_PROXY=1`, so the CLI uses `https_proxy` when you have one set.
-
-## Admin
-
-The ids in `ADMIN_IDS` can use these commands:
-- `/stats`
-- `/user <id>`
-- `/grant <id> <±amount>`
-- `/setchips <id> <amount>`
-- `/resetdaily <id>`
-- `/ban <id>` and `/unban <id>`: a banned player is blocked in chat, inline mode and the Mini App.
-- `/broadcast <text>`: sends to 40 players per run; add `from=<id>` to continue.
-
-`/admin` lists them, and in the admin's own chat the command menu includes them too.
-
-## Tests
-
-```sh
-npm test                 # rules, Telegram limits, house edge, poker, hidden-state leaks, fuzzing
-npm run test:ui          # every Mini App screen in headless Chromium, with two players
-UI_BASE=https://app<id>.tgcloud.ai/ npm run test:live-ui   # same, against your deployed site
-```
-
-The UI tests use `playwright-core`. Either install its browser with
-`npx playwright-core install chromium-headless-shell`, or set `CHROME_PATH`. Add `-- --shots`
-to save screenshots to `test/shots/`.
+See [`AGENTS.md`](AGENTS.md) for the platform's module rules and [`docs/tgcloud-sdk.md`](docs/tgcloud-sdk.md) for the SDK reference.
 
 ## Contributing
 
-Issues and pull requests are welcome. See [CONTRIBUTING.md](CONTRIBUTING.md).
+Issues and pull requests are welcome; see [CONTRIBUTING.md](CONTRIBUTING.md). Run `npm test` before sending a change.
 
 ## License
 

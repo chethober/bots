@@ -3,7 +3,7 @@
 <p align="center">
   A Telegram bot for sharing VPNs with a community: a public directory, private invites with optional passwords,
   and anonymous memberships. Works best with <a href="https://github.com/chethober/xtune">xtune</a>, where every member gets their own account.<br>
-  Runs serverless on <a href="https://cloud.telegram.org">tgcloud</a>, Telegram's platform for bots. No server, no npm packages at runtime.
+  Runs serverless on <a href="https://core.telegram.org/bots/serverless">Telegram Serverless (tgcloud)</a>, Telegram's platform for bots. No server to host, no npm packages at runtime.
 </p>
 
 <p align="center">
@@ -17,7 +17,7 @@ learn who their members are, and members never learn who the owner is.
 
 The bot speaks **English, Persian, Arabic, Russian and Spanish**, picked from the user's Telegram language or the
 🌐 Language button. Every user-facing string is in one file ([`tgcloud/lib/texts.js`](tgcloud/lib/texts.js)).
-Everything is a button: a reply keyboard (🌍 Directory · 📂 My VPNs · ➕ Add VPN · 🛠 My servers · 🌐 Language ·
+The interface follows the [shared style](../README.md#how-they-work). Everything is a button: a reply keyboard (🌍 Directory · 📂 My VPNs · ➕ Add VPN · 🛠 My servers · 🌐 Language ·
 ℹ️ About) and inline buttons under each screen. Button taps are deleted, and each screen replaces the previous one.
 Slash commands are only `/start` and the admin commands.
 
@@ -106,7 +106,14 @@ on the command line.
 **For admins** (the ids in `ADMIN_IDS`)
 - Reports arrive with the VPN's details and **Unlist** / **Delete** / **Ban owner** / **Dismiss** buttons. Admins
   don't see who reported it. Banning an owner deletes their VPNs (members are told) and stops them adding more.
-- `/admin`: counts of VPNs, owners, memberships, open reports and bans. `/reports` resends the open reports.
+- The admin commands below appear in the command menu only in admins' chats.
+
+## Admins
+
+| Command | What it does |
+|---|---|
+| `/admin` | Counts of VPNs, owners, memberships, open reports and bans |
+| `/reports` | Resend the open reports with their buttons |
 
 ## Privacy
 
@@ -152,8 +159,11 @@ npx tgcloud login            # link the project to your bot
 
 Deploying never touches the database. After changing `schema.js`, run `npx tgcloud migrate`.
 
-`npm test` checks the password hashing against `node:crypto`, the link parsing, that every module's imports line
-up, and that every text key exists in all five languages.
+## Tests
+
+```sh
+npm test      # password hashing against node:crypto, link parsing, module imports, every text key in all five languages
+```
 
 ## How it works
 
@@ -205,6 +215,7 @@ Issues and pull requests are welcome. Please keep the privacy guarantees intact:
 - Owners never see a member's Telegram identity, and members never see the owner's.
 - Never put a Telegram id in callback data, and never send an xtune connect link to anyone.
 - Update the privacy text in `texts.js` (every language) whenever `schema.js` changes.
+- Run `npm test` before sending a change.
 
 ## License
 

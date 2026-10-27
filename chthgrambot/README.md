@@ -1,17 +1,66 @@
-# chthgrambot — AI secretary for Telegram Business
+<h1 align="center">Secretary</h1>
 
-Answers your private Telegram chats on your behalf using **Telegram Business chatbot
-mode** ("secretary"). It runs on **[Telegram Serverless](https://core.telegram.org/bots/serverless)**
-and generates replies with **Cloudflare Workers AI** (free tier). A Mini App panel lets you
-tune mood, emoji style, temperature, length, language, knowledge, schedule and more.
+<p align="center">
+  An AI secretary for Telegram Business: it answers your private chats on your behalf, with replies from Cloudflare Workers AI (free tier).<br>
+  Runs serverless on <a href="https://core.telegram.org/bots/serverless">Telegram Serverless (tgcloud)</a>, Telegram's platform for bots. No server to host.
+</p>
 
-## Setup
+<p align="center">
+  <a href="../LICENSE">MIT License</a>
+</p>
 
-1. **Create the bot.** In [@BotFather](https://t.me/BotFather), create a bot, then:
+---
+
+The bot uses **Telegram Business chatbot mode** ("secretary"). A Mini App panel lets you tune mood, emoji style,
+temperature, length, language, knowledge, schedule and more.
+
+In your private chat with the bot, the interface follows the [shared style](../README.md#how-they-work).
+Everything is a button, in English, Persian, Arabic, Russian or Spanish (your Telegram language, or
+🌐 Language): **📊 Status** (with pause/resume), **⚙️ Settings** (one-tap settings and the panel),
+**🪞 Teach my style**, **🔑 Connect AI**, **🌐 Language**, **ℹ️ Help** and **🔗 Source code**. `/start`
+is the only command. Button taps are deleted and each screen replaces the previous one, so the chat
+keeps only relayed messages and previews. Any other text gets a **preview** of how the secretary would
+answer. The panel itself is in English.
+
+## Features
+
+### Panel options
+
+| Section | Settings |
+|---|---|
+| Personality | mood (9 presets + custom), emoji style (none/minimal/balanced/expressive/kaomoji/old-school/custom set), reply length, formality, language (auto-detect or fixed), assistant name |
+| Creativity | model, temperature, top-p, presence penalty, max tokens |
+| Knowledge | facts about you, extra instructions, signature, AI label, fallback reply |
+| Behavior | context memory, reply delay (with typing indicator and burst merging), stepping back after you reply yourself, quoting, marking as read, reply-hours window and time zone |
+| Chats | mute single chats, resume paused chats, clear stored context |
+
+### Speak as me: learning from chat exports
+
+In the panel, choose Voice → **Speak as me**, then **📥 Import result.json**. To get the file: Telegram Desktop →
+open a chat → ⋮ → Export chat history → JSON. The file is parsed in your browser. Only "their message → your
+reply" pairs are uploaded, with links and phone/card numbers removed. For every incoming message, the bot shows
+the model the most similar past exchanges (keyword match) plus random ones, and a style guide and samples.
+Replies in this mode never get the 🤖 label.
+
+### Photos, voice messages and files
+
+The AI can't see or hear media. By default, non-text messages from contacts (photos, voice, video,
+stickers, files, locations, contacts and so on) are **forwarded to you** in your chat with the bot, with
+**✍️ Reply / 🤖 Let AI answer / 🙈 Ignore** buttons. Reply to one with anything: text, a photo, a voice
+message, a sticker. The bot sends it to the contact from your account, quoting their message. You can
+change this in the panel (Behavior → Photos, voice, files & stickers): forward to me, let the AI guess
+from a description, or ignore.
+
+## Run your own
+
+You need Node.js 18+ and a bot from [@BotFather](https://t.me/BotFather).
+
+1. **Create the bot.** In @BotFather, create a bot, then:
    - *Bot Settings → Business Mode → Turn on*
    - open the bot → *Serverless* → enable it
-2. **Install and link** (Node.js 18+):
+2. **Install and link:**
    ```sh
+   git clone https://github.com/chethober/bots && cd bots/chthgrambot
    npm install
    npx tgcloud init      # adds .tgcloud/ state; it never overwrites existing files
    npx tgcloud login     # paste the app token from BotFather → Serverless
@@ -32,43 +81,8 @@ tune mood, emoji style, temperature, length, language, knowledge, schedule and m
 6. **Connect to your account.** In Telegram, go to *Settings → Telegram Business → Chatbots*, add your bot, and allow
    **Reply to messages**. (Optionally, allow **Mark messages as read** too.)
 
-## Panel options
-
-| Section | Settings |
-|---|---|
-| Personality | mood (9 presets + custom), emoji style (none/minimal/balanced/expressive/kaomoji/old-school/custom set), reply length, formality, language (auto-detect or fixed), assistant name |
-| Creativity | model, temperature, top-p, presence penalty, max tokens |
-| Knowledge | facts about you, extra instructions, signature, AI label, fallback reply |
-| Behavior | context memory, reply delay (with typing indicator and burst merging), stepping back after you reply yourself, quoting, marking as read, reply-hours window and time zone |
-| Chats | mute single chats, resume paused chats, clear stored context |
-
-## In your private chat with the bot
-
-Everything is a button, in English, Persian, Arabic, Russian or Spanish (your Telegram language, or
-🌐 Language): **📊 Status** (with pause/resume), **⚙️ Settings** (one-tap settings and the panel),
-**🪞 Teach my style**, **🔑 Connect AI**, **🌐 Language**, **ℹ️ Help** and **🔗 Source code**. `/start`
-is the only command. Button taps are deleted and each screen replaces the previous one, so the chat
-keeps only relayed messages and previews. Any other text gets a **preview** of how the secretary would
-answer. The panel itself is in English.
-
-After updating, run `npx tgcloud migrate` (the `ui` table holds each chat's language and live screens).
-
-## Speak as me: learning from chat exports
-
-In the panel, choose Voice → **Speak as me**, then **📥 Import result.json**. To get the file: Telegram Desktop →
-open a chat → ⋮ → Export chat history → JSON. The file is parsed in your browser. Only "their message → your
-reply" pairs are uploaded, with links and phone/card numbers removed. For every incoming message, the bot shows
-the model the most similar past exchanges (keyword match) plus random ones, and a style guide and samples.
-Replies in this mode never get the 🤖 label.
-
-## Photos, voice messages and files
-
-The AI can't see or hear media. By default, non-text messages from contacts (photos, voice, video,
-stickers, files, locations, contacts and so on) are **forwarded to you** in your chat with the bot, with
-**✍️ Reply / 🤖 Let AI answer / 🙈 Ignore** buttons. Reply to one with anything: text, a photo, a voice
-message, a sticker. The bot sends it to the contact from your account, quoting their message. You can
-change this in the panel (Behavior → Photos, voice, files & stickers): forward to me, let the AI guess
-from a description, or ignore.
+Deploying never touches the database. After updating, run `npx tgcloud migrate` (the `ui` table holds each chat's
+language and live screens).
 
 ## How it works
 
@@ -84,7 +98,7 @@ from a description, or ignore.
 - Conversation context is stored in the bot's database. It is pruned after 7 days, and only
   messages from the last 3 days are sent to the model.
 
-## Notes
+### Limits
 
 - Telegram Serverless has no environment variables or secrets, so Cloudflare tokens are stored in
   the bot's database. `GLOBAL_CF_*` in `config.js` is an optional shared fallback, used
@@ -93,3 +107,13 @@ from a description, or ignore.
   costs the most per reply. Use Llama 3.1 8B or Gemma for high volume. When the quota runs out,
   the bot DMs you, at most once per hour.
 - Telegram only lets business bots reply in chats that had an incoming message in the last 24 hours.
+
+See [`AGENTS.md`](AGENTS.md) for the platform's module rules and [`docs/tgcloud-sdk.md`](docs/tgcloud-sdk.md) for the SDK reference.
+
+## Contributing
+
+Issues and pull requests are welcome.
+
+## License
+
+[MIT](../LICENSE)

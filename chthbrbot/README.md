@@ -6,7 +6,7 @@
 
 <p align="center">
   A personal anonymous-message link bot for Telegram — get a link, share it, receive anonymous messages and reply to them anonymously.<br>
-  Runs serverless on <a href="https://cloud.telegram.org">tgcloud</a>, Telegram's platform for bots. No server, no npm packages at runtime.
+  Runs serverless on <a href="https://core.telegram.org/bots/serverless">Telegram Serverless (tgcloud)</a>, Telegram's platform for bots. No server to host, no npm packages at runtime.
 </p>
 
 <p align="center">
@@ -19,10 +19,10 @@ The bot speaks **Persian, English, Arabic, Russian and Spanish**, picked from th
 language or the 🌐 Language button. Every user-facing string is in one file
 ([`tgcloud/lib/texts.js`](tgcloud/lib/texts.js)), one table per language.
 
-Everything a user does is a button: a reply keyboard (🎭 My link · 📊 Stats · ⚙️ Settings ·
-🌐 Language · 🔒 Privacy · 🔗 Source code) and inline buttons under each screen. The chat stays
-clean: button taps are deleted, and each screen replaces the previous one. Slash commands are
-only `/start` and the admin commands.
+The interface follows the [shared style](../README.md#how-they-work). Everything a user does is a button: a reply
+keyboard (🎭 My link · 📊 Stats · ⚙️ Settings · 🌐 Language · 🔒 Privacy · 🔗 Source code) and inline buttons under
+each screen. The chat stays clean: button taps are deleted, and each screen replaces the previous one. Slash commands
+are only `/start` and the admin commands.
 
 ## Features
 
@@ -65,13 +65,39 @@ only `/start` and the admin commands.
 - A blocked or banned sender gets the same answers as anyone else (*delivered*, *unsent*, filter notices), so a block can't be detected.
 - An unfinished send, reply or edit expires after 30 minutes. An old pending send can't swallow an unrelated message days later.
 
-**For admins** (the ids in `ADMIN_IDS`)
+**For admins** (the ids in `ADMIN_IDS`, see [Admins](#admins))
 - Every report arrives with the reported message, the link owner, and how many earlier reports the same sender has, plus **Ban** / **Dismiss** buttons (or **Unban**, after an automatic ban). Admins never see the sender's identity.
 - `/admin`: a bot-wide dashboard (users, new users, messages by status, replies, open reports, bans) with buttons for reports and bans.
 - `/reports` resends the open reports, so a report you missed isn't lost.
 - `/bans` lists bot-wide bans with unban buttons. `/ban <id>` and `/unban <id>` take a Telegram user id directly.
 - `/broadcast` sends one message (any kind) to everyone who has used the bot, after a preview and a confirmation. Progress is stored, so an interrupted run resumes where it stopped and never sends to anyone twice. It is paced under Telegram's flood limits.
 - The admin commands appear in the command menu only in admins' chats. For everyone else they don't exist.
+
+## Buttons
+
+| Button             | What it does                                                        |
+|--------------------|---------------------------------------------------------------------|
+| 🎭 My link         | Your link, with Share and QR code buttons                           |
+| 📊 Stats           | Counts of received, replied, blocked, filtered                      |
+| ⚙️ Settings        | Pause/resume, invitation text, message types, hidden words, options, QR code, blocked senders, new link, delete my data |
+| 🌐 Language        | Persian, English, Arabic, Russian, Spanish                          |
+| 🔒 Privacy         | What is stored                                                      |
+| 🔗 Source code     | This repository                                                     |
+
+A pending send, reply or edit has a ✖️ Cancel button. `/start` (with a code: start sending) is the
+only user command.
+
+## Admins
+
+The ids in `ADMIN_IDS` get these commands in their own command menu:
+
+| Command      | What it does                                       |
+|--------------|----------------------------------------------------|
+| `/admin`     | Bot-wide dashboard                                 |
+| `/reports`   | Resend open reports with Ban / Dismiss buttons     |
+| `/bans`      | List bot-wide bans and lift them                   |
+| `/ban <id>` · `/unban <id>` | Ban / unban a Telegram user id      |
+| `/broadcast` | Send a message to every user                       |
 
 ## Privacy
 
@@ -87,30 +113,6 @@ still points at them; dismissed reports go after the same time. The platform has
 
 🗑 Delete my data removes the user's link, their settings, the messages they received, their replies, the blocks they made and the reports they filed.
 Rows where the user is the **sender** are kept: messages they sent to others, and blocks, reports and bans against them. Those belong to the recipients and to moderation, and deleting them would let someone escape a ban.
-
-## Buttons and commands
-
-| Button             | What it does                                                        |
-|--------------------|---------------------------------------------------------------------|
-| 🎭 My link         | Your link, with Share and QR code buttons                           |
-| 📊 Stats           | Counts of received, replied, blocked, filtered                      |
-| ⚙️ Settings        | Pause/resume, invitation text, message types, hidden words, options, QR code, blocked senders, new link, delete my data |
-| 🌐 Language        | Persian, English, Arabic, Russian, Spanish                          |
-| 🔒 Privacy         | What is stored                                                      |
-| 🔗 Source code     | This repository                                                     |
-
-A pending send, reply or edit has a ✖️ Cancel button. `/start` (with a code: start sending) is the
-only user command.
-
-Admin only:
-
-| Command      | What it does                                       |
-|--------------|----------------------------------------------------|
-| `/admin`     | Bot-wide dashboard                                 |
-| `/reports`   | Resend open reports with Ban / Dismiss buttons     |
-| `/bans`      | List bot-wide bans and lift them                   |
-| `/ban <id>` · `/unban <id>` | Ban / unban a Telegram user id      |
-| `/broadcast` | Send a message to every user                       |
 
 ## Run your own
 
@@ -141,6 +143,12 @@ npx tgcloud login            # link the project to your bot
    The webhook is managed for you; `npx tgcloud webhook` checks it.
 
 Deploying never touches the database. After changing `schema.js`, run `npx tgcloud migrate`.
+
+## Tests
+
+```sh
+npm test      # unit tests for the pure modules (Node 22+), including that every language has every string
+```
 
 ## How it works
 
@@ -182,7 +190,7 @@ Issues and pull requests are welcome. Please keep the privacy guarantees intact:
 - Never store message content.
 - Never put a Telegram id in callback data.
 - Update the privacy text in `texts.js` (every language) whenever `schema.js` changes.
-- Run `npm test` (Node 22+); it checks, among other things, that every language has every string.
+- Run `npm test` before sending a change.
 
 ## License
 
