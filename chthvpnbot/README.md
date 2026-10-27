@@ -74,7 +74,9 @@ xtune manage reseller add rex --users 20 --quota 1000   # a link for a reseller:
 ```
 
 - **Status**: Xray and the subscription server, users (active, online), traffic, and each config's last use. A
-  config with no traffic for 2 hours while the others are used is probably blocked.
+  config with no traffic for 2 hours while the others are used is probably blocked. With xtune 0.9 or later, the
+  admin also sees when the server's IP itself looks blocked (with the command that moves it), scheduled backups and
+  whether the last one failed, and each Cloudflare Worker's requests today against its daily limit.
 - **Users**: the list with usage and expiry; each user's card with its links (QR code of the subscription link, then
   every share link); ➕ Add user (`carol 50 30 2` or `dave basic`), ✏️ Limits (`100 30 -`), 🔄 Renew (same terms or
   a plan), enable or disable, reset usage, new keys, new subscription link, delete.

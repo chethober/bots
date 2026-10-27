@@ -58,13 +58,15 @@ test('server management texts exist in every language and render', () => {
   const keys = Object.keys(texts('en').srv).sort();
   const s = { role: 'admin', addr: '1.2.3.4', xray: 'active (v26)', sub: 'cdn, active', users: 3, active: 2, online: 1,
     traffic: 2 ** 33, version: 'v0.7.0', plans: ['basic'],
-    configs: [{ id: 'r-tcp', state: 'active', since: 1 }, { id: 'hy2', state: 'quiet', since: 1 }, { id: 'ss', state: 'idle' }] };
+    configs: [{ id: 'r-tcp', state: 'active', since: 1 }, { id: 'hy2', state: 'quiet', since: 1 }, { id: 'ss', state: 'idle' }],
+    ipBlocked: 'every direct config is quiet while the CDN carries traffic.', backup: { every: 86400, last: 1, error: 'S3: HTTP 403' },
+    workers: [{ host: 'a.workers.dev', requests: 90000 }, { host: 'b.workers.dev', requests: 12 }], workerMax: 100000 };
   const u = { name: 'carol', status: 'active', used: 2 ** 30, quota: 50 * 2 ** 30, expires: Math.floor(Date.now() / 1000) + 86400 * 3,
     devices: 2, online: 1, plan: 'basic', reset: 'monthly', daily: [1, 2], sub: 'https://x/subs/abc' };
   for (const loc of LOCALES) {
     const S = texts(loc).srv;
     assert.deepEqual(Object.keys(S).sort(), keys, `${loc}: srv keys differ`);
-    for (const out of [S.status({ name: 'x' }, s), S.status({ name: 'x' }, { role: 'reseller', reseller: 'rex', users: 1, maxUsers: 5, assigned: 2 ** 31, quotaGB: 10, traffic: 0 }),
+    for (const out of [S.status({ name: 'x' }, s), S.status({ name: 'x' }, { ...s, backup: { every: 7 * 86400 }, workerMax: 0 }), S.status({ name: 'x' }, { role: 'reseller', reseller: 'rex', users: 1, maxUsers: 5, assigned: 2 ** 31, quotaGB: 10, traffic: 0 }),
       S.userCard(u), S.usersList({ name: 'x' }, [u], 1, 1, 1), S.plansList([{ name: 'basic', quotaGB: 50, days: 30 }]), S.subCaption(u)]) {
       assert.ok(!out.includes('undefined'), `${loc}: ${out}`);
     }

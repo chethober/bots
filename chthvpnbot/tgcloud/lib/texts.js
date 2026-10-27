@@ -1042,6 +1042,8 @@ function composeSrv(locale, w, num, ago) {
     const d = Math.ceil((ts - Date.now() / 1000) / 86400);
     return d <= 0 ? w.expired : w.daysLeft(num(d));
   };
+  // a schedule in seconds: whole days past one, hours otherwise
+  const every = (sec) => (sec > 86400 && sec % 86400 === 0 ? w.daysN(num(sec / 86400)) : w.hoursN(num(Math.round(sec / 3600))));
   const quota = (u) => (u.quota > 0 ? `${gb(u.used)} / ${gb(u.quota)} GB` : `${gb(u.used)} GB · ${w.unlimited}`);
   return {
     ...w, icon,
@@ -1057,8 +1059,13 @@ function composeSrv(locale, w, num, ago) {
         `Xray: ${s.xray ?? '?'}`,
         `${w.subWord}: ${s.sub ?? '?'}`,
         `👥 ${w.usersLine(num(s.users), num(s.active), num(s.online))}`,
-        `📶 ${gb(s.traffic)} GB`, '',
-        w.configsWord,
+        `📶 ${gb(s.traffic)} GB`,
+        ...(s.ipBlocked ? ['', `⛔ ${w.ipBlocked(s.ipBlocked.replace(/\.$/, ''))}`] : []),
+        ...(s.backup ? [`💾 ${w.backupLine(every(s.backup.every), s.backup.last && ago(s.backup.last))}`] : []),
+        ...(s.backup?.error ? [`⚠️ ${w.backupFailed(s.backup.error)}`] : []),
+        ...(s.workers ?? []).map((x) => `${s.workerMax && x.requests >= s.workerMax * 0.8 ? '⚠️' : '☁️'} ` +
+          w.workerLine(x.host, num(x.requests), s.workerMax ? num(s.workerMax) : '')),
+        '', w.configsWord,
         ...(s.configs ?? []).map((c) => `• ${c.id}: ` + ({
           active: `🟢 ${w.usedAgo(ago(c.since))}`,
           quiet: `⚠️ ${w.quietSince(ago(c.since))}`,
@@ -1103,6 +1110,10 @@ const srvEn = {
   noUsers: 'No users yet.',
   usersWord: 'users', assignedWord: 'assigned', subWord: 'Subscription', configsWord: 'Configs:', devicesWord: 'devices',
   usersLine: (n, a, o) => `${n} users · ${a} active · ${o} online`,
+  ipBlocked: (why) => `The server's IP looks blocked: ${why}.\nOn the server: xtune migrate --to NEWHOST, or xtune autopilot digitalocean to move it by itself.`,
+  backupLine: (every, last) => `Backups every ${every}` + (last ? `, last ${last}` : ', none sent yet'),
+  backupFailed: (err) => `The last backup failed: ${err}`, hoursN: (n) => `${n} hours`,
+  workerLine: (host, n, max) => `${host}: ${n}${max ? ` / ${max}` : ''} requests today`,
   usedAgo: (t) => `used ${t}`, quietSince: (t) => `no traffic since ${t}: probably blocked`, idle: 'no traffic yet',
   never: 'never expires', expired: 'expired', daysLeft: (n) => `${n} days left`, daysN: (n) => `${n} days`, unlimited: 'unlimited',
   statuses: { active: 'active', disabled: 'disabled', expired: 'expired', 'over quota': 'over quota' },
@@ -1139,6 +1150,10 @@ const srvFa = {
   noUsers: 'هنوز کاربری نیست.',
   usersWord: 'کاربر', assignedWord: 'تخصیص‌داده‌شده', subWord: 'سابسکریپشن', configsWord: 'کانفیگ‌ها:', devicesWord: 'دستگاه',
   usersLine: (n, a, o) => `${n} کاربر · ${a} فعال · ${o} آنلاین`,
+  ipBlocked: (why) => `به نظر می‌رسه آی‌پی سرور مسدود شده: ${why}.\nروی سرور: xtune migrate --to NEWHOST، یا xtune autopilot digitalocean تا خودش جابه‌جا بشه.`,
+  backupLine: (every, last) => `بکاپ هر ${every}` + (last ? `، آخرین: ${last}` : '، هنوز بکاپی فرستاده نشده'),
+  backupFailed: (err) => `آخرین بکاپ ناموفق بود: ${err}`, hoursN: (n) => `${n} ساعت`,
+  workerLine: (host, n, max) => `${host}: ${n}${max ? ` / ${max}` : ''} درخواست امروز`,
   usedAgo: (t) => `استفاده: ${t}`, quietSince: (t) => `بی‌ترافیک از ${t}: احتمالاً مسدود شده`, idle: 'هنوز ترافیکی نداشته',
   never: 'بدون انقضا', expired: 'منقضی شده', daysLeft: (n) => `${n} روز مونده`, daysN: (n) => `${n} روز`, unlimited: 'نامحدود',
   statuses: { active: 'فعال', disabled: 'غیرفعال', expired: 'منقضی', 'over quota': 'حجم تموم شده' },
@@ -1175,6 +1190,10 @@ const srvAr = {
   noUsers: 'لا يوجد مستخدمون بعد.',
   usersWord: 'مستخدم', assignedWord: 'مخصّص', subWord: 'الاشتراك', configsWord: 'الإعدادات:', devicesWord: 'أجهزة',
   usersLine: (n, a, o) => `${n} مستخدم · ${a} نشط · ${o} متصل`,
+  ipBlocked: (why) => `يبدو أن عنوان IP للخادم محجوب: ${why}.\nعلى الخادم: xtune migrate --to NEWHOST، أو xtune autopilot digitalocean لينتقل تلقائيًا.`,
+  backupLine: (every, last) => `نسخ احتياطي كل ${every}` + (last ? `، آخرها ${last}` : '، لم تُرسل أي نسخة بعد'),
+  backupFailed: (err) => `فشلت آخر نسخة احتياطية: ${err}`, hoursN: (n) => `${n} ساعة`,
+  workerLine: (host, n, max) => `${host}: ${n}${max ? ` / ${max}` : ''} طلب اليوم`,
   usedAgo: (t) => `استُخدم ${t}`, quietSince: (t) => `بلا حركة منذ ${t}: غالباً محجوب`, idle: 'لا حركة بعد',
   never: 'بلا انتهاء', expired: 'منتهٍ', daysLeft: (n) => `بقي ${n} يوم`, daysN: (n) => `${n} يوم`, unlimited: 'غير محدود',
   statuses: { active: 'نشط', disabled: 'معطّل', expired: 'منتهٍ', 'over quota': 'تجاوز الحصة' },
@@ -1211,6 +1230,10 @@ const srvRu = {
   noUsers: 'Пользователей пока нет.',
   usersWord: 'пользователей', assignedWord: 'выделено', subWord: 'Подписка', configsWord: 'Конфиги:', devicesWord: 'устройств',
   usersLine: (n, a, o) => `${n} пользователей · ${a} активных · ${o} онлайн`,
+  ipBlocked: (why) => `Похоже, IP сервера заблокирован: ${why}.\nНа сервере: xtune migrate --to NEWHOST или xtune autopilot digitalocean, чтобы сервер переезжал сам.`,
+  backupLine: (every, last) => `Резервные копии каждые ${every}` + (last ? `, последняя ${last}` : ', пока ни одной'),
+  backupFailed: (err) => `Последняя резервная копия не удалась: ${err}`, hoursN: (n) => `${n} ч`,
+  workerLine: (host, n, max) => `${host}: ${n}${max ? ` / ${max}` : ''} запросов сегодня`,
   usedAgo: (t) => `использовался ${t}`, quietSince: (t) => `нет трафика с ${t}: вероятно, заблокирован`, idle: 'трафика ещё не было',
   never: 'бессрочно', expired: 'истёк', daysLeft: (n) => `осталось ${n} дн`, daysN: (n) => `${n} дн`, unlimited: 'без лимита',
   statuses: { active: 'активен', disabled: 'отключён', expired: 'истёк', 'over quota': 'лимит исчерпан' },
@@ -1247,6 +1270,10 @@ const srvEs = {
   noUsers: 'Aún no hay usuarios.',
   usersWord: 'usuarios', assignedWord: 'asignados', subWord: 'Suscripción', configsWord: 'Configuraciones:', devicesWord: 'dispositivos',
   usersLine: (n, a, o) => `${n} usuarios · ${a} activos · ${o} en línea`,
+  ipBlocked: (why) => `La IP del servidor parece bloqueada: ${why}.\nEn el servidor: xtune migrate --to NEWHOST, o xtune autopilot digitalocean para que se mueva solo.`,
+  backupLine: (every, last) => `Copias de seguridad cada ${every}` + (last ? `, la última ${last}` : ', aún ninguna'),
+  backupFailed: (err) => `La última copia falló: ${err}`, hoursN: (n) => `${n} horas`,
+  workerLine: (host, n, max) => `${host}: ${n}${max ? ` / ${max}` : ''} solicitudes hoy`,
   usedAgo: (t) => `usada ${t}`, quietSince: (t) => `sin tráfico desde ${t}: probablemente bloqueada`, idle: 'sin tráfico aún',
   never: 'sin caducidad', expired: 'caducado', daysLeft: (n) => `quedan ${n} días`, daysN: (n) => `${n} días`, unlimited: 'ilimitado',
   statuses: { active: 'activo', disabled: 'desactivado', expired: 'caducado', 'over quota': 'sin cuota' },
@@ -1282,7 +1309,7 @@ function composeGuide(num, g) {
   return { ...g, pages };
 }
 
-const PICK_NAMES = ['VLESS REALITY', 'VLESS Encryption', 'Hysteria2', 'Shadowsocks', 'CDN', 'CF Worker'];
+const PICK_NAMES = ['VLESS REALITY', 'VLESS Encryption', 'Hysteria2', 'Shadowsocks', 'CDN', 'CF Worker', 'Trojan'];
 const pick = (descs) => PICK_NAMES.map((n, i) => `${n}: ${descs[i]}`);
 
 const guideEn = {
@@ -1383,6 +1410,7 @@ const guideEn = {
     'simple and light.',
     'through Cloudflare. Slower, but works when the server\'s address is blocked.',
     'through a Cloudflare Worker, for when even the CDN is blocked.',
+    'disguised like VLESS REALITY, for apps and networks that do better with Trojan.',
   ]),
   pickOutro: 'Test the delays in your app and use the lowest. When one stops working, switch to another or update the subscription.',
 };
@@ -1485,6 +1513,7 @@ const guideFa = {
     'ساده و سبک.',
     'از طریق Cloudflare. کندتره، ولی وقتی آی‌پی سرور فیلتر شده کار می‌کنه.',
     'از طریق یه Cloudflare Worker، برای وقتی که CDN هم بسته‌ست.',
+    'مثل VLESS REALITY استتار شده، برای برنامه‌ها و شبکه‌هایی که با Trojan بهتر کار می‌کنن.',
   ]),
   pickOutro: 'تأخیرها رو توی برنامه‌ات تست کن و کمترین رو بزن. اگه یکی قطع شد، یکی دیگه رو بزن یا سابسکریپشن رو آپدیت کن.',
 };
@@ -1587,6 +1616,7 @@ const guideAr = {
     'بسيط وخفيف.',
     'عبر Cloudflare. أبطأ، لكنه يعمل حين يُحجب عنوان الخادم.',
     'عبر Cloudflare Worker، لحين يُحجب حتى الـ CDN.',
+    'متخفٍّ مثل VLESS REALITY، للتطبيقات والشبكات التي تعمل أفضل مع Trojan.',
   ]),
   pickOutro: 'اختبر التأخير في تطبيقك واستخدم الأقل. حين يتوقف أحدها، انتقل إلى غيره أو حدّث الاشتراك.',
 };
@@ -1689,6 +1719,7 @@ const guideRu = {
     'простой и лёгкий.',
     'через Cloudflare. Медленнее, но работает, когда адрес сервера заблокирован.',
     'через Cloudflare Worker, на случай когда заблокирован даже CDN.',
+    'замаскирован как VLESS REALITY, для приложений и сетей, где Trojan работает лучше.',
   ]),
   pickOutro: 'Проверьте задержки в приложении и выберите наименьшую. Если конфиг перестал работать, переключитесь на другой или обновите подписку.',
 };
@@ -1791,6 +1822,7 @@ const guideEs = {
     'simple y ligera.',
     'a través de Cloudflare. Más lenta, pero funciona cuando la dirección del servidor está bloqueada.',
     'a través de un Cloudflare Worker, para cuando incluso el CDN está bloqueado.',
+    'camuflado como VLESS REALITY, para apps y redes que funcionan mejor con Trojan.',
   ]),
   pickOutro: 'Prueba los retardos en tu app y usa el menor. Cuando una deje de funcionar, cambia a otra o actualiza la suscripción.',
 };
