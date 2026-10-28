@@ -75,7 +75,7 @@ You need Node.js 18+ and a bot from [@BotFather](https://t.me/BotFather). In Bot
    in `tgcloud/lib/config.js` and push again.
 3. **Services** (in `tgcloud/lib/secrets.js`; a service without credentials shows as unavailable):
    - **Spotify:** create an app at https://developer.spotify.com/dashboard with the redirect URI
-     `<MINIAPP_URL>/callback.html` and the Web API, and set `SPOTIFY_CLIENT_ID` (no secret: the login uses
+     `<MINIAPP_URL>/callback` and the Web API, and set `SPOTIFY_CLIENT_ID` (no secret: the login uses
      PKCE). Add your testers' Spotify emails under *User Management*. Without it, users bring their own app.
    - **YouTube Music:** in Google Cloud, enable the *YouTube Data API v3* and create an OAuth client of type
      *TVs and Limited Input devices*; set `GOOGLE_CLIENT_ID` and `GOOGLE_CLIENT_SECRET`.

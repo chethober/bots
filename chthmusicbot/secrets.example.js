@@ -2,7 +2,7 @@
 // Leave a value empty to turn that service off.
 
 // Spotify: an app from https://developer.spotify.com/dashboard with the
-// redirect URI <MINIAPP_URL>/callback.html. Only the client id is needed (the
+// redirect URI <MINIAPP_URL>/callback. Only the client id is needed (the
 // login uses PKCE). Users can also bring their own app's client id.
 export const SPOTIFY_CLIENT_ID = '';
 

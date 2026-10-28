@@ -172,7 +172,7 @@ state.routes.unshift(
     : { __status: 428, __body: { error: 'authorization_pending' } })],
   [/youtube\/v3\/channels/, () => ({ items: [{ snippet: { title: 'Sara Music' } }] })],
 );
-const pkce = { clientId: 'a'.repeat(32), verifier: 'v'.repeat(64), challenge: 'c'.repeat(43), redirectUri: 'https://app1.tgcloud.ai/callback.html' };
+const pkce = { clientId: 'a'.repeat(32), verifier: 'v'.repeat(64), challenge: 'c'.repeat(43), redirectUri: 'https://app1.tgcloud.ai/callback' };
 await assert.rejects(spotifyStart({ ...pkce, clientId: 'nope' }, ctx), /client id/);
 const { url } = await spotifyStart(pkce, ctx);
 const loginState = new URL(url).searchParams.get('state');

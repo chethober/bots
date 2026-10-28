@@ -2,7 +2,7 @@
 //
 //   Spotify      PKCE in the Mini App: the page makes the verifier/challenge,
 //                spotifyStart stores the verifier, Spotify sends the user back to
-//                <MINIAPP_URL>/callback.html, and spotifyFinish swaps the code.
+//                <MINIAPP_URL>/callback, and spotifyFinish swaps the code.
 //   Apple Music  MusicKit JS in the Mini App returns a Music User Token.
 //   YouTube      Google's device flow, right in the chat: the user types a code
 //                at google.com/device and taps ✅.
@@ -58,7 +58,7 @@ async function saveWithProfile(userId, providerId, fields) {
 export async function spotifyStart(userId, { clientId, challenge, verifier, redirectUri }) {
   const client = String(clientId || SPOTIFY_CLIENT_ID || '').trim();
   if (!/^[0-9a-f]{32}$/i.test(client)) throw new LoginError('CLIENT_ID', 'A Spotify client id is 32 letters and digits.');
-  if (!/^https:\/\/[^/\s]+\/callback\.html$/.test(redirectUri ?? '')) throw new LoginError('REDIRECT', 'Bad redirect URI.');
+  if (!/^https:\/\/[^/\s]+\/callback(\.html)?$/.test(redirectUri ?? '')) throw new LoginError('REDIRECT', 'Bad redirect URI.');
   if (!/^[A-Za-z0-9_.~-]{43,128}$/.test(verifier ?? '') || !/^[A-Za-z0-9_-]{43}$/.test(challenge ?? '')) {
     throw new LoginError('PKCE', 'Bad PKCE values.');
   }
