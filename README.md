@@ -6,7 +6,23 @@
 </p>
 
 <p align="center">
-  <a href="#the-bots">The bots</a> · <a href="#how-they-work">How they work</a> · <a href="LICENSE">MIT License</a>
+  <a href="https://github.com/chethober/bots/stargazers"><img alt="GitHub stars" src="https://img.shields.io/github/stars/chethober/bots?style=flat&logo=github"></a>
+  <a href="LICENSE"><img alt="MIT License" src="https://img.shields.io/badge/license-MIT-blue"></a>
+  <img alt="Languages: EN FA AR RU ES" src="https://img.shields.io/badge/languages-EN%20·%20FA%20·%20AR%20·%20RU%20·%20ES-2CA5E0">
+  <img alt="Free and open source" src="https://img.shields.io/badge/free-open%20source-brightgreen">
+</p>
+
+<p align="center">
+  <b>Try them in Telegram:</b><br>
+  <a href="https://t.me/chthgamesbot"><img alt="Games" src="https://img.shields.io/badge/🎰_Games-@chthgamesbot-2CA5E0?logo=telegram&logoColor=white"></a>
+  <a href="https://t.me/chthvpnbot"><img alt="Community VPN" src="https://img.shields.io/badge/🛡_Community_VPN-@chthvpnbot-2CA5E0?logo=telegram&logoColor=white"></a>
+  <a href="https://t.me/chthbrbot"><img alt="Anonymous messages" src="https://img.shields.io/badge/🎭_Anonymous_messages-@chthbrbot-2CA5E0?logo=telegram&logoColor=white"></a>
+  <a href="https://t.me/chthapibot"><img alt="Multi-tool" src="https://img.shields.io/badge/🧰_Multi--tool-@chthapibot-2CA5E0?logo=telegram&logoColor=white"></a>
+  <a href="https://t.me/chsbrbot"><img alt="CVE alerts" src="https://img.shields.io/badge/🚨_CVE_alerts-@chsbrbot-2CA5E0?logo=telegram&logoColor=white"></a>
+</p>
+
+<p align="center">
+  <a href="#the-bots">The bots</a> · <a href="#how-they-work">How they work</a> · <a href="#support">Support</a> · <a href="LICENSE">MIT License</a>
 </p>
 
 ---
@@ -40,7 +56,8 @@ The bots share one interface style:
   keeps only real content (messages, games, alerts).
 - **ℹ️ About.** What the bot does, with 🔗 Source code and ⭐ Tip the developer: a ☕ coffee,
   🍟 fries, 🍔 burger or 🍕 pizza (50, 100, 250 or 500 Telegram Stars). A tip unlocks nothing; the
-  bot thanks the tipper and tells its admins. Each bot carries the same `tgcloud/lib/tips.js`.
+  bot thanks the tipper and tells its admins. 🤖 More bots links to the other public bots here.
+  Each bot carries the same `tgcloud/lib/tips.js`.
 
 Every bot follows it. The multi-utility bot also keeps its slash commands as typed shortcuts (and
 a command menu in groups), and its hub screens are in English; some admin screens are English too.
@@ -83,6 +100,15 @@ The workflows read these repository secrets:
 
 See [`<bot>/AGENTS.md`](chthapibot/AGENTS.md) in any bot for the platform's module rules and
 `<bot>/docs/tgcloud-sdk.md` for the SDK reference.
+
+## Support
+
+Like the bots? The free ways to help count the most:
+
+- ⭐ **Star this repo**, so more people find it.
+- 📣 **Share a bot** with a friend or a group that would use it.
+- 🐛 **Open an issue** with a bug or an idea.
+- ☕ **Tip in Telegram Stars** from any bot's ℹ️ About screen.
 
 ## License
 
