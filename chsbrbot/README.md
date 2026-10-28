@@ -24,6 +24,12 @@ The interface follows the [shared style](../README.md#how-they-work): buttons on
   says why each one is trending (KEV, the FIRST EPSS score, the PoC repositories) and gives CISA's required action.
 - **Who gets alerts:** everyone who pressed Start (they can switch alerts off in ⚙️ Settings), and every group or
   channel that adds the bot. In a channel the bot has to be an admin who can post messages.
+- **Filters:** in the private chat, ⚙️ Settings sets which alerts arrive:
+  - 🎚 **Alert level**: high and critical (the default), critical only (new CVEs from CVSS 9.0,
+    `CRITICAL_CVSS`), or exploited only (trending CVEs).
+  - 👁 **Watchlist**: up to 20 products, vendors or words, such as `nginx`, `Fortinet` or `linux kernel`. When it
+    isn't empty, an alert arrives only if a word names one of the CVE's affected products or appears in its
+    description (as a whole word). Search results offer to add the search to it. Groups and channels get every alert.
 - **Search:** in the private chat, type a product, vendor, bug type or CVE id. The 🆕 Latest, 🔥 Trending and
   ⚡ Categories buttons open lists, and a CVE opens as a card with its bug types, affected products, CVSS vector,
   KEV status and exploit links.
@@ -79,7 +85,7 @@ in this repo's history before the tgcloud port.
 ## Tests
 
 ```sh
-npm test      # renders real NVD records in every language and checks Telegram's limits
+npm test      # renders real NVD records in every language and checks Telegram's limits; tests the alert filters
 ```
 
 ## How it works
@@ -92,7 +98,7 @@ amount of work and leaves the rest for the next one ([`lib/scheduler.js`](tgclou
 2. fetch the CVEs NVD published since the last run and queue an alert for each one above the threshold;
 3. queue an alert for each new trending CVE;
 4. fetch NVD details and EPSS scores for queued trending alerts;
-5. deliver queued alerts chat by chat. Each alert remembers the last chat it reached, so delivery picks up where the last run stopped.
+5. deliver queued alerts chat by chat, skipping chats whose filters leave the alert out. Each alert remembers the last chat it reached, so delivery picks up where the last run stopped.
 
 Without an NVD API key, NVD allows 5 requests per 30 s, so a run makes at most 3 NVD requests. With a key in
 `tgcloud/lib/secrets.js` it makes up to 20, which clears a backlog of trending CVEs faster.
@@ -106,6 +112,7 @@ tgcloud/
     ├── scheduler.js       the five steps above
     ├── nvd.js · feeds.js  NVD, CISA KEV, EPSS and GitHub
     ├── cves.js            the CVE store: lookups, search, lists
+    ├── filters.js         each chat's alert level and watchlist
     ├── views.js · format.js · strings.js   screens, cards and alerts, translated texts
     └── config.js          thresholds and admin ids
 test/                      npm test

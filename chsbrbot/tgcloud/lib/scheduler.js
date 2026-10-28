@@ -25,6 +25,7 @@ import { saveCves, fromKev } from './cves.js';
 import { alertMessage, esc } from './format.js';
 import { isGone, migrate, setActive } from './chats.js';
 import { LOCALES } from './i18n.js';
+import { wantsAlert } from './filters.js';
 
 const KEV_EVERY_MS = 12 * 3600_000;
 const FIRST_LOOKBACK_MS = 2 * 3600_000; // first run, or after the cursor is lost
@@ -214,11 +215,13 @@ async function enrich(nvd) {
 
 // Send alerts oldest first. Each alert walks the active chats in id order;
 // `cursor` remembers the last chat it reached, so a run that stops halfway is
-// picked up by the next one. Admin broadcasts (kind 'broadcast', the text in
+// picked up by the next one. Chats whose filters (lib/filters.js) leave the
+// alert out are skipped. Admin broadcasts (kind 'broadcast', the text in
 // `signals`) travel the same way.
 async function deliver(deadline, maxSends) {
   let sent = 0;
   let failed = 0;
+  let skipped = 0;
   let done = 0;
   for (;;) {
     const alert = await db.select().from(alerts).where(eq(alerts.status, 'sending')).orderBy(asc(alerts.id)).get();
@@ -227,33 +230,45 @@ async function deliver(deadline, maxSends) {
     const cve = broadcast ? null : await alertCve(alert.cveId);
     const rendered = {};
     let cursor = alert.cursor;
+    let saved = cursor;
     for (;;) {
-      if (Date.now() > deadline || sent >= maxSends) return { sent, failed, done, more: true };
+      if (Date.now() > deadline || sent >= maxSends) return { sent, failed, skipped, done, more: true };
       const where = [eq(chats.active, true)];
       if (cursor != null) where.push(gt(chats.id, cursor));
       if (broadcast && alert.signals?.channelsOnly) where.push(eq(chats.type, 'channel'));
-      const batch = await db.select({ id: chats.id, locale: chats.locale }).from(chats)
-        .where(and(...where)).orderBy(asc(chats.id)).limit(25).all();
+      const batch = await db.select({ id: chats.id, locale: chats.locale, level: chats.level, watch: chats.watch })
+        .from(chats).where(and(...where)).orderBy(asc(chats.id)).limit(25).all();
       if (!batch.length) break;
       for (const chat of batch) {
-        if (Date.now() > deadline || sent >= maxSends) return { sent, failed, done, more: true };
+        if (Date.now() > deadline || sent >= maxSends) return { sent, failed, skipped, done, more: true };
+        if (!wantsAlert(chat, alert.kind, cve)) {
+          // Saved with the next send or at the end of the batch: a run that
+          // stops before then only looks at these chats again.
+          cursor = chat.id;
+          skipped++;
+          continue;
+        }
         const locale = LOCALES.includes(chat.locale) ? chat.locale : 'en';
         rendered[locale] ??= broadcast
           ? { text: `📢 ${esc(alert.signals?.text)}` }
           : alertMessage(cve, alert.kind, alert.signals, locale);
         const outcome = await sendAlert(chat.id, rendered[locale]);
-        if (outcome === 'retry') return { sent, failed, done, more: true, rateLimited: true };
+        if (outcome === 'retry') return { sent, failed, skipped, done, more: true, rateLimited: true };
         if (outcome === 'sent') sent++;
         else failed++;
-        cursor = chat.id;
+        cursor = saved = chat.id;
         await db.update(alerts).set({ cursor }).where(eq(alerts.id, alert.id)).run();
         await sleep(40);
+      }
+      if (cursor !== saved) {
+        saved = cursor;
+        await db.update(alerts).set({ cursor }).where(eq(alerts.id, alert.id)).run();
       }
     }
     await db.update(alerts).set({ status: 'sent', sentAt: nowSec() }).where(eq(alerts.id, alert.id)).run();
     done++;
   }
-  return { sent, failed, done };
+  return { sent, failed, skipped, done };
 }
 
 // The CVE to show in an alert: NVD's details, else the KEV entry, else the id.

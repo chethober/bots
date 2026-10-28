@@ -1,5 +1,6 @@
 // handlers/message.js — the private chat. Everything is a button on the reply
-// keyboard; typing anything else searches (a CVE id opens its card). The only
+// keyboard; typing anything else searches (a CVE id opens its card), or, right
+// after ⚙️ Settings → 👁 Watchlist → ➕ Add, adds to the watchlist. The only
 // slash commands are /start (which also takes a CVE id from deep links) and
 // the admin ones. Groups and channels only receive alerts, so their messages
 // are ignored.
@@ -7,15 +8,21 @@
 import { api } from 'sdk';
 import { SOURCE_URL, MIN_CVSS, ADMIN_IDS } from '../lib/config.js';
 import { aboutKeyboard, thankTip } from '../lib/tips.js';
-import { upsertChat, getChat, migrate } from '../lib/chats.js';
-import { saveSetting } from '../lib/settings.js';
+import { upsertChat, getChat, migrate, setFilters } from '../lib/chats.js';
+import { getSetting, saveSetting, deleteSetting } from '../lib/settings.js';
+import { watchOf, parseWatch, addWatch } from '../lib/filters.js';
 import { localeFor, languageKeyboard } from '../lib/i18n.js';
 import { drop, showHome, showScreen } from '../lib/screen.js';
 import { normalizeId } from '../lib/nvd.js';
-import { isAdmin, matchButton, homeView, listView, categoriesView, cveView, settingsView } from '../lib/views.js';
+import {
+  isAdmin, matchButton, homeView, listView, categoriesView, cveView, settingsView, watchView, watchPromptView,
+} from '../lib/views.js';
 import { dashboardView, statsView, queueBroadcast } from '../lib/admin.js';
 import { runTick } from '../lib/scheduler.js';
 import { t } from '../lib/strings.js';
+
+// How long ➕ Add waits for the words.
+const WATCH_INPUT_MS = 15 * 60_000;
 
 function parseCommand(text) {
   const m = /^\/([a-z_]+)(?:@\w+)?(?:\s+([\s\S]*))?$/i.exec(text ?? '');
@@ -57,6 +64,9 @@ async function onPrivate(message) {
   const locale = await localeFor(message.from);
   const command = parseCommand(message.text);
   await drop(chatId, message.message_id);
+  // A pending ➕ Add takes this message, unless it's a command or a button.
+  const asked = Number(await getSetting(`watch:${chatId}`));
+  if (asked) await deleteSetting(`watch:${chatId}`);
 
   if (command?.cmd === 'start') {
     await sendHome(message.from, locale);
@@ -72,11 +82,23 @@ async function onPrivate(message) {
   if (button) return onButton(button, message, locale);
 
   const text = (message.text ?? '').trim();
+  if (!command && Date.now() - asked < WATCH_INPUT_MS) return addToWatchlist(chatId, text, locale);
   if (command || text.length < 2) return sendHome(message.from, locale);
   await api.sendChatAction({ chat_id: chatId, action: 'typing' }).catch(() => {});
   if (/^(CVE-)?\d{4}-\d{4,7}$/i.test(text)) return showScreen(chatId, await cveView(text, locale));
   await saveSetting(`q:${chatId}`, text.slice(0, 100));
   return showScreen(chatId, await listView('q', 0, chatId, locale));
+}
+
+async function addToWatchlist(chatId, text, locale) {
+  const words = parseWatch(text);
+  if (!words.length) {
+    await saveSetting(`watch:${chatId}`, String(Date.now()));
+    return showScreen(chatId, watchPromptView(locale));
+  }
+  const chat = await getChat(chatId);
+  await setFilters(chatId, { watch: addWatch(watchOf(chat), words) });
+  return showScreen(chatId, watchView(await getChat(chatId), locale));
 }
 
 export default async function (message) {

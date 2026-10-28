@@ -8,7 +8,8 @@ export const settings = table('settings', {
 
 // Every chat the bot knows: private chats, groups and channels. Active ones
 // receive alerts. In a private chat the chat id is the user's id, and the
-// clean-chat message ids (home / screen) are kept here.
+// clean-chat message ids (home / screen) are kept here. `level` and `watch`
+// are the chat's alert filters (lib/filters.js); null means none.
 export const chats = table('chats', {
   id:        integer('id').primaryKey(),
   type:      text('type').notNull().default('private'),
@@ -18,6 +19,8 @@ export const chats = table('chats', {
   locale:    text('locale'),
   homeMsg:   integer('home_msg'),
   screenMsg: integer('screen_msg'),
+  level:     text('level'),
+  watch:     json('watch'),
   createdAt: integer('created_at').notNull(),
   updatedAt: integer('updated_at').notNull(),
 }, (t) => ({

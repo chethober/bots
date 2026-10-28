@@ -6,6 +6,9 @@
 //                             search, kept in settings as q:<chatId>) | c.<category>
 //   cv:<id>:<list>:<page>     a CVE card opened from that list page
 //   cats · set · sub · noop   categories · settings · alerts on/off · nothing
+//   lvl · lvl:<level>         the alert level picker · pick one (lib/filters.js)
+//   wl · wl:add · wl:del:<i>  the watchlist · add words (asks for them) ·
+//   wl:clr · wl:q:<page>      remove one · remove all · add the last search
 
 import { api } from 'sdk';
 import { MIN_CVSS, ADMIN_IDS } from './config.js';
@@ -13,6 +16,8 @@ import { getSetting } from './settings.js';
 import { search, latest, trending, getCve, kevEntry, CATEGORIES } from './cves.js';
 import { normalizeId } from './nvd.js';
 import { cveCard, severityEmoji, badge, esc, cut } from './format.js';
+import { LEVELS, CRITICAL_CVSS, MAX_WATCH, levelOf, watchOf, parseWatch } from './filters.js';
+import { getChat } from './chats.js';
 import { LOCALES } from './i18n.js';
 import { t } from './strings.js';
 
@@ -111,6 +116,14 @@ export async function listView(list, page, chatId, locale) {
     ]);
   }
   if (list.startsWith('c.')) rows.push([{ text: t(locale, 'btn_back'), callback_data: 'cats' }]);
+  if (list === 'q') {
+    // Searched for a product: offer to get its alerts only.
+    const [word] = parseWatch(q);
+    const watch = watchOf(await getChat(chatId));
+    if (word && !watch.includes(word) && watch.length < MAX_WATCH) {
+      rows.push([{ text: t(locale, 'btn_watch_q', { q: cut(word, 24) }), callback_data: `wl:q:${page}` }]);
+    }
+  }
   return { text: lines.join('\n').trimEnd(), reply_markup: { inline_keyboard: rows } };
 }
 
@@ -138,7 +151,54 @@ export async function cveView(input, locale, back = null) {
 
 export function settingsView(chat, userId, locale) {
   const on = chat?.active ?? false;
-  const rows = [[{ text: t(locale, on ? 'btn_alerts_off' : 'btn_alerts_on'), callback_data: 'sub' }]];
+  const watch = watchOf(chat);
+  const rows = [
+    [{ text: t(locale, on ? 'btn_alerts_off' : 'btn_alerts_on'), callback_data: 'sub' }],
+    [{ text: t(locale, 'btn_level'), callback_data: 'lvl' }],
+    [{ text: t(locale, 'btn_watchlist', { n: watch.length }), callback_data: 'wl' }],
+  ];
   if (isAdmin(userId)) rows.push([{ text: t(locale, 'btn_admin'), callback_data: 'adm' }]);
-  return { text: t(locale, on ? 'settings_on' : 'settings_off', { min: MIN_CVSS }), reply_markup: { inline_keyboard: rows } };
+  const text = on
+    ? t(locale, 'settings_on', {
+      level: t(locale, `level_${levelOf(chat)}`, { min: MIN_CVSS, crit: CRITICAL_CVSS.toFixed(1) }),
+      watch: watch.length ? t(locale, 'watch_some', { words: esc(watch.join(', ')) }) : t(locale, 'watch_none'),
+    })
+    : t(locale, 'settings_off');
+  return { text, reply_markup: { inline_keyboard: rows } };
+}
+
+const backToSettings = (locale) => [{ text: t(locale, 'btn_back'), callback_data: 'set' }];
+
+export function levelView(chat, locale) {
+  const current = levelOf(chat);
+  const rows = LEVELS.map((l) => [{
+    text: `${l === current ? '✅ ' : ''}${t(locale, `btn_level_${l}`)}`, callback_data: `lvl:${l}`,
+  }]);
+  rows.push(backToSettings(locale));
+  const vars = { min: MIN_CVSS, crit: CRITICAL_CVSS.toFixed(1) };
+  const text = [t(locale, 'level_title'), '', ...LEVELS.map((l) => `• ${t(locale, `level_${l}`, vars)}`)].join('\n');
+  return { text, reply_markup: { inline_keyboard: rows } };
+}
+
+export function watchView(chat, locale) {
+  const watch = watchOf(chat);
+  const rows = [];
+  for (let i = 0; i < watch.length; i += 2) {
+    rows.push(watch.slice(i, i + 2).map((w, j) => ({ text: `❌ ${cut(w, 28)}`, callback_data: `wl:del:${i + j}` })));
+  }
+  const tools = [];
+  if (watch.length < MAX_WATCH) tools.push({ text: t(locale, 'btn_watch_add'), callback_data: 'wl:add' });
+  if (watch.length) tools.push({ text: t(locale, 'btn_watch_clear'), callback_data: 'wl:clr' });
+  rows.push(tools, backToSettings(locale));
+  const text = watch.length
+    ? t(locale, 'watch_title_some', { words: watch.map((w) => `• <code>${esc(w)}</code>`).join('\n') })
+    : t(locale, 'watch_title_none');
+  return { text, reply_markup: { inline_keyboard: rows } };
+}
+
+export function watchPromptView(locale) {
+  return {
+    text: t(locale, 'watch_prompt', { max: MAX_WATCH }),
+    reply_markup: { inline_keyboard: [[{ text: t(locale, 'btn_cancel'), callback_data: 'wl' }]] },
+  };
 }

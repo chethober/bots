@@ -7,7 +7,9 @@ import { parseCve } from '../tgcloud/lib/nvd.js';
 import { cveCard, alertMessage } from '../tgcloud/lib/format.js';
 import { LOCALES } from '../tgcloud/lib/i18n.js';
 import { t } from '../tgcloud/lib/strings.js';
-import { mainKeyboard, matchButton, categoriesView, settingsView } from '../tgcloud/lib/views.js';
+import {
+  mainKeyboard, matchButton, categoriesView, settingsView, levelView, watchView, watchPromptView,
+} from '../tgcloud/lib/views.js';
 import { ADMIN_IDS } from '../tgcloud/lib/config.js';
 
 const print = process.argv.includes('--print');
@@ -85,6 +87,11 @@ for (const locale of LOCALES) {
     categories: categoriesView(locale),
     settingsOn: settingsView({ active: true }, 1, locale),
     settingsOffAdmin: settingsView({ active: false }, ADMIN_IDS[0], locale),
+    settingsFiltered: settingsView({ active: true, level: 'critical', watch: ['nginx', 'a&b <x>'] }, 1, locale),
+    level: levelView({ level: 'exploited' }, locale),
+    watchEmpty: watchView({}, locale),
+    watchFull: watchView({ watch: Array.from({ length: 20 }, (_, i) => `${'ж'.repeat(38)}${i}`) }, locale),
+    watchPrompt: watchPromptView(locale),
   })) {
     checkHtml(view.text, `${locale}/${name}`);
     checkMarkup(view.reply_markup, `${locale}/${name}`);
