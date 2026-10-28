@@ -1,0 +1,73 @@
+# CI/CD for chsbrbot: tests every pull request and push to main; after the
+# tests pass on main, deploys to Telegram Serverless (tgcloud push) and applies
+# the safe schema changes (tgcloud migrate --safe). Destructive schema changes
+# are only listed in the log: apply them by hand with "npx tgcloud migrate".
+# Needs the repository secret CHSBRBOT_TGCLOUD_TOKEN (the bot's tgcloud project token).
+name: chsbrbot CI/CD
+
+on:
+  push:
+    branches: [main]
+    paths: ['chsbrbot/**', '.github/workflows/chsbrbot-ci.yml']
+  pull_request:
+    paths: ['chsbrbot/**', '.github/workflows/chsbrbot-ci.yml']
+  workflow_dispatch:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    defaults:
+      run:
+        working-directory: chsbrbot
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: chsbrbot/package-lock.json
+      - run: npm ci
+      - run: cp secrets.example.js tgcloud/lib/secrets.js
+      - run: npm test
+
+  deploy:
+    needs: test
+    if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    # One deploy at a time: each push is conditional on the cloud's revision.
+    concurrency:
+      group: chsbrbot-deploy
+      cancel-in-progress: false
+    defaults:
+      run:
+        working-directory: chsbrbot
+    env:
+      TGCLOUD_TOKEN: ${{ secrets.CHSBRBOT_TGCLOUD_TOKEN }}
+    steps:
+      - name: Check TGCLOUD_TOKEN
+        if: env.TGCLOUD_TOKEN == ''
+        working-directory: .
+        run: echo "::error::Set the CHSBRBOT_TGCLOUD_TOKEN repository secret" && exit 1
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: chsbrbot/package-lock.json
+      - run: npm ci
+      # Both keys are optional; empty strings keep the bot on the public rate limits.
+      - name: Write tgcloud/lib/secrets.js
+        run: |
+          node -e 'const s = (k) => JSON.stringify(process.env[k] ?? "");
+            require("fs").writeFileSync("tgcloud/lib/secrets.js",
+              `export const NVD_API_KEY = ${s("NVD_API_KEY")};\nexport const GITHUB_TOKEN = ${s("GH_POC_TOKEN")};\n`)'
+        env:
+          NVD_API_KEY: ${{ secrets.CHSBRBOT_NVD_API_KEY }}
+          GH_POC_TOKEN: ${{ secrets.CHSBRBOT_GITHUB_TOKEN }}
+      # .tgcloud/ is git-ignored: fetch the cloud snapshot and revision into a
+      # fresh one so push sends only the diff and removes deleted modules.
+      - run: mkdir -p .tgcloud && npx tgcloud fetch
+      - run: npx tgcloud push
+      - run: npx tgcloud migrate --safe

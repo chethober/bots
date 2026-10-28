@@ -1,0 +1,78 @@
+# CI/CD for chthgamesbot: tests every pull request and push to main; after the
+# tests pass on main, deploys to Telegram Serverless (tgcloud push) and applies
+# the safe schema changes (tgcloud migrate --safe). Destructive schema changes
+# are only listed in the log: apply them by hand with "npx tgcloud migrate".
+# Needs the repository secret CHTHGAMESBOT_TGCLOUD_TOKEN (the bot's tgcloud project token).
+name: chthgamesbot CI/CD
+
+on:
+  push:
+    branches: [main]
+    paths: ['chthgamesbot/**', '.github/workflows/chthgamesbot-ci.yml']
+  pull_request:
+    paths: ['chthgamesbot/**', '.github/workflows/chthgamesbot-ci.yml']
+  workflow_dispatch:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    defaults:
+      run:
+        working-directory: chthgamesbot
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: chthgamesbot/package-lock.json
+      - run: npm ci
+      - run: cp secrets.example.js tgcloud/lib/secrets.js
+      - run: npm test
+      - run: npx playwright-core install --with-deps chromium-headless-shell
+      - run: npm run test:ui
+
+  deploy:
+    needs: test
+    if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    # One deploy at a time: each push is conditional on the cloud's revision.
+    concurrency:
+      group: chthgamesbot-deploy
+      cancel-in-progress: false
+    defaults:
+      run:
+        working-directory: chthgamesbot
+    env:
+      TGCLOUD_TOKEN: ${{ secrets.CHTHGAMESBOT_TGCLOUD_TOKEN }}
+    steps:
+      - name: Check TGCLOUD_TOKEN
+        if: env.TGCLOUD_TOKEN == ''
+        working-directory: .
+        run: echo "::error::Set the CHTHGAMESBOT_TGCLOUD_TOKEN repository secret" && exit 1
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: chthgamesbot/package-lock.json
+      - run: npm ci
+      # ADMIN_IDS is a JSON array of Telegram user ids, e.g. [12345, 67890].
+      - name: Write tgcloud/lib/secrets.js
+        run: |
+          node -e 'const { BUTTON_SECRET, ADMIN_IDS } = process.env;
+            if (!BUTTON_SECRET) throw new Error("Set the CHTHGAMESBOT_BUTTON_SECRET repository secret");
+            const ids = JSON.parse(ADMIN_IDS || "[]");
+            if (!Array.isArray(ids) || !ids.every(Number.isInteger)) throw new Error("CHTHGAMESBOT_ADMIN_IDS must be a JSON array of integers");
+            require("fs").writeFileSync("tgcloud/lib/secrets.js",
+              `export const BUTTON_SECRET = ${JSON.stringify(BUTTON_SECRET)};\nexport const ADMIN_IDS = ${JSON.stringify(ids)};\n`)'
+        env:
+          BUTTON_SECRET: ${{ secrets.CHTHGAMESBOT_BUTTON_SECRET }}
+          ADMIN_IDS: ${{ secrets.CHTHGAMESBOT_ADMIN_IDS }}
+      # .tgcloud/ is git-ignored: fetch the cloud snapshot and revision into a
+      # fresh one so push sends only the diff and removes deleted modules.
+      - run: mkdir -p .tgcloud && npx tgcloud fetch
+      - run: npx tgcloud push
+      - run: npx tgcloud migrate --safe

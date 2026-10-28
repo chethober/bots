@@ -61,6 +61,23 @@ npx tgcloud migrate   # apply schema changes to the database
 Most bots also have a one-off setup endpoint or script that applies the bot profile (descriptions,
 command menus); see each README.
 
+### CI/CD
+
+Each bot has a GitHub Actions workflow, `.github/workflows/<bot>-ci.yml`. It runs the bot's tests
+(or a syntax check of its modules) on every pull request and push to `main` that touches the bot's
+folder. On `main`, it then deploys with `tgcloud push` and applies the safe schema changes with
+`tgcloud migrate --safe`. Destructive schema changes are only listed in the job log, so apply those
+by hand with `npx tgcloud migrate`. You can also run a workflow by hand from the Actions tab.
+
+The workflows read these repository secrets:
+
+| Bot | Secrets |
+|---|---|
+| every bot | `<BOT>_TGCLOUD_TOKEN`, the bot's tgcloud project token (e.g. `CHTHVPNBOT_TGCLOUD_TOKEN`) |
+| `chsbrbot` | `CHSBRBOT_NVD_API_KEY`, `CHSBRBOT_GITHUB_TOKEN` (both optional) |
+| `chthgamesbot` | `CHTHGAMESBOT_BUTTON_SECRET`, `CHTHGAMESBOT_ADMIN_IDS` (a JSON array such as `[12345]`) |
+| `chtht2sbot` | `CHTHT2SBOT_SPOTIFY_CLIENT_ID`, `CHTHT2SBOT_SPOTIFY_CLIENT_SECRET` |
+
 See [`<bot>/AGENTS.md`](chthapibot/AGENTS.md) in any bot for the platform's module rules and
 `<bot>/docs/tgcloud-sdk.md` for the SDK reference.
 
