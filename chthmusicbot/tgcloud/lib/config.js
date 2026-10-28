@@ -7,7 +7,7 @@ export const ADMIN_IDS = [6330862227];
 // The Mini App's address, printed by the first `npx tgcloud push`
 // (https://app<app_id>.tgcloud.ai, no trailing slash). Spotify and Apple Music
 // logins open there; until it's set only YouTube Music can be connected.
-export const MINIAPP_URL = '';
+export const MINIAPP_URL = 'https://app9094733003.tgcloud.ai';
 
 // The music bot asked for audio by name over bot-to-bot messages. Turn on
 // bot-to-bot communication for this bot in @BotFather. CHETHOBERBOT_ID is
