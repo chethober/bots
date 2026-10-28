@@ -52,7 +52,7 @@ export async function closeScreen(userId) {
 
 // --- reply keyboard ---------------------------------------------------------------
 
-const KEYS = [['kb_games', 'kb_hub'], ['kb_balance', 'kb_daily', 'kb_top'], ['kb_language', 'kb_source']];
+const KEYS = [['kb_games', 'kb_hub'], ['kb_balance', 'kb_daily', 'kb_shop'], ['kb_top', 'kb_language', 'kb_source']];
 
 export function mainKeyboard(locale) {
   return {

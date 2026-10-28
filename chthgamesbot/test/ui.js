@@ -16,6 +16,8 @@ import { crashPoint, evaluate, publicView, multAt } from '../tgcloud/lib/crash.j
 
 const ROOT = path.resolve('public');
 const SHOTS = process.argv.includes('--shots');
+// UI_ONLY=<regex> runs only the matching scenarios.
+const ONLY = process.env.UI_ONLY ? new RegExp(process.env.UI_ONLY) : null;
 // CHROME_PATH overrides the browser; otherwise Playwright's own (npx playwright-core install chromium-headless-shell).
 const EXE = process.env.CHROME_PATH;
 
@@ -58,6 +60,7 @@ let roomN = 0;
 async function backend(user, name, input) {
   const me = player(user);
   if (name === 'wallet') return { name: me.name, chips: me.chips, played: 0, wins: 0, bestWin: 0, daily: 500, dailyIn: 0 };
+  if (name === 'shop') return { chips: me.chips, packs: [{ stars: 25, chips: 2500, link: 'https://t.me/$x' }, { stars: 100, chips: 11000, link: 'https://t.me/$y' }] };
   if (name === 'plinko') {
     const bet = input.bet;
     if (!TABLES[input.risk]) fail('Unknown risk level');
@@ -165,6 +168,7 @@ async function newPlayer(id, name) {
 // ---- scenarios ------------------------------------------------------------------------
 let failures = 0;
 async function step(name, fn) {
+  if (ONLY && !ONLY.test(name)) return;
   const before = errors.length;
   try {
     await fn();
@@ -187,7 +191,7 @@ const B = await newPlayer(7002, 'Bob');
 await step('home lists every game', async () => {
   await home(A);
   const n = await A.locator('.tile').count();
-  assert.equal(n, 20, `expected 20 tiles, got ${n}`);
+  assert.equal(n, 22, `expected 22 tiles, got ${n}`);
   await shot(A, '00-home');
 });
 
@@ -424,6 +428,80 @@ await step('hangman: guess letters until over', async () => {
   }
   await A.waitForSelector('text=New word', { timeout: 5000 });
   await shot(A, '20-hangman');
+});
+
+await step('shop lists the Stars packs', async () => {
+  await home(A);
+  await A.locator('#shop').click();
+  await A.waitForSelector('.tile:has-text("2,500 chips")');
+  await shot(A, '21-shop');
+  await A.evaluate(() => window.__backFn());
+  await A.waitForSelector('.tile');
+});
+
+// Four players for the Persian games: A creates, everyone joins; the 4th join deals.
+const C = await newPlayer(7003, 'Cyrus');
+const D = await newPlayer(7004, 'Dara');
+const FOUR = [A, B, C, D];
+async function fourJoin(title) {
+  const room = await makeRoom(title);
+  for (const P of [C, D]) {
+    await P.goto(`${BASE}?room=${room}`);
+    await P.waitForSelector('#screen h2:not(:text("Loading…"))');
+  }
+  for (const P of FOUR) { await P.getByRole('button', { name: /Join/ }).first().click(); await wait(150); }
+  await A.waitForSelector('.ttable', { timeout: 6000 });
+}
+// The page whose turn it is: it shows tappable cards, or the given button.
+async function whoseTurn(test, tries = 30) {
+  for (let i = 0; i < tries; i++) {
+    for (const P of FOUR) if (await test(P)) return P;
+    await wait(300);
+  }
+  throw new Error('nobody to act');
+}
+// Cards in a hand overlap: tap the visible left strip, not the centre (the next card's).
+const tapCard = (P) => P.locator('.fan .pcard.tap').first().click({ position: { x: 8, y: 20 } });
+async function playTrick() {
+  for (let k = 0; k < 4; k++) {
+    const P = await whoseTurn((p) => p.locator('.fan .pcard.tap').count());
+    const before = await P.locator('.fan .pcard').count();
+    await tapCard(P);
+    await P.waitForFunction((n) => document.querySelectorAll('.fan .pcard').length === n - 1, before, { timeout: 5000 });
+  }
+}
+
+await step('hokm: four join, the Hakem calls trump, one trick', async () => {
+  await fourJoin('Hokm');
+  const hakem = await whoseTurn((p) => p.locator('text=You are the Hakem').count());
+  assert.equal(await hakem.locator('.fan .pcard').count(), 5, 'the Hakem sees five cards');
+  await shot(hakem, '22-hokm-trump');
+  await click(hakem, '♥', { exact: true });
+  await hakem.waitForFunction(() => document.querySelectorAll('.fan .pcard').length === 13, null, { timeout: 5000 });
+  await playTrick();
+  await A.waitForSelector('.tcard.glow', { timeout: 5000 });
+  await shot(A, '22-hokm');
+});
+
+await step('shelem: bidding, kitty, trump, one trick', async () => {
+  await fourJoin('Shelem');
+  for (let i = 0; i < 3; i++) {
+    const P = await whoseTurn((p) => p.getByRole('button', { name: 'Pass', exact: true }).count());
+    await click(P, 'Pass', { exact: true });
+    await wait(300);
+  }
+  const bidder = await whoseTurn((p) => p.locator('text=You took the kitty').count());
+  assert.equal(await bidder.locator('.fan .pcard').count(), 16, 'the bidder holds the kitty');
+  await shot(bidder, '23-shelem-kitty');
+  for (let n = 16; n > 12; n--) {
+    await tapCard(bidder);
+    await bidder.waitForFunction((m) => document.querySelectorAll('.fan .pcard').length === m - 1, n, { timeout: 5000 });
+  }
+  await click(bidder, '♠', { exact: true });
+  await bidder.waitForSelector('text=Your lead', { timeout: 5000 });
+  await playTrick();
+  await A.waitForSelector('.tcard.glow', { timeout: 5000 });
+  await shot(A, '23-shelem');
 });
 
 await step('back navigation returns home', async () => {

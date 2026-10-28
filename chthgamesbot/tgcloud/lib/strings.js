@@ -10,14 +10,15 @@ const strings = {
   kb_daily:    { en: '🎁 Daily chips', fa: '🎁 چیپ روزانه', ar: '🎁 الرقائق اليومية', ru: '🎁 Ежедневные фишки', es: '🎁 Fichas diarias' },
   kb_top:      { en: '🏆 Top players', fa: '🏆 برترین‌ها', ar: '🏆 أفضل اللاعبين', ru: '🏆 Лучшие игроки', es: '🏆 Mejores jugadores' },
   kb_language: { en: '🌐 Language', fa: '🌐 زبان', ar: '🌐 اللغة', ru: '🌐 Язык', es: '🌐 Idioma' },
+  kb_shop:     { en: '💎 Buy chips', fa: '💎 خرید چیپ', ar: '💎 شراء رقائق', ru: '💎 Купить фишки', es: '💎 Comprar fichas' },
   kb_source:   { en: '🔗 Source code', fa: '🔗 کد منبع', ar: '🔗 الكود المصدري', ru: '🔗 Исходный код', es: '🔗 Código fuente' },
 
   welcome: {
-    en: '<b>Welcome to Chth Games, {name}!</b> 🎲\n\nYou have <b>{chips}</b> play-money chips (everyone starts with {start}).\nGrab {daily} more every day with 🎁 Daily chips. Chips are just for fun — they can\'t be bought, sold or cashed out.\n\nPlay here with the buttons below, add me to a group, or type <code>@{bot}</code> in any chat to drop a game in.',
-    fa: '<b>به چث گیمز خوش اومدی، {name}!</b> 🎲\n\nتو <b>{chips}</b> چیپِ بازیچه‌ای داری (همه با {start} شروع می‌کنن).\nهر روز با «🎁 چیپ روزانه» تا {daily} تای دیگه بگیر. چیپ‌ها فقط برای سرگرمی‌ان — نه خرید می‌شن، نه فروش و نه نقد.\n\nبا دکمه‌های پایین همین‌جا بازی کن، منو به یه گروه اضافه کن، یا توی هر چتی <code>@{bot}</code> رو تایپ کن تا یه بازی بندازم اونجا.',
-    ar: '<b>مرحبًا بك في Chth Games يا {name}!</b> 🎲\n\nلديك <b>{chips}</b> رقاقة لعب (يبدأ الجميع بـ {start}).\nاحصل على {daily} إضافية كل يوم عبر «🎁 الرقائق اليومية». الرقائق للمتعة فقط — لا تُشترى ولا تُباع ولا تُصرف.\n\nالعب هنا بالأزرار بالأسفل، أو أضفني إلى مجموعة، أو اكتب <code>@{bot}</code> في أي محادثة لإسقاط لعبة.',
-    ru: '<b>Добро пожаловать в Chth Games, {name}!</b> 🎲\n\nУ тебя <b>{chips}</b> игровых фишек (все начинают с {start}).\nЗабирай ещё {daily} каждый день кнопкой «🎁 Ежедневные фишки». Фишки только для веселья — их нельзя купить, продать или обналичить.\n\nИграй здесь кнопками внизу, добавь меня в группу или набери <code>@{bot}</code> в любом чате, чтобы бросить туда игру.',
-    es: '<b>¡Bienvenido a Chth Games, {name}!</b> 🎲\n\nTienes <b>{chips}</b> fichas de juego (todos empiezan con {start}).\nConsigue {daily} más cada día con «🎁 Fichas diarias». Las fichas son solo por diversión — no se compran, venden ni cobran.\n\nJuega aquí con los botones de abajo, añádeme a un grupo o escribe <code>@{bot}</code> en cualquier chat para soltar una partida.',
+    en: '<b>Welcome to Chth Games, {name}!</b> 🎲\n\nYou have <b>{chips}</b> play-money chips (everyone starts with {start}).\nGrab {daily} more every day with 🎁 Daily chips. Want more? 💎 Buy chips with Telegram Stars. Chips are for play only — they can\'t be sold, sent or cashed out.\n\nPlay here with the buttons below, add me to a group, or type <code>@{bot}</code> in any chat to drop a game in.',
+    fa: '<b>به چث گیمز خوش اومدی، {name}!</b> 🎲\n\nتو <b>{chips}</b> چیپِ بازیچه‌ای داری (همه با {start} شروع می‌کنن).\nهر روز با «🎁 چیپ روزانه» تا {daily} تای دیگه بگیر. بیشتر می‌خوای؟ با «💎 خرید چیپ» و استارز تلگرام بخر. چیپ‌ها فقط برای بازی‌ان — نه فروخته می‌شن، نه منتقل و نه نقد.\n\nبا دکمه‌های پایین همین‌جا بازی کن، منو به یه گروه اضافه کن، یا توی هر چتی <code>@{bot}</code> رو تایپ کن تا یه بازی بندازم اونجا.',
+    ar: '<b>مرحبًا بك في Chth Games يا {name}!</b> 🎲\n\nلديك <b>{chips}</b> رقاقة لعب (يبدأ الجميع بـ {start}).\nاحصل على {daily} إضافية كل يوم عبر «🎁 الرقائق اليومية». تريد المزيد؟ «💎 اشترِ رقائق» بنجوم تيليجرام. الرقائق للعب فقط — لا تُباع ولا تُحوَّل ولا تُصرف.\n\nالعب هنا بالأزرار بالأسفل، أو أضفني إلى مجموعة، أو اكتب <code>@{bot}</code> في أي محادثة لإسقاط لعبة.',
+    ru: '<b>Добро пожаловать в Chth Games, {name}!</b> 🎲\n\nУ тебя <b>{chips}</b> игровых фишек (все начинают с {start}).\nЗабирай ещё {daily} каждый день кнопкой «🎁 Ежедневные фишки». Нужно больше? «💎 Купить фишки» за Telegram Stars. Фишки только для игры — их нельзя продать, передать или обналичить.\n\nИграй здесь кнопками внизу, добавь меня в группу или набери <code>@{bot}</code> в любом чате, чтобы бросить туда игру.',
+    es: '<b>¡Bienvenido a Chth Games, {name}!</b> 🎲\n\nTienes <b>{chips}</b> fichas de juego (todos empiezan con {start}).\nConsigue {daily} más cada día con «🎁 Fichas diarias». ¿Quieres más? «💎 Comprar fichas» con Telegram Stars. Las fichas son solo para jugar: no se venden, transfieren ni cobran.\n\nJuega aquí con los botones de abajo, añádeme a un grupo o escribe <code>@{bot}</code> en cualquier chat para soltar una partida.',
   },
   menu_header: {
     en: '🎮 Pick a game', fa: '🎮 یه بازی انتخاب کن', ar: '🎮 اختر لعبة', ru: '🎮 Выбери игру', es: '🎮 Elige un juego',
@@ -103,6 +104,67 @@ const strings = {
   dead_button: {
     en: 'This button no longer works.', fa: 'این دکمه دیگه کار نمی‌کنه.', ar: 'هذا الزر لم يعد يعمل.',
     ru: 'Эта кнопка больше не работает.', es: 'Este botón ya no funciona.',
+  },
+
+  // 💎 Buy chips (lib/shop.js)
+  shop: {
+    en: '<b>💎 Buy chips</b>\nYour balance: <b>{chips}</b>\n\nPay with Telegram Stars ⭐. Chips arrive right after payment.\nChips are for play only: they can\'t be sold, sent to others or cashed out.\nProblem with a payment? /paysupport',
+    fa: '<b>💎 خرید چیپ</b>\nموجودی تو: <b>{chips}</b>\n\nبا استارز تلگرام ⭐ پرداخت کن. چیپ‌ها بلافاصله بعد از پرداخت میان.\nچیپ‌ها فقط برای بازی‌ان: نه فروخته می‌شن، نه به کسی منتقل و نه نقد.\nمشکلی با پرداخت داری؟ /paysupport',
+    ar: '<b>💎 شراء رقائق</b>\nرصيدك: <b>{chips}</b>\n\nادفع بنجوم تيليجرام ⭐. تصل الرقائق فور الدفع.\nالرقائق للعب فقط: لا تُباع ولا تُرسل لآخرين ولا تُصرف.\nمشكلة في الدفع؟ /paysupport',
+    ru: '<b>💎 Купить фишки</b>\nТвой баланс: <b>{chips}</b>\n\nОплата в Telegram Stars ⭐. Фишки приходят сразу после оплаты.\nФишки только для игры: их нельзя продать, передать или обналичить.\nПроблема с оплатой? /paysupport',
+    es: '<b>💎 Comprar fichas</b>\nTu saldo: <b>{chips}</b>\n\nPaga con Telegram Stars ⭐. Las fichas llegan justo después del pago.\nLas fichas son solo para jugar: no se venden, no se envían a otros y no se cobran.\n¿Problema con un pago? /paysupport',
+  },
+  pack_btn: { en: '{chips} · ⭐ {stars}', fa: '{chips} · ⭐ {stars}', ar: '{chips} · ⭐ {stars}', ru: '{chips} · ⭐ {stars}', es: '{chips} · ⭐ {stars}' },
+  pack_title: { en: '{chips} chips', fa: '{chips} چیپ', ar: '{chips} رقاقة', ru: '{chips} фишек', es: '{chips} fichas' },
+  pack_desc: {
+    en: '{chips} play chips for Chth Games. Chips are for play only and can\'t be cashed out.',
+    fa: '{chips} چیپ بازی برای چث گیمز. چیپ‌ها فقط برای بازی‌ان و نقد نمی‌شن.',
+    ar: '{chips} رقاقة لعب في Chth Games. الرقائق للعب فقط ولا تُصرف.',
+    ru: '{chips} игровых фишек для Chth Games. Фишки только для игры и не обналичиваются.',
+    es: '{chips} fichas de juego para Chth Games. Son solo para jugar y no se pueden cobrar.',
+  },
+  paid: {
+    en: '✅ Thanks! <b>+{n}</b> added.\nBalance: <b>{chips}</b>',
+    fa: '✅ ممنون! <b>+{n}</b> اضافه شد.\nموجودی: <b>{chips}</b>',
+    ar: '✅ شكرًا! أُضيفت <b>+{n}</b>.\nالرصيد: <b>{chips}</b>',
+    ru: '✅ Спасибо! Начислено <b>+{n}</b>.\nБаланс: <b>{chips}</b>',
+    es: '✅ ¡Gracias! Se añadieron <b>+{n}</b>.\nSaldo: <b>{chips}</b>',
+  },
+  pay_failed: {
+    en: '⚠️ Your payment went through but the chips couldn\'t be added. An admin has been told — or write /paysupport.',
+    fa: '⚠️ پرداختت انجام شد ولی چیپ‌ها اضافه نشد. به ادمین خبر دادیم — یا /paysupport بنویس.',
+    ar: '⚠️ تم الدفع لكن تعذّرت إضافة الرقائق. أُبلغ المشرف — أو اكتب /paysupport.',
+    ru: '⚠️ Оплата прошла, но фишки не начислились. Админ уже знает — или напиши /paysupport.',
+    es: '⚠️ El pago se hizo pero no se pudieron añadir las fichas. Ya avisamos a un admin; o escribe /paysupport.',
+  },
+  pay_refunded: {
+    en: '↩️ Your payment of ⭐ {stars} was refunded and {n} were removed. Balance: <b>{chips}</b>',
+    fa: '↩️ پرداخت ⭐ {stars} تو برگشت داده شد و {n} کم شد. موجودی: <b>{chips}</b>',
+    ar: '↩️ أُعيدت دفعتك ⭐ {stars} وأُزيلت {n}. الرصيد: <b>{chips}</b>',
+    ru: '↩️ Платёж ⭐ {stars} возвращён, списано {n}. Баланс: <b>{chips}</b>',
+    es: '↩️ Se reembolsó tu pago de ⭐ {stars} y se retiraron {n}. Saldo: <b>{chips}</b>',
+  },
+  pay_start_first: {
+    en: 'Open the bot and press Start first.', fa: 'اول ربات رو باز کن و Start رو بزن.', ar: 'افتح البوت واضغط Start أولًا.',
+    ru: 'Сначала открой бота и нажми Start.', es: 'Abre el bot y pulsa Start primero.',
+  },
+  pay_stale: {
+    en: 'This offer has changed — open 💎 Buy chips again.', fa: 'این پیشنهاد عوض شده — دوباره «💎 خرید چیپ» رو باز کن.',
+    ar: 'تغيّر هذا العرض — افتح «💎 شراء رقائق» مجددًا.', ru: 'Предложение изменилось — открой «💎 Купить фишки» снова.',
+    es: 'Esta oferta cambió: abre «💎 Comprar fichas» otra vez.',
+  },
+  paysupport: {
+    en: '<b>💬 Payment support</b>\nFor a problem with a purchase, send <code>/paysupport</code> followed by what happened, e.g. <code>/paysupport I paid but got no chips</code>. An admin will get back to you here.\n\nYour recent payments:\n{list}',
+    fa: '<b>💬 پشتیبانی پرداخت</b>\nبرای مشکل خرید، <code>/paysupport</code> رو با توضیح ماجرا بفرست، مثلاً <code>/paysupport پرداخت کردم ولی چیپ نیومد</code>. ادمین همین‌جا جوابت رو می‌ده.\n\nپرداخت‌های اخیرت:\n{list}',
+    ar: '<b>💬 دعم المدفوعات</b>\nلمشكلة في عملية شراء، أرسل <code>/paysupport</code> متبوعًا بما حدث، مثل <code>/paysupport دفعت ولم تصلني رقائق</code>. سيرد عليك مشرف هنا.\n\nمدفوعاتك الأخيرة:\n{list}',
+    ru: '<b>💬 Поддержка платежей</b>\nЕсли с покупкой что-то не так, отправь <code>/paysupport</code> и опиши проблему, например <code>/paysupport оплатил, но фишек нет</code>. Админ ответит здесь.\n\nТвои последние платежи:\n{list}',
+    es: '<b>💬 Soporte de pagos</b>\nSi tienes un problema con una compra, envía <code>/paysupport</code> y lo que pasó, p. ej. <code>/paysupport pagué y no recibí fichas</code>. Un admin te responderá aquí.\n\nTus pagos recientes:\n{list}',
+  },
+  paysupport_none: { en: '— none —', fa: '— هیچی —', ar: '— لا شيء —', ru: '— нет —', es: '— ninguno —' },
+  paysupport_sent: {
+    en: '✅ Sent to the admins. They\'ll answer here.', fa: '✅ برای ادمین‌ها فرستاده شد. همین‌جا جواب می‌دن.',
+    ar: '✅ أُرسلت إلى المشرفين. سيردّون هنا.', ru: '✅ Отправлено админам. Они ответят здесь.',
+    es: '✅ Enviado a los admins. Te responderán aquí.',
   },
 
   source_here: { en: '📦 Source code:', fa: '📦 کد منبع:', ar: '📦 الكود المصدري:', ru: '📦 Исходный код:', es: '📦 Código fuente:' },

@@ -22,7 +22,7 @@ export const games = table('games', {
   oIdx: index('idx_games_o').on(t.oId),
 }));
 
-// Play-money wallet + lifetime stats, one row per Telegram user.
+// Chip wallet + lifetime stats, one row per Telegram user.
 export const players = table('players', {
   id:        integer('id').primaryKey(),                  // Telegram user id
   name:      text('name').notNull(),
@@ -53,3 +53,19 @@ export const sessions = table('sessions', {
   created: integer('created_at').notNull().default(sql`(unixepoch())`),
   updated: integer('updated_at').notNull().default(sql`(unixepoch())`),
 });
+
+// Telegram Stars purchases, keyed by Telegram's charge id so a payment is credited once.
+// `credited` turns true once the chips are on the player's balance; a row left at false
+// (the credit failed) shows up in /stats for an admin to /grant.
+export const purchases = table('purchases', {
+  charge:   text('charge_id').primaryKey(),                // telegram_payment_charge_id
+  userId:   integer('user_id').notNull(),
+  pack:     integer('pack').notNull(),                     // index into PACKS
+  stars:    integer('stars').notNull(),
+  chips:    integer('chips').notNull(),
+  credited: integer('credited', { mode: 'boolean' }).notNull().default(false),
+  refunded: integer('refunded', { mode: 'boolean' }).notNull().default(false),
+  created:  integer('created_at').notNull().default(sql`(unixepoch())`),
+}, (t) => ({
+  userIdx: index('idx_purchases_user').on(t.userId),
+}));

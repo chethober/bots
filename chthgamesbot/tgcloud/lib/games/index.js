@@ -18,11 +18,14 @@ import tictactoe from './tictactoe.js';
 import connect4 from './connect4.js';
 import trivia from './trivia.js';
 import hangman from './hangman.js';
+import hokm from './hokm.js';
+import shelem from './shelem.js';
 
 export const GAMES = [
   slots, coinflip, dice, roulette,
   blackjack, videopoker, mines, hilo,
   holdem, coinduel, diceduel, rps, jackpot, russian,
+  hokm, shelem,
   tictactoe, connect4, trivia, hangman,
 ];
 
@@ -33,5 +36,6 @@ export const GROUPS = [
   ['casino', '🎰 Casino tables'],
   ['solo', '🃏 Solo vs house'],
   ['duel', '⚔️ Bet with friends'],
+  ['persian', '🇮🇷 Persian card games'],
   ['party', '🎉 Party games (free)'],
 ];

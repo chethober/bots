@@ -10,7 +10,7 @@ import { t } from './strings.js';
 import { normalizeLocale, LOCALES, LOCALE_NAMES, tr } from './i18n.js';
 import { closeScreen, mainKeyboard, showHome } from './screen.js';
 
-const MULTI = new Set(['duel', 'party']);
+const MULTI = new Set(['duel', 'persian', 'party']);
 
 export function menuText(chatType, locale = 'en') {
   const lines = [`<b>${t(locale, 'menu_header')}</b>`];

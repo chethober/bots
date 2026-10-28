@@ -19,6 +19,9 @@ import { score5, best, compare, handName, videoPokerPays, VP_PAYS } from '../tgc
 import * as holdem from '../tgcloud/lib/games/holdem.js';
 import { deck as newDeck } from '../tgcloud/lib/games/cards.js';
 import WORDS from '../tgcloud/lib/data/words.js';
+import { trickWinner, legalSlots, suitOf } from '../tgcloud/lib/games/tricks.js';
+import hokm from '../tgcloud/lib/games/hokm.js';
+import shelem, { cardPoints, TARGET as SHELEM_TARGET } from '../tgcloud/lib/games/shelem.js';
 
 let failures = 0;
 function check(name, fn) {
@@ -220,7 +223,7 @@ async function fuzz(game, { players = 2, rounds = 300, bet } = {}) {
 }
 
 for (const g of GAMES) {
-  await check(`fuzz ${g.key} (${g.cmd})`, () => fuzz(g, { players: g.group === 'solo' ? 1 : 3, rounds: g.group === 'casino' ? 50 : 150 }));
+  await check(`fuzz ${g.key} (${g.cmd})`, () => fuzz(g, { players: g.players ?? (g.group === 'solo' ? 1 : 3), rounds: g.group === 'casino' ? 50 : 150 }));
 }
 
 await check('duel pays winner both stakes exactly once', async () => {
@@ -460,6 +463,181 @@ await check('hold\'em: chips conserved through 300 random hands', async () => {
   assert.ok(hands >= 300, `only ${hands} hands played`);
 });
 
+
+// ---- Hokm & Shelem -----------------------------------------------------------------
+await check('tricks: winner, trump and follow-suit', () => {
+  const T = (str) => str.split(' ').map((c, seat) => ({ seat, card: C(c) }));
+  assert.equal(trickWinner(T('Ks As 2s 3s'), 1), 1, 'ace high in the led suit');
+  assert.equal(trickWinner(T('Ks Ad 2s 3s'), 1), 0, 'off-suit non-trump never wins');
+  assert.equal(trickWinner(T('Ks Ad 2h 3s'), 1), 2, 'a low trump beats the led suit');
+  assert.equal(trickWinner(T('Ks 3h 2h As'), 1), 1, 'the higher trump wins');
+  const s = { hands: [H('Ah 2s 3d'), [], [], []], trick: [{ seat: 3, card: C('Ks') }] };
+  assert.deepEqual(legalSlots(s, 0), [1], 'must follow spades');
+  s.trick = [{ seat: 3, card: C('Kc') }];
+  assert.deepEqual(legalSlots(s, 0), [0, 1, 2], 'void in clubs: anything goes');
+  let pts = 0;
+  for (let c = 0; c < 52; c++) pts += cardPoints(c);
+  assert.equal(pts, 100, 'shelem card points add up to 100');
+});
+
+// Plays a 4-player trick game to the end with random legal moves; returns the world.
+async function playOut(g, { stake = 100, maxSteps = 20_000 } = {}) {
+  const w = world();
+  const users = [1, 2, 3, 4].map((i) => w.player(i, 10_000));
+  const key = 'm:1:1';
+  const lobby = await g.lobby({ creator: users[0], bet: stake });
+  for (const u of users) assert.ok((await press(w, u, find(lobby, new RegExp(`^${g.key}:j:`)), key)).ok);
+  const hands = [];
+  let lastHand = 1;
+  for (let step = 0; step < maxSteps; step++) {
+    const st = w.sessions.get(key).state;
+    if (st.phase === 'ended') return { w, st, hands };
+    if (st.hand !== lastHand) { hands.push(st.result); lastHand = st.hand; }
+    const seat = st.toAct;
+    const u = users.find((x) => x.id === st.seats[seat].id);
+    const rnd = (a) => a[Math.floor(Math.random() * a.length)];
+    let data;
+    if (st.phase === 'play') {
+      const legal = legalSlots(st, seat);
+      // Now and then try an illegal card: it must be refused without changing anything.
+      const illegal = st.hands[seat].flatMap((c, i) => (c != null && !legal.includes(i) ? [i] : []));
+      if (illegal.length && Math.random() < 0.1) {
+        const before = JSON.stringify(st);
+        const r = await press(w, u, `${g.key}:p:${st.seq}:${rnd(illegal)}`, key);
+        assert.equal(r.ok, false, 'illegal card accepted');
+        assert.match(r.error, /follow/);
+        assert.equal(JSON.stringify(w.sessions.get(key).state), before);
+      }
+      data = `${g.key}:p:${st.seq}:${rnd(legal)}`;
+    } else if (st.phase === 'trump') data = `${g.key}:h:${st.seq}:${Math.floor(Math.random() * 4)}`;
+    else if (st.phase === 'discard') data = `sh:d:${st.seq}:${rnd(st.hands[seat].flatMap((c, i) => (c == null ? [] : [i])))}`;
+    else if (st.phase === 'bid') {
+      const opts = buttons({ markup: g.render(st).markup }).map((b) => b.callback_data).filter((d) => d.startsWith('sh:b:'));
+      data = Math.random() < 0.7 ? opts.at(-1) /* pass */ : rnd(opts);
+    }
+    // Shelem: the last card of a hand — every point is accounted for (165 in all).
+    if (g.key === 'sh' && st.phase === 'play' && st.trick.length === 3 && st.hands.flat().filter((c) => c != null).length === 1) {
+      const card = st.hands[seat].find((c) => c != null);
+      const tricksPts = st.points[0] + st.points[1] + 5 + [...st.trick.map((t) => t.card), card].reduce((t, c) => t + cardPoints(c), 0);
+      assert.equal(tricksPts + 5 + st.discards.reduce((t, c) => t + cardPoints(c), 0), 165);
+    }
+    const other = users.find((x) => x.id !== u.id);
+    assert.equal((await press(w, other, data, key)).ok, false, 'acted out of turn');
+    const r = await press(w, u, data, key);
+    assert.ok(r.ok, `${data}: ${r.error}`);
+  }
+  const end = w.sessions.get(key).state;
+  throw new Error(`${g.key}: game did not finish (hand ${end.hand}, score ${end.score})`);
+}
+
+function settled(w, st, stake, base = 10_000) {
+  st.seats.forEach((p, i) => {
+    assert.equal(w.wallets.get(p.id).chips, base + (i % 2 === st.winner ? stake : -stake), `seat ${i} paid wrong`);
+  });
+}
+
+await check('hokm: full games end at 7 points and pay the winning team once', async () => {
+  for (let n = 0; n < 15; n++) {
+    const { w, st } = await playOut(hokm);
+    assert.ok(st.score[st.winner] >= 7 && st.score[1 - st.winner] < st.score[st.winner]);
+    settled(w, st, 100);
+  }
+});
+
+await check('hokm: scoring, kot and the Hakem passing on', () => {
+  // Seat 3 plays the last card of a trick seat 2 takes with K♠, bringing team 0 (seats 0 + 2) to 7.
+  const run = (tricks, hakem) => {
+    const s = hokm.newGame({ creator: { id: 1, name: 'A' }, stake: 0, data: ['', ''] });
+    s.seats = [1, 2, 3, 4].map((id) => ({ id, name: `P${id}` }));
+    Object.assign(s, {
+      phase: 'play', hakem, trump: 1, tricks: [tricks[0] - 1, tricks[1]], toAct: 3,
+      hands: [[], [], [], [C('2s')]], trick: [{ seat: 0, card: C('3s') }, { seat: 1, card: C('5s') }, { seat: 2, card: C('Ks') }],
+    });
+    return hokm.play(s, 3, 0);
+  };
+  let st = run([7, 3], 0);
+  assert.deepEqual([st.score[0], st.hakem, st.phase, st.hand], [1, 0, 'trump', 1], 'Hakem\'s team wins: +1, Hakem stays');
+  st = run([7, 3], 1);
+  assert.deepEqual([st.score[0], st.hakem], [1, 2], 'the Hakem passes to the next player');
+  assert.equal(run([7, 0], 0).score[0], 2, 'kot');
+  assert.equal(run([7, 0], 3).score[0], 3, 'hakem kot');
+});
+
+await check('shelem: full games, 165 points per hand, payouts', async () => {
+  for (let n = 0; n < 6; n++) {
+    const { w, st } = await playOut(shelem);
+    assert.ok(Math.max(...st.score) >= SHELEM_TARGET || Math.min(...st.score) <= -SHELEM_TARGET);
+    settled(w, st, 100);
+  }
+});
+
+await check('shelem: bidding rules and scoring', async () => {
+  const w = world();
+  const users = [1, 2, 3, 4].map((i) => w.player(i, 10_000));
+  const key = 'm:1:1';
+  const lobby = await shelem.lobby({ creator: users[0], bet: 100 });
+  for (const u of users) await press(w, u, find(lobby, /^sh:j:/), key);
+  const st = () => w.sessions.get(key).state;
+  const who = () => users[st().seats[st().toAct].id - 1];
+  const bid = (n) => press(w, who(), `sh:b:${st().seq}:${n}`, key);
+  assert.equal((await bid(95)).ok, false, 'below the minimum');
+  assert.equal((await bid(103)).ok, false, 'not a step of 5');
+  assert.ok((await bid(100)).ok);
+  assert.equal((await bid(100)).ok, false, 'must raise');
+  assert.ok((await bid(0)).ok);
+  assert.ok((await bid(0)).ok);
+  const bidder = st().bidder;
+  assert.ok((await bid(0)).ok, 'last pass ends the bidding');
+  assert.deepEqual([st().phase, st().bidder, st().bid, st().hands[bidder].length], ['discard', bidder, 100, 16]);
+  const v = shelem.view(st(), st().seats[bidder].id);
+  assert.equal(v.cards.length, 16, 'bidder holds the kitty');
+
+  // Scoring: made, set and shelem.
+  const score = (bid, pts, discards) => {
+    const s = { ...st(), bid, bidder: 0, points: [...pts], discards, score: [0, 0], lang: 'en' };
+    shelem.scoreHand(s);
+    return s.score;
+  };
+  const five = [4, 17];           // two fives: 10 points
+  assert.deepEqual(score(110, [100, 50], five), [115, 50], 'made: 100 + kitty 15');
+  assert.deepEqual(score(120, [100, 50], five), [-120, 50], 'set by 5');
+  assert.deepEqual(score(140, [100, 50], five), [-140, 50], 'set');
+  assert.deepEqual(score(165, [150, 0], five), [330, 0], 'shelem made');
+  assert.deepEqual(score(165, [140, 10], five), [-165, 10], 'shelem missed');
+});
+
+await check('hokm/shelem: lobby leave and cancel refund, AFK claim pays the other team', async () => {
+  for (const g of [hokm, shelem]) {
+    const w = world();
+    const users = [1, 2, 3, 4, 5].map((i) => w.player(i, 1000));
+    const key = 'm:1:1';
+    const lobby = await g.lobby({ creator: users[0], bet: 100 });
+    const join = find(lobby, new RegExp(`^${g.key}:j:`)), cancel = find(lobby, new RegExp(`^${g.key}:x:`));
+    assert.ok((await press(w, users[1], join, key)).ok);
+    assert.ok((await press(w, users[1], `${g.key}:l`, key)).ok);
+    assert.equal(w.wallets.get(2).chips, 1000, 'leave refunds');
+    assert.ok((await press(w, users[1], join, key)).ok);
+    assert.equal((await press(w, users[1], cancel, key)).ok, false, 'only the host cancels');
+    assert.ok((await press(w, users[0], cancel, key)).ok);
+    assert.equal(w.wallets.get(2).chips, 1000, 'cancel refunds');
+
+    const key2 = 'm:1:2';
+    for (const u of users.slice(0, 4)) assert.ok((await press(w, u, join, key2)).ok);
+    assert.equal((await press(w, users[4], join, key2)).ok, false, 'fifth player refused');
+    const s = w.sessions.get(key2).state;
+    const actor = s.toAct;
+    const mate = users[s.seats[(actor + 2) % 4].id - 1], opp = users[s.seats[(actor + 1) % 4].id - 1];
+    const claim = `${g.key}:t:${s.seq}`;
+    assert.equal((await press(w, opp, claim, key2)).ok, false, 'too early');
+    s.touched -= 11 * 60 * 1000;
+    assert.equal((await press(w, mate, claim, key2)).ok, false, 'a teammate cannot claim');
+    assert.ok((await press(w, opp, claim, key2)).ok);
+    const end = w.sessions.get(key2).state;
+    assert.equal(end.winner, (actor + 1) % 2);
+    settled(w, end, 100, 1000);
+  }
+});
+
 // ---- hidden information ------------------------------------------------------
 function keysDeep(o, out = new Set()) {
   if (o && typeof o === 'object') for (const [k, v] of Object.entries(o)) { out.add(k); keysDeep(v, out); }
@@ -475,13 +653,21 @@ function assertNoLeak(g, st, uid) {
   if (g.key === 'rp') for (const [id, m] of Object.entries(v.picks ?? {})) if (Number(id) !== uid) assert.equal(m, true, 'rps pick visible');
   if (g.key === 'ph') for (const p of v.seats) if (p.hole && p.id !== uid) assert.ok(st.shown?.[p.id], 'hole cards visible');
   if (g.key === 'hm' && !st.over) assert.ok(v.mask.some((c) => c === null) || st.over, 'hangman word visible');
+  if (g.key === 'hk' || g.key === 'sh') {
+    for (const k of ['hands', 'widow']) assert.ok(!(k in v), `${g.key}: view exposes "${k}"`);
+    const seat = st.seats.findIndex((p) => p.id === uid);
+    if (seat < 0) assert.equal(v.cards, null, 'outsider sees a hand');
+    else if (v.cards) assert.ok(v.cards.every((c) => c == null || st.hands[seat].includes(c)), 'sees cards that are not theirs');
+    if (v.discards) assert.equal(seat, st.bidder, 'kitty visible to a non-bidder');
+  }
   JSON.stringify(v); // must be serialisable
 }
 
 for (const g of GAMES) {
   await check(`no hidden-state leaks: ${g.key}`, async () => {
     const w = world();
-    const users = [1, 2, 3].map((i) => w.player(i));
+    const n = g.players ?? 3;
+    const users = Array.from({ length: n }, (_, i) => w.player(i + 1));
     for (let r = 0; r < 40; r++) {
       const key = `m:1:${r}`;
       let view = await g.lobby({ creator: users[0], bet: g.defaultBet ? 100 : 0 });
@@ -489,10 +675,10 @@ for (const g of GAMES) {
         const opts = buttons(view);
         if (!opts.length) break;
         const b = opts[Math.floor(Math.random() * opts.length)].callback_data;
-        const res = await press(w, users[Math.floor(Math.random() * 3)], b, key);
+        const res = await press(w, users[Math.floor(Math.random() * n)], b, key);
         if (res.ok && res.view) view = res.view;
         const row = w.sessions.get(key);
-        if (row) for (const uid of [1, 2, 3, 99]) assertNoLeak(g, row.state, uid);
+        if (row) for (const uid of [...users.map((u) => u.id), 99]) assertNoLeak(g, row.state, uid);
       }
     }
   });

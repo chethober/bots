@@ -1,7 +1,7 @@
 {
   "name": "telegram-games",
   "version": "1.0.0",
-  "description": "Casino, poker and party games for Telegram — chat games, inline mode and a graphic Mini App on Telegram Serverless. Play-money only.",
+  "description": "Casino, poker, Persian card and party games for Telegram — chat games, inline mode and a graphic Mini App on Telegram Serverless. Play chips only, never cashed out.",
   "license": "MIT",
   "author": "chethober",
   "repository": {
@@ -17,6 +17,8 @@
     "serverless",
     "poker",
     "texas-holdem",
+    "hokm",
+    "shelem",
     "blackjack",
     "games"
   ],

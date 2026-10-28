@@ -33,7 +33,8 @@ chip conservation. Run `npm run test:ui` when you change anything in `public/`.
   Use the `prev` and `state` it returns, or collect payouts in the state the way
   `holdem.js` uses `payq`.
 - Handlers must never throw. A redelivered update must not move chips twice.
-- Keep chips earn-only: no transfers between players.
+- Chips only flow in: earned, or bought with Stars. Never add transfers between players, selling
+  or cashing out.
 
 ## Style
 

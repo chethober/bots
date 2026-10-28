@@ -22,7 +22,7 @@ instructions. Clone the repo, `cd` into the one you want, and follow its README.
 | [`chsbrbot`](chsbrbot) | [CVE alerts](https://t.me/chsbrbot) | Posts new High/Critical CVEs and trending ones (CISA KEV, GitHub PoCs, EPSS), with CVE search |
 | [`chthapibot`](chthapibot) | [Multi-utility bot](https://t.me/chthapibot) | Crypto prices, sports, food & drinks, random pickers and a daily briefing |
 | [`chthbrbot`](chthbrbot) | [anonm](https://t.me/chthbrbot) | Personal anonymous-message link bot: people message you without seeing who you are |
-| [`chthgamesbot`](chthgamesbot) | [Games](https://t.me/chthgamesbot) | Casino, poker and party games: chat games, inline mode and a graphic Mini App. Play-money only |
+| [`chthgamesbot`](chthgamesbot) | [Games](https://t.me/chthgamesbot) | Casino, poker, Persian card games (Hokm, Shelem) and party games: chat games, inline mode and a graphic Mini App. Play chips (buyable with Stars, never cashed out) |
 | [`chthgrambot`](chthgrambot) | Secretary | Telegram Business secretary assistant, powered by Cloudflare Workers AI |
 | [`chtht2sbot`](chtht2sbot) | t2s | Watches a forum's topics and files every posted track into a per-topic Spotify playlist |
 | [`chthvpnbot`](chthvpnbot) | [Community VPN](https://t.me/chthvpnbot) | A directory of VPNs shared by their owners: public listings, private invites with passwords, anonymous memberships. Works best with [xtune](https://github.com/chethober/xtune) public profiles (an account per member), and manages xtune servers' users through management links |

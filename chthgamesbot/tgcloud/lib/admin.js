@@ -2,7 +2,10 @@
 
 import { api, db, BotApiError } from 'sdk';
 import { eq, desc, gt, sql } from 'sdk/db';
-import { players, sessions } from '../schema.js';
+import { players, sessions, purchases } from '../schema.js';
+import { refundPurchase } from './shop.js';
+import { playerLocale } from './i18n.js';
+import { t } from './strings.js';
 import { sendHtml } from './engine.js';
 import { esc, chips } from './ui.js';
 import { ADMIN_IDS } from './config.js';
@@ -18,12 +21,15 @@ const HELP = [
   '/resetdaily &lt;id&gt; — make /daily claimable now',
   '/ban &lt;id&gt; · /unban &lt;id&gt; — block from all games',
   '/broadcast &lt;text&gt; — DM every player (40 per run; add from=&lt;id&gt; to continue)',
+  '/payments [id] — latest Stars purchases (all, or one player\'s)',
+  '/refund &lt;charge id&gt; — return the Stars and take the chips back',
 ].join('\n');
 
 export const ADMIN_COMMANDS = [
   ['admin', 'Admin help'], ['stats', 'Bot statistics'], ['user', 'Player details'],
   ['grant', 'Add/remove chips'], ['setchips', 'Set a balance'], ['resetdaily', 'Reset daily bonus'],
   ['ban', 'Ban a player'], ['unban', 'Unban a player'], ['broadcast', 'Message all players'],
+  ['payments', 'Stars purchases'], ['refund', 'Refund a Stars purchase'],
 ];
 
 // Returns true if the command was an admin command (handled), false otherwise.
@@ -54,11 +60,15 @@ export async function adminCommand(message, cmd, args, rawText) {
         const s = await db.get(sql`SELECT count(*) AS n, sum(updated_at > ${day}) AS active FROM sessions WHERE kind != 'room'`);
         const kinds = await db.all(sql`SELECT kind, count(*) AS n FROM sessions WHERE updated_at > ${day} AND kind != 'room' GROUP BY kind ORDER BY n DESC LIMIT 8`);
         const top = await db.select().from(players).orderBy(desc(players.wagered)).limit(5);
+        const pay = await db.get(sql`SELECT count(*) AS n, coalesce(sum(stars),0) AS stars, coalesce(sum(chips),0) AS chips,
+          sum(created_at > ${day}) AS fresh, sum(credited = 0) AS stuck FROM purchases WHERE refunded = 0`);
         await reply([
           '<b>📊 Stats</b>',
           `Players: <b>${p.n}</b> (${p.fresh ?? 0} new today, ${p.banned ?? 0} banned)`,
           `Chips held: ${chips(p.chips)} · wagered all-time: ${chips(p.wagered)}`,
           `Bets placed: ${p.played}`,
+          `Stars: ⭐ ${pay.stars} from ${pay.n} purchases (${pay.fresh ?? 0} today) · ${chips(pay.chips)} sold`
+            + (pay.stuck ? ` · ⚠️ ${pay.stuck} not credited (/payments)` : ''),
           `Games: ${s.n} total, ${s.active ?? 0} active in 24h`,
           kinds.length ? `Last 24h: ${kinds.map((k) => `${k.kind} ${k.n}`).join(' · ')}` : '',
           '',
@@ -105,6 +115,31 @@ export async function adminCommand(message, cmd, args, rawText) {
         if (isAdmin(id)) return await reply("Admins can't be banned."), true;
         const [x] = await db.update(players).set({ banned: cmd === 'ban' }).where(eq(players.id, id)).returning();
         await reply(x ? `${cmd === 'ban' ? '🚫 Banned' : '✅ Unbanned'} ${esc(x.name)}.` : 'No such player.');
+        return true;
+      }
+
+      case 'payments': {
+        const id = Number(args[0]) || message.reply_to_message?.from?.id;
+        const q = db.select().from(purchases);
+        const rows = await (Number.isSafeInteger(id) ? q.where(eq(purchases.userId, id)) : q).orderBy(desc(purchases.created)).limit(15);
+        if (!rows.length) return await reply('No purchases.'), true;
+        await reply(['<b>⭐ Purchases</b>', ...rows.map((x) => [
+          `${new Date(x.created * 1000).toISOString().slice(0, 16).replace('T', ' ')} · <code>${x.userId}</code> · ⭐ ${x.stars} → ${chips(x.chips)}`
+            + (x.refunded ? ' · ↩️ refunded' : x.credited ? '' : ' · ⚠️ not credited'),
+          `<code>${esc(x.charge)}</code>`,
+        ].join('\n'))].join('\n'));
+        return true;
+      }
+
+      case 'refund': {
+        if (!args[0]) return await reply('Usage: /refund &lt;charge id&gt; (see /payments)'), true;
+        const res = await refundPurchase(args[0]);
+        if (!res) return await reply('Already refunded.'), true;
+        const locale = playerLocale(res.player);
+        await sendHtml(res.purchase.userId, t(locale, 'pay_refunded', {
+          stars: res.purchase.stars, n: chips(res.purchase.chips), chips: chips(res.player?.chips ?? 0),
+        })).catch(() => {});
+        await reply(`↩️ Refunded ⭐ ${res.purchase.stars} to <code>${res.purchase.userId}</code>; they now have ${chips(res.player?.chips ?? 0)}.`);
         return true;
       }
 

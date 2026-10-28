@@ -24,6 +24,8 @@ const GAMES = [
   { key: 'rp', ico: '✂️', t: 'Rock Paper Scissors', d: 'Secret picks', kind: 'room', bet: 100, sec: 'With friends' },
   { key: 'jp', ico: '🎟', t: 'Jackpot', d: 'One winner takes the pot', kind: 'room', bet: 100, sec: 'With friends' },
   { key: 'rr', ico: '🔫', t: 'Russian Roulette', d: 'Survivors split the pot', kind: 'room', bet: 100, sec: 'With friends' },
+  { key: 'hk', ico: '👑', t: 'Hokm', d: 'Persian 2v2 · call trump, 7 tricks', kind: 'room', bet: 100, sec: 'Persian cards' },
+  { key: 'sh', ico: '🎴', t: 'Shelem', d: 'Persian 2v2 · bid for the kitty', kind: 'room', bet: 100, sec: 'Persian cards' },
   { key: 'tt', ico: '❌', t: 'Tic-tac-toe', d: 'Free · 2 players', kind: 'room', bet: 0, sec: 'Party (free)' },
   { key: 'c4', ico: '🔴', t: 'Connect Four', d: 'Free · 2 players', kind: 'room', bet: 0, sec: 'Party (free)' },
   { key: 'tv', ico: '🧠', t: 'Trivia', d: 'Free · fastest finger', kind: 'room', bet: 0, sec: 'Party (free)' },
@@ -86,6 +88,7 @@ function renderDaily() {
   b.textContent = dailyIn > 0 ? `🎁 ${Math.ceil(dailyIn / 3600)}h` : '🎁 Claim';
 }
 document.getElementById('daily').addEventListener('click', () => loadWallet(true));
+document.getElementById('shop').addEventListener('click', () => { haptic('light'); go(shopScreen); });
 setInterval(() => { if (dailyIn > 0) { dailyIn = Math.max(0, dailyIn - 60); renderDaily(); } }, 60_000);
 
 // ---- home ------------------------------------------------------------------------------
@@ -103,7 +106,7 @@ function home() {
         h('span.ico', g.ico), h('span.t', g.t), h('span.d', g.d)))));
   });
   screen.append(h('div.note',
-    'Play-money chips only: you start with 1,000 and get a free bonus every day. Chips can\'t be bought, sold or withdrawn. ',
+    'Play chips only: you start with 1,000 and get a free bonus every day, or buy more with Telegram Stars (💎). Chips can\'t be sold, sent or withdrawn. ',
     'Multiplayer games make a room with an invite link. You can also type @chthgamesbot in any chat.'));
 }
 
@@ -116,6 +119,36 @@ function openGame(key) {
 
 async function loadModule(key) {
   return import(`./games/${key}.js`);
+}
+
+// ---- 💎 buy chips ------------------------------------------------------------------------
+// Packs come with Stars invoice links (endpoints/shop.js). The chips are credited by the bot
+// when Telegram confirms the payment, a moment after the invoice closes, so re-read the wallet.
+function shopScreen() {
+  screen.append(h('h2', '💎 Buy chips'));
+  const list = h('div.grid', h('p.muted', 'Loading…'));
+  screen.append(list, h('div.note',
+    'Paid with Telegram Stars ⭐. Chips are for play only: they can\'t be sold, sent to other players or cashed out. ',
+    'Problem with a payment? Send /paysupport to the bot.'));
+  let dead = false;
+  (async () => {
+    try {
+      const { packs } = await call('shop');
+      if (dead) return;
+      list.replaceChildren(...packs.map((p) => h('button.tile', { onclick: () => buy(p) },
+        h('span.ico', '🪙'), h('span.t', `${fmt(p.chips)} chips`), h('span.d', `⭐ ${fmt(p.stars)}`))));
+    } catch (e) { list.replaceChildren(h('p.muted', e.message || 'Could not load the shop')); }
+  })();
+  function buy(p) {
+    if (!tg?.openInvoice) return toast('Open this inside Telegram.', 'error');
+    haptic('light');
+    tg.openInvoice(p.link, async (status) => {
+      if (status !== 'paid') return status === 'failed' && toast('Payment failed', 'error');
+      toast(`+${fmt(p.chips)} chips on the way!`, 'success');
+      for (const ms of [800, 2000, 4000]) { await new Promise((r) => setTimeout(r, ms)); await loadWallet(); }
+    });
+  }
+  return { destroy() { dead = true; } };
 }
 
 // ---- personal games ------------------------------------------------------------------
