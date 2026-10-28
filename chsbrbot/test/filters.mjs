@@ -3,7 +3,8 @@
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { parseCve } from '../tgcloud/lib/nvd.js';
-import { wantsAlert, watchMatches, parseWatch, addWatch, MAX_WATCH } from '../tgcloud/lib/filters.js';
+import { wantsAlert, watchMatches, parseWatch, addWatch, modeOf, MAX_WATCH } from '../tgcloud/lib/filters.js';
+import { changes } from '../tgcloud/lib/follows.js';
 
 const fixture = (id) => JSON.parse(readFileSync(new URL(`./fixtures/nvd-${id}.json`, import.meta.url))).vulnerabilities[0];
 const xz = parseCve(fixture('CVE-2024-3094'));
@@ -44,4 +45,19 @@ assert.ok(wantsAlert(chat('all', ['nginx', 'xz']), 'new', xz));
 assert.ok(!wantsAlert(chat('critical', ['acme']), 'new', high), 'both filters apply');
 assert.ok(wantsAlert(chat('exploited', ['nginx']), 'broadcast', null), 'broadcasts ignore filters');
 
-console.log('ok: alert filters');
+// Delivery modes.
+assert.equal(modeOf({}), 'instant');
+assert.equal(modeOf({ mode: 'weekly' }), 'weekly');
+assert.equal(modeOf({ mode: 'hourly' }), 'instant');
+
+// What a follower hears about.
+const none = { score: null, severity: null, kev: false, poc: false };
+assert.deepEqual(changes(none, none), []);
+assert.deepEqual(changes(null, none), [], 'a follow without a state hears nothing until something is known');
+assert.deepEqual(changes(none, { ...none, score: 9.8 }), ['score']);
+assert.deepEqual(changes({ ...none, score: 7.5 }, { ...none, score: 7.5 }), []);
+assert.deepEqual(changes({ ...none, score: 7.5 }, { ...none, score: 9.1, kev: true, poc: true }), ['score', 'kev', 'poc']);
+assert.deepEqual(changes({ ...none, kev: true }, { ...none, kev: true }), []);
+assert.deepEqual(changes({ ...none, score: 9.8 }, none), [], 'a score that disappears is not news');
+
+console.log('ok: alert filters, delivery modes, follow updates');

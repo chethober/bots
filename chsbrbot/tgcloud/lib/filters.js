@@ -1,17 +1,23 @@
-// Per-chat alert filters, set in ⚙️ Settings (private chats only; groups and
-// channels get every alert). Pure — no SDK imports.
+// Per-chat alert filters, set in ⚙️ Settings (for a group or channel, by its
+// admins from their private chat). Pure — no SDK imports.
 //
 //   level  'all' (the default: new CVEs above MIN_CVSS and trending ones),
 //          'critical' (new CVEs only from CRITICAL_CVSS) or 'exploited'
 //          (trending ones only: in KEV or with a public PoC)
 //   watch  products, vendors or words; when set, an alert goes out only if
 //          the CVE's affected products or description name one of them
+//   mode   'instant' (the default: each alert as it happens), or 'daily' /
+//          'weekly' for one digest of the alerts that pass (lib/digest.js)
 
 export const LEVELS = ['all', 'critical', 'exploited'];
 export const CRITICAL_CVSS = 9.0;
 export const MAX_WATCH = 20;
 export const MAX_WATCH_LEN = 40;
 
+export const MODES = ['instant', 'daily', 'weekly'];
+export const DIGEST_PERIOD_S = { daily: 86400, weekly: 7 * 86400 };
+
+export const modeOf = (chat) => (MODES.includes(chat?.mode) ? chat.mode : 'instant');
 export const levelOf = (chat) => (LEVELS.includes(chat?.level) ? chat.level : 'all');
 export const watchOf = (chat) => (Array.isArray(chat?.watch) ? chat.watch : []);
 

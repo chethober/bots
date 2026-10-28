@@ -109,18 +109,28 @@ export function latest({ limit = 5, offset = 0 }) {
   return db.select().from(cves).orderBy(...newestFirst).limit(limit).offset(offset).all();
 }
 
-// Trending CVEs, most recently alerted first: details from `cves` where known,
-// else from the KEV entry.
+// Trending CVEs, most recently alerted first.
 export async function trending({ limit = 5, offset = 0 }) {
   const ids = (await db.select({ id: alerts.cveId }).from(alerts)
     .where(eq(alerts.kind, 'trending'))
     .orderBy(desc(alerts.id)).limit(limit).offset(offset).all()).map((r) => r.id);
-  if (!ids.length) return [];
-  const [known, kevRows] = await Promise.all([
-    db.select().from(cves).where(inArray(cves.id, ids)).all(),
-    db.select().from(kev).where(inArray(kev.cveId, ids)).all(),
-  ]);
-  const byId = new Map([...kevRows.map((k) => [k.cveId, fromKev(k)]), ...known.map((c) => [c.id, c])]);
+  return byIds(ids);
+}
+
+// CVEs by id, in that order: details from `cves` where known, else from the
+// KEV entry, else just the id. Looked up 90 at a time, to stay under SQL
+// parameter limits (a weekly digest can list hundreds).
+export async function byIds(ids) {
+  const byId = new Map();
+  for (let i = 0; i < ids.length; i += 90) {
+    const part = ids.slice(i, i + 90);
+    const [known, kevRows] = await Promise.all([
+      db.select().from(cves).where(inArray(cves.id, part)).all(),
+      db.select().from(kev).where(inArray(kev.cveId, part)).all(),
+    ]);
+    for (const k of kevRows) if (!byId.has(k.cveId)) byId.set(k.cveId, fromKev(k));
+    for (const c of known) byId.set(c.id, c);
+  }
   return ids.map((id) => byId.get(id) ?? { id, description: '', bugTypes: [], software: [], pocRefs: [] });
 }
 

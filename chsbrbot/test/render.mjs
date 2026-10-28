@@ -4,11 +4,12 @@
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { parseCve } from '../tgcloud/lib/nvd.js';
-import { cveCard, alertMessage } from '../tgcloud/lib/format.js';
+import { cveCard, alertMessage, digestMessage, followUpdateMessage } from '../tgcloud/lib/format.js';
 import { LOCALES } from '../tgcloud/lib/i18n.js';
 import { t } from '../tgcloud/lib/strings.js';
 import {
-  mainKeyboard, matchButton, categoriesView, settingsView, levelView, watchView, watchPromptView,
+  mainKeyboard, matchButton, categoriesView, settingsView, levelView, deliveryView, watchView, watchPromptView,
+  managedView, linkPromptView,
 } from '../tgcloud/lib/views.js';
 import { ADMIN_IDS } from '../tgcloud/lib/config.js';
 
@@ -30,7 +31,7 @@ function checkHtml(html, where) {
 }
 
 function checkMarkup(markup, where) {
-  for (const row of markup.inline_keyboard) {
+  for (const row of markup?.inline_keyboard ?? []) {
     for (const b of row) {
       if (b.callback_data) assert.ok(Buffer.byteLength(b.callback_data) <= 64, `${where}: callback_data too long`);
       else assert.match(b.url, /^https:\/\//, `${where}: button without a link`);
@@ -65,6 +66,15 @@ for (const locale of LOCALES) {
     cardNoScore: cveCard(noScore, locale),
     alertNew: alertMessage(xz, 'new', null, locale),
     alertTrending: alertMessage(log4j, 'trending', signals, locale),
+    cardFollowing: cveCard(log4j, locale, { kev, back: 'ls:c.memory:12', following: true }),
+    cardFollow: cveCard(xz, locale, { following: false }),
+    digest: digestMessage(Array.from({ length: 40 }, (_, i) => ({
+      cve: { ...(i % 2 ? log4j : xz), id: `CVE-2026-${String(10000 + i)}` }, kinds: i % 3 ? ['new'] : ['new', 'trending'],
+    })), 'weekly', locale),
+    digestOne: digestMessage([{ cve: noScore, kinds: ['trending'] }], 'daily', locale),
+    followScore: followUpdateMessage(xz.id, { score: null, kev: false, poc: false },
+      { score: 9.8, severity: 'CRITICAL', kev: true, poc: true }, ['score', 'kev', 'poc'], locale),
+    followRescore: followUpdateMessage(xz.id, { score: 7.5 }, { score: 9.8, severity: 'CRITICAL' }, ['score'], locale),
   };
   for (const [name, { text, reply_markup }] of Object.entries(outputs)) {
     checkHtml(text, `${locale}/${name}`);
@@ -88,10 +98,17 @@ for (const locale of LOCALES) {
     settingsOn: settingsView({ active: true }, 1, locale),
     settingsOffAdmin: settingsView({ active: false }, ADMIN_IDS[0], locale),
     settingsFiltered: settingsView({ active: true, level: 'critical', watch: ['nginx', 'a&b <x>'] }, 1, locale),
-    level: levelView({ level: 'exploited' }, locale),
-    watchEmpty: watchView({}, locale),
-    watchFull: watchView({ watch: Array.from({ length: 20 }, (_, i) => `${'ж'.repeat(38)}${i}`) }, locale),
-    watchPrompt: watchPromptView(locale),
+    settingsChannel: settingsView({ id: -1001234567890, type: 'channel', title: 'Sec <news> & more', active: true, mode: 'weekly' }, 1, locale),
+    settingsGroupOff: settingsView({ id: -1001234567891, type: 'supergroup', title: 'Ops', active: false }, 1, locale),
+    level: levelView({ id: 1, level: 'exploited' }, locale),
+    levelChannel: levelView({ id: -1001234567890, type: 'channel' }, locale),
+    delivery: deliveryView({ id: -1001234567890, type: 'channel', mode: 'daily' }, locale),
+    watchEmpty: watchView({ id: 1 }, locale),
+    watchFull: watchView({ id: -1001234567890, type: 'channel', watch: Array.from({ length: 20 }, (_, i) => `${'ж'.repeat(38)}${i}`) }, locale),
+    watchPrompt: watchPromptView({ id: -1001234567890 }, locale),
+    managedEmpty: managedView([], locale),
+    managed: managedView(Array.from({ length: 20 }, (_, i) => ({ id: -1001234567890 - i, type: i % 2 ? 'channel' : 'supergroup', title: `Chat ${i}`, active: i % 3 })), locale),
+    linkPrompt: linkPromptView(locale),
   })) {
     checkHtml(view.text, `${locale}/${name}`);
     checkMarkup(view.reply_markup, `${locale}/${name}`);
