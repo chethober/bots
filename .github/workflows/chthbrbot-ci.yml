@@ -1,0 +1,63 @@
+# CI/CD for chthbrbot: tests every pull request and push to main; after the
+# tests pass on main, deploys to Telegram Serverless (tgcloud push) and applies
+# the safe schema changes (tgcloud migrate --safe). Destructive schema changes
+# are only listed in the log: apply them by hand with "npx tgcloud migrate".
+# Needs the repository secret CHTHBRBOT_TGCLOUD_TOKEN (the bot's tgcloud project token).
+name: chthbrbot CI/CD
+
+on:
+  push:
+    branches: [main]
+    paths: ['chthbrbot/**', '.github/workflows/chthbrbot-ci.yml']
+  pull_request:
+    paths: ['chthbrbot/**', '.github/workflows/chthbrbot-ci.yml']
+  workflow_dispatch:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    defaults:
+      run:
+        working-directory: chthbrbot
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: chthbrbot/package-lock.json
+      - run: npm ci
+      - run: npm test
+
+  deploy:
+    needs: test
+    if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    # One deploy at a time: each push is conditional on the cloud's revision.
+    concurrency:
+      group: chthbrbot-deploy
+      cancel-in-progress: false
+    defaults:
+      run:
+        working-directory: chthbrbot
+    env:
+      TGCLOUD_TOKEN: ${{ secrets.CHTHBRBOT_TGCLOUD_TOKEN }}
+    steps:
+      - name: Check TGCLOUD_TOKEN
+        if: env.TGCLOUD_TOKEN == ''
+        working-directory: .
+        run: echo "::error::Set the CHTHBRBOT_TGCLOUD_TOKEN repository secret" && exit 1
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: chthbrbot/package-lock.json
+      - run: npm ci
+      # .tgcloud/ is git-ignored: fetch the cloud snapshot and revision into a
+      # fresh one so push sends only the diff and removes deleted modules.
+      - run: mkdir -p .tgcloud && npx tgcloud fetch
+      - run: npx tgcloud push
+      - run: npx tgcloud migrate --safe
