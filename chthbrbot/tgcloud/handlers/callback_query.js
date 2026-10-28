@@ -6,7 +6,7 @@
 //   ⚙️ Settings st:<op> (st:home = back to it), message types k:<kind>,
 //   invitation reset x:reset, hidden words w:<index>|all, options o:<option>,
 //   unblock ub:<rowid>, new link n:yes|no,
-//   delete d:yes|no, QR code q:me, language lang:<code>, ℹ️ About's ⭐ Tip tip|tip:back
+//   delete d:yes|no, QR code q:me, language lang:<code>, ℹ️ About's ⭐ Tip tip|tip:back|tip:more
 //   admin, under a report:           Ban / Dismiss / Unban  ab:/ad:/au:<reportId>
 //   admin, /admin dashboard am:refresh|reports|bans, /bans unban bu:<createdAt>.<rank>,
 //   /broadcast send bc:<adminMsgId>|no

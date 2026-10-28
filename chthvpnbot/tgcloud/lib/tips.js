@@ -2,7 +2,8 @@
 // no chips, features or perks, just a thank-you. Flow: the About screen's ⭐ Tip button
 // (callback `tip`) swaps its buttons for the four treats below, each a Stars invoice link
 // → handlers/pre_checkout_query.js checks it with validTip → message.successful_payment
-// → thankTip. `tip:back` puts the About buttons back.
+// → thankTip. `tip:back` puts the About buttons back. 🤖 More bots (callback `tip:more`)
+// swaps them for links to the developer's other bots, the same way.
 //
 // Every bot in this repo carries the same copy of this file; keep them identical.
 
@@ -17,9 +18,19 @@ export const TIPS = [
   { key: 'pizza', ico: '🍕', stars: 500 },
 ];
 
+// The developer's public bots, for 🤖 More bots. The bot showing the list leaves itself out.
+export const BOTS = [
+  { user: 'chthgamesbot', ico: '🎰', name: { en: 'Games', fa: 'بازی‌ها', ar: 'ألعاب', ru: 'Игры', es: 'Juegos' } },
+  { user: 'chthvpnbot', ico: '🛡', name: { en: 'Community VPN', fa: 'وی‌پی‌ان اشتراکی', ar: 'VPN مجتمعي', ru: 'VPN сообщества', es: 'VPN comunitaria' } },
+  { user: 'chthbrbot', ico: '🎭', name: { en: 'Anonymous messages', fa: 'پیام ناشناس', ar: 'رسائل مجهولة', ru: 'Анонимные сообщения', es: 'Mensajes anónimos' } },
+  { user: 'chthapibot', ico: '🧰', name: { en: 'Multi-tool', fa: 'ابزار همه‌کاره', ar: 'أدوات متعددة', ru: 'Мультитул', es: 'Multiherramienta' } },
+  { user: 'chsbrbot', ico: '🚨', name: { en: 'CVE alerts', fa: 'هشدار CVE', ar: 'تنبيهات CVE', ru: 'Оповещения CVE', es: 'Alertas CVE' } },
+];
+
 const S = {
   tip: { en: '⭐ Tip the developer', fa: '⭐ حمایت از سازنده', ar: '⭐ ادعم المطوّر', ru: '⭐ Поддержать разработчика', es: '⭐ Invita al desarrollador' },
   source: { en: '🔗 Source code', fa: '🔗 کد منبع', ar: '🔗 الكود المصدري', ru: '🔗 Исходный код', es: '🔗 Código fuente' },
+  more: { en: '🤖 More bots', fa: '🤖 بات‌های دیگه', ar: '🤖 بوتات أخرى', ru: '🤖 Другие боты', es: '🤖 Más bots' },
   back: { en: '« Back', fa: '« برگشت', ar: '« رجوع', ru: '« Назад', es: '« Atrás' },
   coffee: { en: 'Coffee', fa: 'قهوه', ar: 'قهوة', ru: 'Кофе', es: 'Café' },
   fries: { en: 'Fries', fa: 'سیب‌زمینی', ar: 'بطاطا مقلية', ru: 'Картошка фри', es: 'Papas fritas' },
@@ -45,15 +56,27 @@ const tr = (locale, key, vars = {}) =>
   (S[key][locale] ?? S[key].en).replace(/\{(\w+)\}/g, (_, k) => vars[k] ?? '');
 const esc = (s) => String(s ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
 
-export const isTipCallback = (data) => data === 'tip' || data === 'tip:back';
+export const isTipCallback = (data) => data === 'tip' || data === 'tip:back' || data === 'tip:more';
 
-// The About screen's buttons: the bot's own rows (if any), then 🔗 Source code and ⭐ Tip.
+// The About screen's buttons: the bot's own rows (if any), then 🔗 Source code, ⭐ Tip and
+// 🤖 More bots.
 export function aboutKeyboard(locale, sourceUrl, rows = []) {
   return {
     inline_keyboard: [
       ...rows,
       [{ text: tr(locale, 'source'), url: sourceUrl }],
-      [{ text: tr(locale, 'tip'), callback_data: 'tip' }],
+      [{ text: tr(locale, 'tip'), callback_data: 'tip' }, { text: tr(locale, 'more'), callback_data: 'tip:more' }],
+    ],
+  };
+}
+
+// The other bots, one link per row. `self` is this bot's username.
+export function moreKeyboard(locale, self) {
+  const others = BOTS.filter((b) => b.user.toLowerCase() !== String(self ?? '').toLowerCase());
+  return {
+    inline_keyboard: [
+      ...others.map((b) => [{ text: `${b.ico} ${b.name[locale] ?? b.name.en}`, url: `https://t.me/${b.user}` }]),
+      [{ text: tr(locale, 'back'), callback_data: 'tip:back' }],
     ],
   };
 }
@@ -73,10 +96,13 @@ export async function tipKeyboard(locale) {
   };
 }
 
-// The `tip` / `tip:back` callbacks: swap the About message's buttons in place.
+// The `tip` / `tip:more` / `tip:back` callbacks: swap the About message's buttons in place.
+// The About message is the bot's own, so its sender names the bot for moreKeyboard.
 export async function onTipCallback(q, locale, aboutMarkup) {
   await api.answerCallbackQuery({ callback_query_id: q.id }).catch(() => {});
-  const reply_markup = q.data === 'tip' ? await tipKeyboard(locale) : aboutMarkup;
+  const reply_markup = q.data === 'tip' ? await tipKeyboard(locale)
+    : q.data === 'tip:more' ? moreKeyboard(locale, q.message.from?.username)
+    : aboutMarkup;
   await api.editMessageReplyMarkup({ chat_id: q.message.chat.id, message_id: q.message.message_id, reply_markup })
     .catch(() => {}); // "message is not modified" on a double tap
 }
