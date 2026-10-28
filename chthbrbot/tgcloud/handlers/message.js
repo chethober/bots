@@ -2,7 +2,7 @@
 // (plain or with a link code), anonymous sends and replies, and the admin commands.
 // The only slash commands are /start and the admin ones; everything else is a button.
 
-import { PROMPT_MAX, SOURCE_URL, WORDS_MAX, WORD_MAX_LEN } from '../lib/config.js';
+import { ADMIN_IDS, PROMPT_MAX, SOURCE_URL, WORDS_MAX, WORD_MAX_LEN } from '../lib/config.js';
 import { ban, bansView, dashboardView, isAdmin, recipientCount, sendOpenReports, unban } from '../lib/admin.js';
 import { cancelRow, closeScreen, drop, matchButton, showScreen, textsFor } from '../lib/chats.js';
 import { deliverAnonymous, deliverReply, findAlbumStart, findOwnerCopy, findReplyCopy } from '../lib/delivery.js';
@@ -12,6 +12,7 @@ import { linkView, sendHome, settingsView, statsView, wordsView } from '../lib/m
 import { markSeen } from '../lib/receipts.js';
 import { maybePrune } from '../lib/retention.js';
 import { getOrCreateUser, getUser, getUserByCode, getState, setState, setPrompt, setWords } from '../lib/users.js';
+import { aboutKeyboard, thankTip } from '../lib/tips.js';
 import { safeApi } from '../lib/util.js';
 
 const reply = (msg, text, extra = {}) => safeApi('sendMessage', { chat_id: msg.chat.id, text, ...extra });
@@ -41,8 +42,9 @@ async function onButton(msg, key, L) {
       return screen(msg, L.chooseLanguage, { reply_markup: languageKeyboard() });
     case 'privacy':
       return screen(msg, L.privacy);
-    case 'source':
-      return screen(msg, L.sourceHere, { reply_markup: { inline_keyboard: [[{ text: L.source, url: SOURCE_URL }]] } });
+    case 'source': // 🔗 Source code, on keyboards sent before it moved into ℹ️ About
+    case 'about':
+      return screen(msg, L.about, { reply_markup: aboutKeyboard(L.locale, SOURCE_URL) });
   }
 }
 
@@ -179,6 +181,8 @@ export default async function (msg, ctx) {
   if (msg.chat?.type !== 'private' || !msg.from || msg.from.is_bot) return;
   try {
     const L = await textsFor(msg.from);
+    // A ⭐ tip from the About screen (lib/tips.js), never an anonymous message.
+    if (msg.successful_payment) return await thankTip(msg, L.locale, ADMIN_IDS);
     await markSeen(msg.from.id);
     const button = matchButton(msg.text);
     const parsed = button ? null : parseCommand(msg.text);

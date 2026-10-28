@@ -92,7 +92,7 @@ export async function isScreen(chatId, messageId) {
 
 // --- keyboards ----------------------------------------------------------------------
 
-const KEYS = [['link', 'stats'], ['settings', 'language'], ['privacy', 'source']];
+const KEYS = [['link', 'stats'], ['settings', 'language'], ['privacy', 'about']];
 
 export function mainKeyboard(L) {
   return {

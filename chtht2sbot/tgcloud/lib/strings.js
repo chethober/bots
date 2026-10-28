@@ -83,9 +83,6 @@ const strings = {
       '/spotify <refresh_token> — conectar Spotify',
     ].join('\n'),
   },
-  source: {
-    en: '🔗 Source code', fa: '🔗 کد منبع', ar: '🔗 الكود المصدري', ru: '🔗 Исходный код', es: '🔗 Código fuente',
-  },
   spotify_connected: {
     en: 'Spotify: connected ✅', fa: 'اسپاتیفای: متصل ✅', ar: 'Spotify: متصل ✅',
     ru: 'Spotify: подключён ✅', es: 'Spotify: conectado ✅',
@@ -104,9 +101,6 @@ const strings = {
   },
   settings_title: {
     en: '⚙️ Settings', fa: '⚙️ تنظیمات', ar: '⚙️ الإعدادات', ru: '⚙️ Настройки', es: '⚙️ Ajustes',
-  },
-  source_here: {
-    en: '📦 Source code:', fa: '📦 کد منبع:', ar: '📦 الكود المصدري:', ru: '📦 Исходный код:', es: '📦 Código fuente:',
   },
   reaction_on: {
     en: '🔔 Reaction: on {emoji} — tap to turn off', fa: '🔔 واکنش: روشن {emoji} — برای خاموش کردن بزن',

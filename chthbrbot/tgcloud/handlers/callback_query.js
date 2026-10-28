@@ -6,7 +6,7 @@
 //   ⚙️ Settings st:<op> (st:home = back to it), message types k:<kind>,
 //   invitation reset x:reset, hidden words w:<index>|all, options o:<option>,
 //   unblock ub:<rowid>, new link n:yes|no,
-//   delete d:yes|no, QR code q:me, language lang:<code>
+//   delete d:yes|no, QR code q:me, language lang:<code>, ℹ️ About's ⭐ Tip tip|tip:back
 //   admin, under a report:           Ban / Dismiss / Unban  ab:/ad:/au:<reportId>
 //   admin, /admin dashboard am:refresh|reports|bans, /bans unban bu:<createdAt>.<rank>,
 //   /broadcast send bc:<adminMsgId>|no
@@ -14,7 +14,8 @@
 import { api, db } from 'sdk';
 import { eq } from 'sdk/db';
 import { messages, blocks, reports } from '../schema.js';
-import { KINDS, UNSEND_WINDOW_SEC } from '../lib/config.js';
+import { KINDS, SOURCE_URL, UNSEND_WINDOW_SEC } from '../lib/config.js';
+import { aboutKeyboard, isTipCallback, onTipCallback } from '../lib/tips.js';
 import {
   ban, bansView, dashboardView, isAdmin, maybeAutoBan, reportKeyboard, runBroadcast, sendOpenReports, sendReport, unban,
   unbanAt,
@@ -371,6 +372,7 @@ export default async function (q, ctx) {
     else if (action === 'bu') answer = await onBansUnban(q, value, L);
     else if (action === 'lang') answer = await onLanguage(q, value);
     else if (action === 'st') answer = await onSettings(q, value, L);
+    else if (isTipCallback(q.data)) answer = await onTipCallback(q, L.locale, aboutKeyboard(L.locale, SOURCE_URL)); // answers itself
     else if (id === null) answer = {};
     else if (['r', 'b', 'p', 'a'].includes(action)) answer = await onMessageButton(q, action, id, L);
     else if (action === 'u') answer = await onUnsend(q, id, L);

@@ -2,6 +2,7 @@
 // `L` is the viewer's texts table.
 
 import { DIR_PAGE, MEMBERS_PAGE, SOURCE_URL, XTUNE_URL } from './config.js';
+import { aboutKeyboard } from './tips.js';
 import { mainKeyboard, showHome } from './chats.js';
 import { GUIDE_DEVICES, GUIDE_PAGES, ownApps } from './guide.js';
 import { COUNTRIES, flag } from './sources.js';
@@ -149,9 +150,7 @@ export function confirmView(text, yes, no, L) {
 export function aboutView(L) {
   return {
     text: L.about,
-    reply_markup: {
-      inline_keyboard: [[btn(L.guide.btn, 'g:0')], [{ text: L.btnXtune, url: XTUNE_URL }], [{ text: L.btnSourceCode, url: SOURCE_URL }]],
-    },
+    reply_markup: aboutKeyboard(L.locale, SOURCE_URL, [[btn(L.guide.btn, 'g:0')], [{ text: L.btnXtune, url: XTUNE_URL }]]),
   };
 }
 

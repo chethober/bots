@@ -17,7 +17,7 @@ temperature, length, language, knowledge, schedule and more.
 In your private chat with the bot, the interface follows the [shared style](../README.md#how-they-work).
 Everything is a button, in English, Persian, Arabic, Russian or Spanish (your Telegram language, or
 🌐 Language): **📊 Status** (with pause/resume), **⚙️ Settings** (one-tap settings and the panel),
-**🪞 Teach my style**, **🔑 Connect AI**, **🌐 Language**, **ℹ️ Help** and **🔗 Source code**. `/start`
+**🪞 Teach my style**, **🔑 Connect AI**, **🌐 Language**, **❓ Help** and **ℹ️ About** (🔗 Source code and ⭐ Tip the developer). `/start`
 is the only command. Button taps are deleted and each screen replaces the previous one, so the chat
 keeps only relayed messages and previews. Any other text gets a **preview** of how the secretary would
 answer. The panel itself is in English.

@@ -13,13 +13,14 @@ const strings = {
   kb_settings: { en: '⚙️ Settings', fa: '⚙️ تنظیمات', ar: '⚙️ الإعدادات', ru: '⚙️ Настройки', es: '⚙️ Ajustes' },
   kb_language: { en: '🌐 Language', fa: '🌐 زبان', ar: '🌐 اللغة', ru: '🌐 Язык', es: '🌐 Idioma' },
   kb_about: { en: 'ℹ️ About', fa: 'ℹ️ درباره', ar: 'ℹ️ حول البوت', ru: 'ℹ️ О боте', es: 'ℹ️ Acerca de' },
+  // The old button About replaced; keyboards sent before still show it (lib/views.js).
   kb_source: { en: '🔗 Source code', fa: '🔗 کد منبع', ar: '🔗 الكود المصدري', ru: '🔗 Исходный код', es: '🔗 Código fuente' },
   placeholder: {
     en: 'A product, bug type or CVE ID…', fa: 'نام محصول، نوع باگ یا شناسهٔ CVE…', ar: 'منتج أو نوع ثغرة أو معرّف CVE…',
     ru: 'Продукт, тип уязвимости или ID CVE…', es: 'Un producto, tipo de fallo o ID de CVE…',
   },
 
-  // --- home, about, language, source ------------------------------------------
+  // --- home, about, language ------------------------------------------------
   welcome: {
     en: '🛡️ <b>CVE alerts</b>\n\nHi {name}! I post newly published High and Critical vulnerabilities (CVSS above {min}) and CVEs that are exploited in the wild or have a public exploit.\n\nType a product, a bug type or a CVE ID to search, or use the buttons below.',
     fa: '🛡️ <b>هشدار CVE</b>\n\nسلام {name}! آسیب‌پذیری‌های تازهٔ High و Critical (با CVSS بالای {min}) و CVEهایی که در عمل اکسپلویت شده‌اند یا اکسپلویت عمومی دارند را می‌فرستم.\n\nبرای جستجو نام یک محصول، نوع باگ یا شناسهٔ CVE را بنویس، یا از دکمه‌های پایین استفاده کن.',
@@ -42,8 +43,6 @@ const strings = {
     en: '✅ Language set to {name}.', fa: '✅ زبان به {name} تغییر کرد.', ar: '✅ تم ضبط اللغة على {name}.',
     ru: '✅ Язык изменён на {name}.', es: '✅ Idioma cambiado a {name}.',
   },
-  source: { en: '🔗 Source code', fa: '🔗 کد منبع', ar: '🔗 الكود المصدري', ru: '🔗 Исходный код', es: '🔗 Código fuente' },
-  source_here: { en: '📦 Source code:', fa: '📦 کد منبع:', ar: '📦 الكود المصدري:', ru: '📦 Исходный код:', es: '📦 Código fuente:' },
 
   // --- search and lists -----------------------------------------------------------
   search_prompt: {

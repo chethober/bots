@@ -1,5 +1,6 @@
 // Inline buttons: 📊 Status pause/resume, ⚙️ Settings (st:<key>), language
-// (lang:<code>), the setup wizard, and relayed-message actions.
+// (lang:<code>), the setup wizard, relayed-message actions and the About screen's
+// ⭐ Tip buttons (lib/tips.js).
 import { api } from 'sdk';
 import { getSettings, patchSettings, loadSettingsRow, sanitize, resolveCredentials } from '../lib/settings.js';
 import { normalizeLocale, LOCALES, LOCALE_NAMES } from '../lib/i18n.js';
@@ -8,7 +9,8 @@ import { getRelay, getConnection, getChat } from '../lib/store.js';
 import { promptAnswer, markRelay } from '../lib/relay.js';
 import { aiReply } from '../lib/secretary.js';
 import { describeAiError } from '../lib/ai.js';
-import { isAllowed } from '../lib/config.js';
+import { isAllowed, SOURCE_URL } from '../lib/config.js';
+import { aboutKeyboard, isTipCallback, onTipCallback } from '../lib/tips.js';
 import { statusView, settingsKeyboard, nextSetting } from '../lib/ui.js';
 import { startSetup, cancelSetup } from '../lib/setup.js';
 import { localeOf, updateScreen } from '../lib/screen.js';
@@ -30,6 +32,7 @@ export default async function (q) {
     return answer(t(locale, 'setup_cancelled'));
   }
   if (q.data?.startsWith('r:')) return handleRelayButton(q, answer, chatId, locale);
+  if (isTipCallback(q.data)) return onTipCallback(q, locale, aboutKeyboard(locale, SOURCE_URL));
 
   // A language pick: re-send home so the reply keyboard is relabelled (that also
   // removes the picker).

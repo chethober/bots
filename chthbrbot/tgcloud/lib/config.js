@@ -54,5 +54,5 @@ export const SEEN_WINDOW_SEC = 2 * 24 * 60 * 60;
 // Owners' stats then cover this period. 0 = keep forever.
 export const RETENTION_DAYS = 365;
 
-// Public source code for this bot (🔗 Source code button).
+// Public source code for this bot (ℹ️ About).
 export const SOURCE_URL = 'https://github.com/chethober/bots/tree/main/chthbrbot';

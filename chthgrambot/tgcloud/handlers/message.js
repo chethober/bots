@@ -12,6 +12,7 @@ import { describeAiError } from '../lib/ai.js';
 import { panelKeyboard, setupButton, settingsKeyboard, statusView } from '../lib/ui.js';
 import { startSetup, handleSetupInput } from '../lib/setup.js';
 import { deliverAnswer } from '../lib/relay.js';
+import { aboutKeyboard, thankTip } from '../lib/tips.js';
 import { drop, localeOf, mainKeyboard, matchButton, showHome, showScreen } from '../lib/screen.js';
 
 export default async function (message) {
@@ -24,6 +25,8 @@ export default async function (message) {
   if (!isAllowed(userId)) return send(t(normalizeLocale(message.from.language_code), 'private'));
 
   const locale = await localeOf(userId, message.from);
+  // A ⭐ tip from the About screen (lib/tips.js).
+  if (message.successful_payment) return thankTip(message, locale);
   const text = message.text ?? '';
   const cmd = text.startsWith('/') ? text.split(/[\s@]/)[0].toLowerCase() : null;
 
@@ -49,8 +52,8 @@ export default async function (message) {
         return screen(t(locale, 'choose_language'), { reply_markup: languageKeyboard() });
       case 'help':
         return screen(t(locale, 'help'));
-      case 'source':
-        return screen(t(locale, 'source_here'), { reply_markup: { inline_keyboard: [[{ text: t(locale, 'kb_source'), url: SOURCE_URL }]] } });
+      case 'about':
+        return screen(t(locale, 'about'), { reply_markup: aboutKeyboard(locale, SOURCE_URL) });
     }
   }
 

@@ -17,7 +17,7 @@ the Telegram Serverless runtime itself. See [API sources](#api-sources).
 
 In private chats the bot follows the [shared interface](../README.md#how-they-work). A persistent
 keyboard under the text field opens 💰 Crypto, 🏆 Sports, 🍽 Food & drinks, 🎲 Random, ☀️ Daily
-briefing, 🔔 Notifications, ⚙️ Settings, 🌐 Language and 🔗 Source code, labelled in the chat's
+briefing, 🔔 Notifications, ⚙️ Settings, 🌐 Language and ℹ️ About (🔗 Source code, ⭐ Tip the developer), labelled in the chat's
 language. Each opens a screen with buttons attached, and those buttons change the screen in place.
 Questions (a coin to search, a reminder, quiet hours…) appear on the screen with a ✖️ Cancel
 button, and you answer by sending a message. Your taps and answers are deleted and each screen

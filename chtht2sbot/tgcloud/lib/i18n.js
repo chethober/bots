@@ -56,6 +56,7 @@ export function languageKeyboard() {
 export const BUTTONS = {
   about:    { en: 'ℹ️ About', fa: 'ℹ️ درباره', ar: 'ℹ️ حول البوت', ru: 'ℹ️ О боте', es: 'ℹ️ Acerca de' },
   language: { en: '🌐 Language', fa: '🌐 زبان', ar: '🌐 اللغة', ru: '🌐 Язык', es: '🌐 Idioma' },
+  // The old button About replaced; keyboards sent before still show it, and it opens About.
   source:   { en: '🔗 Source code', fa: '🔗 کد منبع', ar: '🔗 الكود المصدري', ru: '🔗 Исходный код', es: '🔗 Código fuente' },
 };
 
@@ -63,7 +64,7 @@ const label = (key, locale) => BUTTONS[key][locale] ?? BUTTONS[key].en;
 
 export function mainKeyboard(locale) {
   return {
-    keyboard: [[{ text: label('about', locale) }, { text: label('language', locale) }], [{ text: label('source', locale) }]],
+    keyboard: [[{ text: label('about', locale) }, { text: label('language', locale) }]],
     resize_keyboard: true,
     is_persistent: true,
   };
@@ -73,7 +74,7 @@ export function mainKeyboard(locale) {
 export function matchButton(text) {
   const t = (text || '').trim();
   for (const [key, labels] of Object.entries(BUTTONS)) {
-    if (Object.values(labels).includes(t)) return key;
+    if (Object.values(labels).includes(t)) return key === 'source' ? 'about' : key;
   }
   return null;
 }

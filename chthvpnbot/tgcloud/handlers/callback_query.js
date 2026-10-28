@@ -30,9 +30,10 @@ import {
   addReport, banOwner, closeReports, deleteVpn, getMember, getReport, getState, getVpn, getVpnByCode, membership,
   newCode, ownedVpns, setState, updateVpn,
 } from '../lib/store.js';
+import { isTipCallback, onTipCallback } from '../lib/tips.js';
 import { safeApi } from '../lib/util.js';
 import {
-  confirmView, countryView, directoryView, guideView, joinedView, manageView, memberView, membersView, ownedView,
+  aboutView, confirmView, countryView, directoryView, guideView, joinedView, manageView, memberView, membersView, ownedView,
   reportReasonsView, sendHome,
 } from '../lib/views.js';
 
@@ -325,6 +326,8 @@ async function route(q, L) {
 export default async function (q) {
   try {
     const L = await textsFor(q.from);
+    // ℹ️ About's ⭐ Tip buttons (lib/tips.js); they answer the query themselves.
+    if (isTipCallback(q.data)) return await onTipCallback(q, L.locale, aboutView(L).reply_markup);
     const answer = await route(q, L);
     await safeApi('answerCallbackQuery', { callback_query_id: q.id, ...answer });
   } catch (e) {

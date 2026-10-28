@@ -52,7 +52,7 @@ export async function closeScreen(userId) {
 
 // --- reply keyboard ---------------------------------------------------------------
 
-const KEYS = [['kb_games', 'kb_hub'], ['kb_balance', 'kb_daily', 'kb_shop'], ['kb_top', 'kb_language', 'kb_source']];
+const KEYS = [['kb_games', 'kb_hub'], ['kb_balance', 'kb_daily', 'kb_shop'], ['kb_top', 'kb_language', 'kb_about']];
 
 export function mainKeyboard(locale) {
   return {
@@ -69,5 +69,7 @@ export function matchButton(text) {
   for (const k of KEYS.flat()) {
     if (LOCALES.some((l) => t(l, k) === s)) return k.slice(3);
   }
+  // 🔗 Source code, on keyboards sent before it moved into ℹ️ About.
+  if (LOCALES.some((l) => t(l, 'kb_source') === s)) return 'about';
   return null;
 }

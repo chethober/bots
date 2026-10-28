@@ -23,5 +23,5 @@ export const PACKS = [
   { stars: 500, chips: 65_000 },
 ];
 
-// Public source code for this bot (shown on /start and /games).
+// Public source code for this bot (ℹ️ About).
 export const SOURCE_URL = 'https://github.com/chethober/bots/tree/main/chthgamesbot';

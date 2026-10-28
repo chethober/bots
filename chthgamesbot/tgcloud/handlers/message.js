@@ -7,6 +7,7 @@ import { api, db } from 'sdk';
 import { desc } from 'sdk/db';
 import { players } from '../schema.js';
 import { ensurePlayer, claimDaily, sendHtml } from '../lib/engine.js';
+import { aboutKeyboard, isTipPayment, thankTip } from '../lib/tips.js';
 import { invoiceLinks, creditPayment, revokePurchase, recentPurchases, validPayment } from '../lib/shop.js';
 import { menuText, menuMarkup, sendHome } from '../lib/menu.js';
 import { adminCommand, ADMIN_COMMANDS, isAdmin } from '../lib/admin.js';
@@ -31,7 +32,11 @@ async function handle(message) {
   const chatId = message.chat.id;
   const chatType = message.chat.type;
 
-  // Telegram Stars: a paid (or refunded) 💎 chips pack. Payments arrive in the private chat.
+  // Telegram Stars: a paid (or refunded) 💎 chips pack, or a ⭐ tip (lib/tips.js).
+  // Payments arrive in the private chat.
+  if (isTipPayment(message.successful_payment)) {
+    return thankTip(message, playerLocale(await ensurePlayer(message.from)), ADMIN_IDS);
+  }
   if (message.successful_payment) return onPayment(message);
   if (message.refunded_payment) return onRefund(message);
 
@@ -119,8 +124,8 @@ async function onButton(me, button, locale) {
       return showScreen(chatId, await leaderboard(locale));
     case 'language':
       return showScreen(chatId, t(locale, 'choose_language'), languageKeyboard());
-    case 'source':
-      return showScreen(chatId, t(locale, 'source_here'), { inline_keyboard: [[{ text: t(locale, 'kb_source'), url: SOURCE_URL }]] });
+    case 'about':
+      return showScreen(chatId, t(locale, 'about'), aboutKeyboard(locale, SOURCE_URL));
   }
 }
 

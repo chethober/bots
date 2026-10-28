@@ -61,7 +61,7 @@
 
 **In the private chat everything is a button** ([shared style](../README.md#how-they-work)), in English, Persian, Arabic, Russian or Spanish
 (the player's Telegram language, or 🌐 Language): 🎮 Games · 🕹 Game hub · 💰 Balance ·
-🎁 Daily chips (a free bonus every 20 hours) · 💎 Buy chips · 🏆 Top players · 🌐 Language · 🔗 Source code.
+🎁 Daily chips (a free bonus every 20 hours) · 💎 Buy chips · 🏆 Top players · 🌐 Language · ℹ️ About (🔗 Source code, ⭐ Tip the developer).
 Button taps are deleted and each menu replaces the previous one; game messages stay. In groups,
 send `/start@yourbot` (or add the bot) for the games menu, or use inline mode. `/start`,
 `/paysupport` and the admin commands are the only slash commands. Game messages are written in the language of whoever

@@ -5,7 +5,8 @@
 import { api, db, BotApiError } from 'sdk';
 import { and, eq, inArray } from 'sdk/db';
 import { topics, tracks } from '../schema.js';
-import { FORUM_ID, PUBLIC_PLAYLISTS, playlistDescription, SOURCE_URL } from '../lib/config.js';
+import { ADMIN_IDS, FORUM_ID, PUBLIC_PLAYLISTS, playlistDescription, SOURCE_URL } from '../lib/config.js';
+import { aboutKeyboard, thankTip } from '../lib/tips.js';
 import { saveSetting } from '../lib/settings.js';
 import { getReaction, getDeleteDuplicates, isAdminId, sendHome, settingsView } from '../lib/panel.js';
 import { localeFor, languageKeyboard, matchButton } from '../lib/i18n.js';
@@ -217,17 +218,17 @@ async function handleAdminCommand(message, { cmd, args }) {
   }
 }
 
-// Private chat. Everyone gets the reply keyboard (ℹ️ About · 🌐 Language ·
-// 🔗 Source code); the only slash commands are the admin ones.
+// Private chat. Everyone gets the reply keyboard (ℹ️ About, with 🔗 Source code and
+// ⭐ Tip · 🌐 Language); the only slash commands are the admin ones.
 async function handlePrivate(message, command) {
   const chatId = message.chat.id;
+  if (message.successful_payment) return thankTip(message, await localeFor(message.from), ADMIN_IDS);
   const button = matchButton(message.text);
   if (button) {
     await drop(chatId, message.message_id);
     const locale = await localeFor(message.from);
-    if (button === 'about') return showScreen(chatId, { text: t(locale, 'about') });
-    if (button === 'language') return showScreen(chatId, { text: t(locale, 'choose_language'), reply_markup: languageKeyboard() });
-    return showScreen(chatId, { text: t(locale, 'source_here'), reply_markup: { inline_keyboard: [[{ text: t(locale, 'source'), url: SOURCE_URL }]] } });
+    if (button === 'about') return showScreen(chatId, { text: t(locale, 'about'), reply_markup: aboutKeyboard(locale, SOURCE_URL) });
+    return showScreen(chatId, { text: t(locale, 'choose_language'), reply_markup: languageKeyboard() });
   }
   if (command?.cmd === 'settings') return settingsScreen(message);
   if (command?.cmd === 'reaction') return handleReactionCommand(message, command.args);

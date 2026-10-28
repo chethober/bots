@@ -1,8 +1,11 @@
-// handlers/callback_query.js — language selection and the ⚙️ Settings toggles (st:<op>).
+// handlers/callback_query.js — language selection, the ⚙️ Settings toggles (st:<op>) and
+// the About screen's ⭐ Tip buttons (lib/tips.js).
 import { api } from 'sdk';
 import { setLocale, LOCALE_NAMES, localeFor } from '../lib/i18n.js';
 import { isAdminId, sendHome, settingsView, toggleSetting } from '../lib/panel.js';
 import { t } from '../lib/strings.js';
+import { aboutKeyboard, isTipCallback, onTipCallback } from '../lib/tips.js';
+import { SOURCE_URL } from '../lib/config.js';
 
 export default async function (q) {
   const data = q.data ?? '';
@@ -28,6 +31,11 @@ export default async function (q) {
     await api.answerCallbackQuery({ callback_query_id: q.id, text: t(locale, 'language_set', { name: LOCALE_NAMES[locale] ?? locale }) }).catch(() => {});
     await sendHome(q.from);
     return;
+  }
+
+  if (isTipCallback(data)) {
+    const locale = await localeFor(q.from);
+    return onTipCallback(q, locale, aboutKeyboard(locale, SOURCE_URL));
   }
 
   await api.answerCallbackQuery({ callback_query_id: q.id }).catch(() => {});

@@ -20,7 +20,7 @@ language or the 🌐 Language button. Every user-facing string is in one file
 ([`tgcloud/lib/texts.js`](tgcloud/lib/texts.js)), one table per language.
 
 The interface follows the [shared style](../README.md#how-they-work). Everything a user does is a button: a reply
-keyboard (🎭 My link · 📊 Stats · ⚙️ Settings · 🌐 Language · 🔒 Privacy · 🔗 Source code) and inline buttons under
+keyboard (🎭 My link · 📊 Stats · ⚙️ Settings · 🌐 Language · 🔒 Privacy · ℹ️ About) and inline buttons under
 each screen. The chat stays clean: button taps are deleted, and each screen replaces the previous one. Slash commands
 are only `/start` and the admin commands.
 
@@ -82,7 +82,7 @@ are only `/start` and the admin commands.
 | ⚙️ Settings        | Pause/resume, invitation text, message types, hidden words, options, QR code, blocked senders, new link, delete my data |
 | 🌐 Language        | Persian, English, Arabic, Russian, Spanish                          |
 | 🔒 Privacy         | What is stored                                                      |
-| 🔗 Source code     | This repository                                                     |
+| ℹ️ About           | What the bot is, 🔗 Source code and ⭐ Tip the developer             |
 
 A pending send, reply or edit has a ✖️ Cancel button. `/start` (with a code: start sending) is the
 only user command.

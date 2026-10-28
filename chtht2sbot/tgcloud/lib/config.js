@@ -23,5 +23,5 @@ export const playlistDescription = (topic) => `${topic}@chthbr`;
 // Make auto-created playlists public?
 export const PUBLIC_PLAYLISTS = false;
 
-// Public source code for this bot (shown via /start and the Source button).
+// Public source code for this bot (ℹ️ About).
 export const SOURCE_URL = 'https://github.com/chethober/bots/tree/main/chtht2sbot';

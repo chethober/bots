@@ -16,7 +16,7 @@ export const MIN_EPSS = 0.15;
 // CISA KEV entries added within this many days count as trending.
 export const KEV_DAYS = 30;
 
-// Public source code for this bot (shown via the Source button).
+// Public source code for this bot (ℹ️ About).
 export const SOURCE_URL = 'https://github.com/chethober/bots/tree/main/chsbrbot';
 
 export const nvdUrl = (id) => `https://nvd.nist.gov/vuln/detail/${id}`;

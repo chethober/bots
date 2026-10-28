@@ -10,8 +10,11 @@ const strings = {
   kb_learn:    { en: '🪞 Teach my style', fa: '🪞 یاد دادن سبکم', ar: '🪞 تعليم أسلوبي', ru: '🪞 Мой стиль', es: '🪞 Enseñar mi estilo' },
   kb_setup:    { en: '🔑 Connect AI', fa: '🔑 اتصال هوش مصنوعی', ar: '🔑 ربط الذكاء الاصطناعي', ru: '🔑 Подключить ИИ', es: '🔑 Conectar IA' },
   kb_language: { en: '🌐 Language', fa: '🌐 زبان', ar: '🌐 اللغة', ru: '🌐 Язык', es: '🌐 Idioma' },
-  kb_help:     { en: 'ℹ️ Help', fa: 'ℹ️ راهنما', ar: 'ℹ️ مساعدة', ru: 'ℹ️ Помощь', es: 'ℹ️ Ayuda' },
-  kb_source:   { en: '🔗 Source code', fa: '🔗 کد منبع', ar: '🔗 الكود المصدري', ru: '🔗 Исходный код', es: '🔗 Código fuente' },
+  kb_help:     { en: '❓ Help', fa: '❓ راهنما', ar: '❓ مساعدة', ru: '❓ Помощь', es: '❓ Ayuda' },
+  kb_about:    { en: 'ℹ️ About', fa: 'ℹ️ درباره', ar: 'ℹ️ حول البوت', ru: 'ℹ️ О боте', es: 'ℹ️ Acerca de' },
+  // Old labels, on keyboards sent before ℹ️ About took 🔗 Source code's place (lib/screen.js).
+  old_help:    { en: 'ℹ️ Help', fa: 'ℹ️ راهنما', ar: 'ℹ️ مساعدة', ru: 'ℹ️ Помощь', es: 'ℹ️ Ayuda' },
+  old_source:  { en: '🔗 Source code', fa: '🔗 کد منبع', ar: '🔗 الكود المصدري', ru: '🔗 Исходный код', es: '🔗 Código fuente' },
 
   // --- home / help ------------------------------------------------------------
   help: {
@@ -106,7 +109,13 @@ Las fotos, notas de voz, archivos y stickers de tus contactos se te reenvían aq
     en: 'Use the buttons below 👇', fa: 'از دکمه‌های پایین استفاده کن 👇', ar: 'استخدم الأزرار بالأسفل 👇',
     ru: 'Пользуйся кнопками внизу 👇', es: 'Usa los botones de abajo 👇',
   },
-  source_here: { en: '📦 Source code:', fa: '📦 کد منبع:', ar: '📦 الكود المصدري:', ru: '📦 Исходный код:', es: '📦 Código fuente:' },
+  about: {
+    en: 'ℹ️ About\n\nAn AI secretary for Telegram Business: it answers your private chats while you\'re away, in your style, and hands you anything it can\'t handle. It runs on your own free Cloudflare Workers AI key, so your chats go only to Telegram and Cloudflare.\n\nFree and open source.',
+    fa: 'ℹ️ درباره\n\nیه منشی هوش مصنوعی برای تلگرام بیزینس: وقتی نیستی به چت‌های خصوصیت با سبک خودت جواب می‌ده و هر چیزی رو که از پسش برنمیاد به خودت می‌سپاره. با کلید رایگان Cloudflare Workers AI خودت کار می‌کنه، پس چت‌هات فقط به تلگرام و Cloudflare می‌رسن.\n\nرایگان و متن‌باز.',
+    ar: 'ℹ️ حول البوت\n\nسكرتير ذكاء اصطناعي لـ Telegram Business: يرد على محادثاتك الخاصة أثناء غيابك بأسلوبك، ويحيل إليك ما لا يستطيع التعامل معه. يعمل بمفتاح Cloudflare Workers AI المجاني الخاص بك، فلا تذهب محادثاتك إلا إلى تيليجرام وCloudflare.\n\nمجاني ومفتوح المصدر.',
+    ru: 'ℹ️ О боте\n\nИИ-секретарь для Telegram Business: отвечает в твоих личных чатах, пока тебя нет, в твоём стиле, и передаёт тебе всё, с чем не справится. Работает на твоём бесплатном ключе Cloudflare Workers AI, так что переписка уходит только в Telegram и Cloudflare.\n\nБесплатный, с открытым кодом.',
+    es: 'ℹ️ Acerca de\n\nUn secretario con IA para Telegram Business: responde tus chats privados mientras no estás, con tu estilo, y te pasa lo que no puede resolver. Funciona con tu propia clave gratuita de Cloudflare Workers AI, así que tus chats solo van a Telegram y Cloudflare.\n\nGratis y de código abierto.',
+  },
   choose_language: {
     en: '🌐 Choose your language:', fa: '🌐 زبان خود را انتخاب کنید:', ar: '🌐 اختر لغتك:',
     ru: '🌐 Выберите язык:', es: '🌐 Elige tu idioma:',

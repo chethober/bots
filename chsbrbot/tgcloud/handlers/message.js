@@ -5,7 +5,8 @@
 // are ignored.
 
 import { api } from 'sdk';
-import { SOURCE_URL, MIN_CVSS } from '../lib/config.js';
+import { SOURCE_URL, MIN_CVSS, ADMIN_IDS } from '../lib/config.js';
+import { aboutKeyboard, thankTip } from '../lib/tips.js';
 import { upsertChat, getChat, migrate } from '../lib/chats.js';
 import { saveSetting } from '../lib/settings.js';
 import { localeFor, languageKeyboard } from '../lib/i18n.js';
@@ -34,9 +35,8 @@ async function onButton(button, message, locale) {
     case 'categories': return showScreen(chatId, categoriesView(locale));
     case 'settings': return showScreen(chatId, settingsView(await getChat(chatId), message.from.id, locale));
     case 'language': return showScreen(chatId, { text: t(locale, 'choose_language'), reply_markup: languageKeyboard() });
-    case 'about': return showScreen(chatId, { text: t(locale, 'about', { min: MIN_CVSS }) });
-    default: return showScreen(chatId, {
-      text: t(locale, 'source_here'), reply_markup: { inline_keyboard: [[{ text: t(locale, 'source'), url: SOURCE_URL }]] },
+    case 'about': return showScreen(chatId, {
+      text: t(locale, 'about', { min: MIN_CVSS }), reply_markup: aboutKeyboard(locale, SOURCE_URL),
     });
   }
 }
@@ -83,6 +83,8 @@ export default async function (message) {
   if (message.migrate_to_chat_id) return migrate(message.chat.id, message.migrate_to_chat_id);
   if (message.chat.type !== 'private' || message.from?.is_bot) return;
   try {
+    // A ⭐ tip from the About screen (lib/tips.js).
+    if (message.successful_payment) return await thankTip(message, await localeFor(message.from), ADMIN_IDS);
     await onPrivate(message);
   } catch (e) {
     console.error(e);

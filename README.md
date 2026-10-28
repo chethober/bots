@@ -38,6 +38,9 @@ The bots share one interface style:
   Telegram language or the 🌐 Language button, including the bot descriptions.
 - **Clean chat.** Button taps are deleted and each screen replaces the previous one, so the chat
   keeps only real content (messages, games, alerts).
+- **ℹ️ About.** What the bot does, with 🔗 Source code and ⭐ Tip the developer: a ☕ coffee,
+  🍟 fries, 🍔 burger or 🍕 pizza (50, 100, 250 or 500 Telegram Stars). A tip unlocks nothing; the
+  bot thanks the tipper and tells its admins. Each bot carries the same `tgcloud/lib/tips.js`.
 
 Every bot follows it. The multi-utility bot also keeps its slash commands as typed shortcuts (and
 a command menu in groups), and its hub screens are in English; some admin screens are English too.

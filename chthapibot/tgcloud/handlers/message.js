@@ -15,6 +15,7 @@ import { esc } from '../lib/format.js';
 import { normalizeLocale, LOCALES } from '../lib/i18n.js';
 import { matchButton } from '../lib/keyboard.js';
 import { t, SOURCE_URL } from '../lib/strings.js';
+import { aboutKeyboard, thankTip } from '../lib/tips.js';
 
 let botUsername = null;
 
@@ -36,6 +37,8 @@ export default async function (msg) {
   const isPrivate = ctx.chatType === 'private';
 
   try {
+    // A ⭐ tip from the About screen (lib/tips.js).
+    if (msg.successful_payment) return await thankTip(msg, ctx.locale);
     if (isPrivate) await drop(ctx.chatId, msg.message_id);
 
     if (msg.location) {
@@ -56,10 +59,10 @@ export default async function (msg) {
       const action = matchButton(text);
       if (action) {
         await takePending(ctx.chatId, ctx.userId);
-        if (action === 'source') {
+        if (action === 'about') {
           return await showScreen(ctx.chatId, () => sendCard(ctx.chatId, {
-            text: t(ctx.locale, 'source_here'),
-            keyboard: [[{ text: t(ctx.locale, 'source'), url: SOURCE_URL }]],
+            text: t(ctx.locale, 'about'),
+            keyboard: aboutKeyboard(ctx.locale, SOURCE_URL).inline_keyboard,
           }));
         }
         if (action === 'language') return await findCommand('language')(ctx, []);

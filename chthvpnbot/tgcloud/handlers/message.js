@@ -4,11 +4,13 @@
 // commands are /start and the admin ones; everything else is a button.
 
 import { dashboardText, isAdmin, sendOpenReports } from '../lib/admin.js';
+import { ADMIN_IDS } from '../lib/config.js';
 import { drop, matchButton, showScreen, textsFor } from '../lib/chats.js';
 import { onAddName, onAddPassword, onAddSource, onEdit, onPassword, openVpn, startAdd } from '../lib/flows.js';
 import { languageKeyboard } from '../lib/i18n.js';
 import { onAddServer, onServerInput } from '../lib/servers.js';
 import { getState, getVpnByCode, setState } from '../lib/store.js';
+import { thankTip } from '../lib/tips.js';
 import { safeApi } from '../lib/util.js';
 import { aboutView, directoryView, joinedView, ownedView, sendHome } from '../lib/views.js';
 
@@ -49,6 +51,8 @@ export default async function (msg) {
   if (msg.chat?.type !== 'private' || !msg.from || msg.from.is_bot) return;
   try {
     const L = await textsFor(msg.from);
+    // A ⭐ tip from the About screen (lib/tips.js).
+    if (msg.successful_payment) return await thankTip(msg, L.locale, ADMIN_IDS);
     const button = matchButton(msg.text);
     const parsed = button ? null : parseCommand(msg.text);
 

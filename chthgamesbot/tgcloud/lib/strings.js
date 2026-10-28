@@ -11,6 +11,8 @@ const strings = {
   kb_top:      { en: '🏆 Top players', fa: '🏆 برترین‌ها', ar: '🏆 أفضل اللاعبين', ru: '🏆 Лучшие игроки', es: '🏆 Mejores jugadores' },
   kb_language: { en: '🌐 Language', fa: '🌐 زبان', ar: '🌐 اللغة', ru: '🌐 Язык', es: '🌐 Idioma' },
   kb_shop:     { en: '💎 Buy chips', fa: '💎 خرید چیپ', ar: '💎 شراء رقائق', ru: '💎 Купить фишки', es: '💎 Comprar fichas' },
+  kb_about:    { en: 'ℹ️ About', fa: 'ℹ️ درباره', ar: 'ℹ️ حول البوت', ru: 'ℹ️ О боте', es: 'ℹ️ Acerca de' },
+  // The old button About replaced; keyboards sent before still show it (lib/screen.js).
   kb_source:   { en: '🔗 Source code', fa: '🔗 کد منبع', ar: '🔗 الكود المصدري', ru: '🔗 Исходный код', es: '🔗 Código fuente' },
 
   welcome: {
@@ -167,7 +169,13 @@ const strings = {
     es: '✅ Enviado a los admins. Te responderán aquí.',
   },
 
-  source_here: { en: '📦 Source code:', fa: '📦 کد منبع:', ar: '📦 الكود المصدري:', ru: '📦 Исходный код:', es: '📦 Código fuente:' },
+  about: {
+    en: 'ℹ️ <b>About Chth Games</b>\n\nCasino, poker, Persian card games (Hokm, Shelem) and party games: here, in groups, inline in any chat and in the 🕹 Game hub.\n\nChips are play money. Get them free every day or buy them with Stars; they are never sold, sent or cashed out.\n\nFree to play and open source.',
+    fa: 'ℹ️ <b>دربارهٔ چث گیمز</b>\n\nکازینو، پوکر، بازی‌های ورق ایرانی (حکم، شلم) و بازی‌های گروهی: همین‌جا، توی گروه‌ها، به‌صورت اینلاین توی هر چتی و توی 🕹 هاب بازی.\n\nچیپ‌ها پول بازیچه‌ان. هر روز مجانی بگیر یا با استارز بخر؛ هیچ‌وقت فروخته، منتقل یا نقد نمی‌شن.\n\nبازی رایگانه و کدش متن‌باز.',
+    ar: 'ℹ️ <b>حول Chth Games</b>\n\nكازينو وبوكر وألعاب ورق فارسية (حكم، شلم) وألعاب جماعية: هنا، وفي المجموعات، وبالوضع المضمّن في أي محادثة، وفي 🕹 مركز الألعاب.\n\nالرقائق نقود لعب. احصل عليها مجانًا كل يوم أو اشترها بالنجوم؛ لا تُباع ولا تُرسل ولا تُصرف أبدًا.\n\nاللعب مجاني والكود مفتوح المصدر.',
+    ru: 'ℹ️ <b>О Chth Games</b>\n\nКазино, покер, персидские карточные игры (Хокм, Шелем) и игры для компании: здесь, в группах, через инлайн в любом чате и в 🕹 Игровом хабе.\n\nФишки — игровые деньги. Получай их бесплатно каждый день или покупай за Stars; их нельзя продать, передать или обналичить.\n\nИграть бесплатно, код открыт.',
+    es: 'ℹ️ <b>Acerca de Chth Games</b>\n\nCasino, póker, juegos de cartas persas (Hokm, Shelem) y juegos de grupo: aquí, en grupos, en modo inline en cualquier chat y en el 🕹 Centro de juegos.\n\nLas fichas son dinero de juego. Consíguelas gratis cada día o cómpralas con Stars; nunca se venden, envían ni cobran.\n\nGratis para jugar y de código abierto.',
+  },
   choose_language: {
     en: '🌐 Choose your language:', fa: '🌐 زبان خود را انتخاب کنید:', ar: '🌐 اختر لغتك:',
     ru: '🌐 Выберите язык:', es: '🌐 Elige tu idioma:',

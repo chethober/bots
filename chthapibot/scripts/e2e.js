@@ -462,7 +462,8 @@ export default async function (input) {
     await S('press location → location keyboard', async () => { await tap('⚙️ Settings'); await press('st:loc'); });
     await S('tap ⬅️ Settings restores keyboard', () => tap('⬅️ Settings'));
     await S('share a location', () => onMessage({ message_id: 2, chat: { id: CHAT, type: 'private' }, from: { id: 4242, first_name: 'Tester', is_bot: false }, location: { latitude: 52.52, longitude: 13.4 } }));
-    await S('tap 🔗 Source code', () => tap('🔗 Source code'));
+    await S('tap ℹ️ About', () => tap('ℹ️ About'));
+    await S('old 🔗 Source code label opens About', () => tap('🔗 Source code'));
     await S('tap 🌐 Language → fa', async () => { await tap('🌐 Language'); await press('lang:fa'); });
     await S('Persian label opens crypto', () => tap('💰 کریپتو'));
     await S('English label still works', () => tap('🏆 Sports'));

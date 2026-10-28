@@ -9,6 +9,8 @@ import { editScreen, showHome, showScreen } from '../lib/screen.js';
 import { isAdmin, homeView, listView, categoriesView, cveView, settingsView } from '../lib/views.js';
 import { dashboardView, statsView, historyView, chatsView, sendTestAlert, tickView } from '../lib/admin.js';
 import { t } from '../lib/strings.js';
+import { aboutKeyboard, isTipCallback, onTipCallback } from '../lib/tips.js';
+import { SOURCE_URL } from '../lib/config.js';
 
 const answer = (q, text, alert = false) =>
   api.answerCallbackQuery({ callback_query_id: q.id, text, show_alert: alert }).catch(() => {});
@@ -67,6 +69,7 @@ async function route(q, locale) {
     return editScreen(q.message, settingsView(await getChat(chatId), q.from.id, locale));
   }
   if (op === 'adm') return onAdmin(q, rest[0], locale);
+  if (isTipCallback(data)) return onTipCallback(q, locale, aboutKeyboard(locale, SOURCE_URL));
   return answer(q);
 }
 

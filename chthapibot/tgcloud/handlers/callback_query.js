@@ -3,6 +3,8 @@ import { api } from 'sdk';
 import { runCallback } from '../lib/hubs/index.js';
 import { getPrefs } from '../lib/store.js';
 import { normalizeLocale } from '../lib/i18n.js';
+import { aboutKeyboard, isTipCallback, onTipCallback } from '../lib/tips.js';
+import { SOURCE_URL } from '../lib/strings.js';
 
 export default async function (q) {
   let answered = false;
@@ -23,6 +25,11 @@ export default async function (q) {
     },
   };
   try {
+    // The About screen's ⭐ Tip buttons; onTipCallback answers the query itself.
+    if (isTipCallback(q.data)) {
+      answered = true;
+      return await onTipCallback(q, ctx.locale, aboutKeyboard(ctx.locale, SOURCE_URL));
+    }
     await runCallback(ctx, q.data);
   } catch (e) {
     console.error(`callback ${q.data} failed`, e);

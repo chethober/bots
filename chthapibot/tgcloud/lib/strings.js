@@ -1,6 +1,6 @@
 // Core multilingual strings: the /start greeting, the reply keyboard, the main
-// menu, /help header, the /language switcher, prompts' chrome and the source
-// link. The detailed command reference and the hub screens stay in English
+// menu, /help header, the /language switcher, prompts' chrome and the About
+// screen. The detailed command reference and the hub screens stay in English
 // (fallback) per the core-surface scope.
 import { makeT } from './i18n.js';
 
@@ -30,6 +30,7 @@ const strings = {
   btn_notifications: { en: '🔔 Notifications', fa: '🔔 اعلان‌ها', ar: '🔔 الإشعارات', ru: '🔔 Уведомления', es: '🔔 Notificaciones' },
   btn_settings: { en: '⚙️ Settings', fa: '⚙️ تنظیمات', ar: '⚙️ الإعدادات', ru: '⚙️ Настройки', es: '⚙️ Ajustes' },
   btn_language: { en: '🌐 Language', fa: '🌐 زبان', ar: '🌐 اللغة', ru: '🌐 Язык', es: '🌐 Idioma' },
+  btn_about: { en: 'ℹ️ About', fa: 'ℹ️ درباره', ar: 'ℹ️ حول البوت', ru: 'ℹ️ О боте', es: 'ℹ️ Acerca de' },
   btn_cancel: { en: '✖️ Cancel', fa: '✖️ لغو', ar: '✖️ إلغاء', ru: '✖️ Отмена', es: '✖️ Cancelar' },
   btn_back_settings: { en: '⬅️ Settings', fa: '⬅️ تنظیمات', ar: '⬅️ الإعدادات', ru: '⬅️ Настройки', es: '⬅️ Ajustes' },
   btn_share_location: { en: '📍 Share location', fa: '📍 ارسال موقعیت', ar: '📍 مشاركة الموقع', ru: '📍 Отправить геопозицию', es: '📍 Compartir ubicación' },
@@ -50,8 +51,15 @@ const strings = {
     ru: 'Нажми 📍, чтобы отправить геопозицию. Она задаст часовой пояс и добавит погоду в ежедневную сводку.',
     es: 'Toca 📍 para compartir tu ubicación. Ajusta tu zona horaria y añade el tiempo al resumen diario.',
   },
+  // The old button About replaced; keyboards sent before still show it (lib/keyboard.js).
   source: { en: '🔗 Source code', fa: '🔗 کد منبع', ar: '🔗 الكود المصدري', ru: '🔗 Исходный код', es: '🔗 Código fuente' },
-  source_here: { en: '📦 Source code:', fa: '📦 کد منبع:', ar: '📦 الكود المصدري:', ru: '📦 Исходный код:', es: '📦 Código fuente:' },
+  about: {
+    en: 'ℹ️ <b>About</b>\n\nA pocket multi-tool: 💰 crypto prices and alerts, 🏆 scores and fixtures, 🍽 recipes, cocktails and coffee, 🎲 random picks and fun, and a ☀️ daily briefing. It works here and in groups; send /help for every command.\n\nFree and open source, built on public APIs.',
+    fa: 'ℹ️ <b>درباره</b>\n\nیه چندکارهٔ جیبی: 💰 قیمت و هشدار کریپتو، 🏆 نتایج و برنامهٔ بازی‌ها، 🍽 دستور غذا، کوکتل و قهوه، 🎲 انتخاب‌های تصادفی و سرگرمی، و ☀️ خلاصهٔ روزانه. هم این‌جا کار می‌کنه هم توی گروه‌ها؛ برای همهٔ دستورها /help بفرست.\n\nرایگان و متن‌باز، ساخته‌شده با APIهای عمومی.',
+    ar: 'ℹ️ <b>حول البوت</b>\n\nأداة متعددة في جيبك: 💰 أسعار العملات الرقمية وتنبيهاتها، 🏆 النتائج والمباريات، 🍽 الوصفات والكوكتيلات والقهوة، 🎲 اختيارات عشوائية وتسلية، و☀️ موجز يومي. يعمل هنا وفي المجموعات؛ أرسل /help لكل الأوامر.\n\nمجاني ومفتوح المصدر، مبني على واجهات برمجة عامة.',
+    ru: 'ℹ️ <b>О боте</b>\n\nКарманный мультитул: 💰 курсы и оповещения по крипте, 🏆 счёт и расписание матчей, 🍽 рецепты, коктейли и кофе, 🎲 случайный выбор и развлечения и ☀️ ежедневная сводка. Работает здесь и в группах; все команды — /help.\n\nБесплатный, с открытым кодом, на публичных API.',
+    es: 'ℹ️ <b>Acerca de</b>\n\nUna multiherramienta de bolsillo: 💰 precios y alertas de cripto, 🏆 resultados y calendarios, 🍽 recetas, cócteles y café, 🎲 elecciones al azar y diversión, y un ☀️ resumen diario. Funciona aquí y en grupos; envía /help para ver todos los comandos.\n\nGratis y de código abierto, hecho con APIs públicas.',
+  },
   choose_language: {
     en: '🌐 Choose your language:', fa: '🌐 زبان خود را انتخاب کنید:', ar: '🌐 اختر لغتك:',
     ru: '🌐 Выберите язык:', es: '🌐 Elige tu idioma:',

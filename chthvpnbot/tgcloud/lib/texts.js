@@ -31,7 +31,7 @@ function compose(locale, w) {
   const expiry = (ts) => (ts > 0 ? w.expiresIn(num(Math.max(0, Math.ceil((ts - Date.now() / 1000) / 86400)))) : w.noExpiry);
 
   return {
-    ...w, num,
+    ...w, locale, num,
     srv: composeSrv(locale, SRV[locale], num, ago),
     guide: composeGuide(num, GUIDE[locale]),
 
@@ -148,7 +148,7 @@ const en = {
     'membership. Owners see only labels; an xtune server gets only the label. Passwords are stored hashed. For a server you manage here, its management link is stored so the bot can reach it.\n\n' +
     '⚠️ The bot checks that servers answer, not that they work on your network. Use VPNs you trust: a server\'s owner ' +
     'can see traffic that isn\'t otherwise encrypted.',
-  btnXtune: '⭐ xtune on GitHub', btnSourceCode: '🔗 Source code',
+  btnXtune: '⭐ xtune on GitHub',
 
   now: 'just now', minutes: (n) => `${n} min ago`, hours: (n) => `${n} h ago`, days: (n) => `${n} days ago`,
   unknown: 'unknown',
@@ -332,7 +332,7 @@ const fa = {
     'صاحب سرور فقط برچسب رو می‌بینه و سرور xtune هم فقط برچسب رو می‌گیره. رمزها هش‌شده ذخیره می‌شن. برای سروری که اینجا مدیریتش می‌کنی، لینک مدیریتش ذخیره می‌شه تا ربات بتونه بهش وصل بشه.\n\n' +
     '⚠️ ربات فقط بررسی می‌کنه که سرور جواب بده، نه اینکه از شبکه‌ی تو کار کنه. فقط از وی‌پی‌ان‌هایی استفاده کن که بهشون اعتماد داری: ' +
     'صاحب سرور ترافیکی که جدا رمزنگاری نشده رو می‌بینه.',
-  btnXtune: '⭐ xtune در گیت‌هاب', btnSourceCode: '🔗 کد منبع',
+  btnXtune: '⭐ xtune در گیت‌هاب',
 
   now: 'همین الان', minutes: (n) => `${n} دقیقه پیش`, hours: (n) => `${n} ساعت پیش`, days: (n) => `${n} روز پیش`,
   unknown: 'نامشخص',
@@ -513,7 +513,7 @@ const ar = {
     '🔒 الخصوصية: يحتفظ البوت بمعرّف تيليجرام ولغتك والشبكات التي انضممت إليها أو أضفتها ووسم عشوائي لكل عضوية. ' +
     'يرى المالكون الوسوم فقط، ويحصل خادم xtune على الوسم فقط. كلمات المرور مخزنة مجزأة (hash). وللخادم الذي تديره هنا يُحفظ رابط إدارته ليصل إليه البوت.\n\n' +
     '⚠️ يتحقق البوت من أن الخوادم تستجيب، لا من أنها تعمل على شبكتك. استخدم شبكات تثق بها: يرى مالك الخادم الحركة غير المشفرة.',
-  btnXtune: '⭐ xtune على GitHub', btnSourceCode: '🔗 الشيفرة المصدرية',
+  btnXtune: '⭐ xtune على GitHub',
 
   now: 'الآن', minutes: (n) => `قبل ${n} دقيقة`, hours: (n) => `قبل ${n} ساعة`, days: (n) => `قبل ${n} يوم`,
   unknown: 'غير معروف',
@@ -696,7 +696,7 @@ const ru = {
     'для каждого членства. Владельцы видят только метки; сервер xtune получает только метку. Пароли хранятся в виде хэша. Для сервера, которым вы управляете здесь, хранится его ссылка управления.\n\n' +
     '⚠️ Бот проверяет, что серверы отвечают, а не что они работают в вашей сети. Пользуйтесь VPN, которым доверяете: ' +
     'владелец сервера видит незашифрованный трафик.',
-  btnXtune: '⭐ xtune на GitHub', btnSourceCode: '🔗 Исходный код',
+  btnXtune: '⭐ xtune на GitHub',
 
   now: 'только что', minutes: (n) => `${n} мин назад`, hours: (n) => `${n} ч назад`, days: (n) => `${n} дн назад`,
   unknown: 'неизвестно',
@@ -879,7 +879,7 @@ const es = {
     'aleatoria por membresía. Los dueños solo ven etiquetas; un servidor xtune solo recibe la etiqueta. Las contraseñas se guardan con hash. De un servidor que gestiones aquí se guarda su enlace de gestión para poder llegar a él.\n\n' +
     '⚠️ El bot comprueba que los servidores respondan, no que funcionen en tu red. Usa VPN en las que confíes: el dueño ' +
     'del servidor ve el tráfico que no va cifrado.',
-  btnXtune: '⭐ xtune en GitHub', btnSourceCode: '🔗 Código fuente',
+  btnXtune: '⭐ xtune en GitHub',
 
   now: 'ahora mismo', minutes: (n) => `hace ${n} min`, hours: (n) => `hace ${n} h`, days: (n) => `hace ${n} días`,
   unknown: 'desconocido',

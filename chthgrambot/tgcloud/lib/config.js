@@ -19,5 +19,5 @@ export function isAllowed(userId) {
   return ALLOWED_USER_IDS.length === 0 || ALLOWED_USER_IDS.includes(userId);
 }
 
-// Public source code for this bot (shown on /start).
+// Public source code for this bot (ℹ️ About).
 export const SOURCE_URL = 'https://github.com/chethober/bots/tree/main/chthgrambot';

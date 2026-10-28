@@ -86,7 +86,7 @@ export async function updateScreen(chatId, messageId, { text, reply_markup }) {
 
 // --- reply keyboard -------------------------------------------------------------------
 
-const KEYS = [['kb_status', 'kb_settings'], ['kb_learn', 'kb_setup'], ['kb_language', 'kb_help', 'kb_source']];
+const KEYS = [['kb_status', 'kb_settings'], ['kb_learn', 'kb_setup'], ['kb_language', 'kb_help', 'kb_about']];
 
 export function mainKeyboard(locale) {
   return {
@@ -103,5 +103,7 @@ export function matchButton(text) {
   for (const k of KEYS.flat()) {
     if (LOCALES.some((l) => t(l, k) === s)) return k.slice(3);
   }
+  if (LOCALES.some((l) => t(l, 'old_help') === s)) return 'help';
+  if (LOCALES.some((l) => t(l, 'old_source') === s)) return 'about';
   return null;
 }

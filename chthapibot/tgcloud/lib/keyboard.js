@@ -1,7 +1,7 @@
 // The private chat's persistent reply keyboard, in the chat's language. A tap
 // is matched against every language's label, so a keyboard sent before a
 // language change still works. Each key opens what its callback data names
-// (routed by hubs/index.js); `source` and `language` are handled by the
+// (routed by hubs/index.js); `about` and `language` are handled by the
 // message handler.
 
 import { t } from './strings.js';
@@ -12,7 +12,7 @@ const KEYS = [
   ['btn_food', 'btn_random'],
   ['btn_daily', 'btn_notifications'],
   ['btn_settings', 'btn_language'],
-  ['source'],
+  ['btn_about'],
 ];
 
 // Key → what it opens: callback data, or a name the message handler knows.
@@ -25,7 +25,7 @@ export const KEY_ACTIONS = {
   btn_notifications: 'n:l:*:0',
   btn_settings: 'st:home',
   btn_language: 'language',
-  source: 'source',
+  btn_about: 'about',
 };
 
 export function mainKeyboard(locale) {
@@ -44,5 +44,7 @@ export function matchButton(text) {
   for (const k of KEYS.flat()) {
     if (LOCALES.some((l) => t(l, k) === s)) return KEY_ACTIONS[k];
   }
+  // 🔗 Source code, on keyboards sent before it moved into ℹ️ About.
+  if (LOCALES.some((l) => t(l, 'source') === s)) return 'about';
   return null;
 }

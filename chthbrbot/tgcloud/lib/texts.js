@@ -31,7 +31,7 @@ function helpers(locale, w) {
 const fa = (w) => {
   const { num, ago, who, invitation, kindList } = helpers('fa', w);
   return {
-    ...w, num, ago, who, invitation, kindList,
+    ...w, locale: 'fa', num, ago, who, invitation, kindList,
 
     profile: {
       description:
@@ -47,7 +47,9 @@ const fa = (w) => {
     // Reply keyboard
     kb: {
       link: '🎭 لینک من', stats: '📊 آمار', settings: '⚙️ تنظیمات', language: '🌐 زبان',
-      privacy: '🔒 حریم خصوصی', source: '🔗 کد منبع',
+      privacy: '🔒 حریم خصوصی', about: 'ℹ️ درباره',
+      // The old button About replaced; keyboards sent before still show it.
+      source: '🔗 کد منبع',
     },
 
     // Home
@@ -348,8 +350,7 @@ const fa = (w) => {
 
     chooseLanguage: '🌐 زبان خود را انتخاب کنید:',
     languageSet: (name) => `✅ زبان به ${name} تغییر کرد.`,
-    sourceHere: '📦 کد منبع:',
-    source: '🔗 کد منبع',
+    about: 'ℹ️ دربارهٔ anonm\n\nیه لینک پیام ناشناس شخصی: به اشتراکش بذار، هر کسی بازش کنه می‌تونه بهت پیام بده بدون اینکه بفهمی کیه. می‌تونی ناشناس جواب بدی، مسدود کنی یا گزارش بدی.\n\nجزئیات حریم خصوصی توی «🔒 حریم خصوصی»ه. رایگان و متن‌باز.',
 
     // Inline mode (@bot in any chat)
     inlineShareTitle: '📤 اشتراک لینک ناشناس من',
@@ -365,7 +366,7 @@ const fa = (w) => {
 const en = (w) => {
   const { num, ago, who, invitation, kindList } = helpers('en', w);
   return {
-    ...w, num, ago, who, invitation, kindList,
+    ...w, locale: 'en', num, ago, who, invitation, kindList,
 
     profile: {
       description:
@@ -380,7 +381,9 @@ const en = (w) => {
 
     kb: {
       link: '🎭 My link', stats: '📊 Stats', settings: '⚙️ Settings', language: '🌐 Language',
-      privacy: '🔒 Privacy', source: '🔗 Source code',
+      privacy: '🔒 Privacy', about: 'ℹ️ About',
+      // The old button About replaced; keyboards sent before still show it.
+      source: '🔗 Source code',
     },
 
     welcome: (owner, link) =>
@@ -666,8 +669,7 @@ const en = (w) => {
 
     chooseLanguage: '🌐 Choose your language:',
     languageSet: (name) => `✅ Language set to ${name}.`,
-    sourceHere: '📦 Source code:',
-    source: '🔗 Source code',
+    about: 'ℹ️ About anonm\n\nA personal anonymous-message link: share it, and anyone who opens it can message you without you seeing who they are. You can reply anonymously, block or report.\n\nPrivacy details are under 🔒 Privacy. Free and open source.',
 
     inlineShareTitle: '📤 Share my anonymous link',
     inlineCustomTitle: '✏️ Share with this text',
@@ -682,7 +684,7 @@ const en = (w) => {
 const ar = (w) => {
   const { num, ago, who, invitation, kindList } = helpers('ar', w);
   return {
-    ...w, num, ago, who, invitation, kindList,
+    ...w, locale: 'ar', num, ago, who, invitation, kindList,
 
     profile: {
       description:
@@ -697,7 +699,9 @@ const ar = (w) => {
 
     kb: {
       link: '🎭 رابطي', stats: '📊 الإحصاءات', settings: '⚙️ الإعدادات', language: '🌐 اللغة',
-      privacy: '🔒 الخصوصية', source: '🔗 الكود المصدري',
+      privacy: '🔒 الخصوصية', about: 'ℹ️ حول البوت',
+      // The old button About replaced; keyboards sent before still show it.
+      source: '🔗 الكود المصدري',
     },
 
     welcome: (owner, link) =>
@@ -983,8 +987,7 @@ const ar = (w) => {
 
     chooseLanguage: '🌐 اختر لغتك:',
     languageSet: (name) => `✅ تم ضبط اللغة على ${name}.`,
-    sourceHere: '📦 الكود المصدري:',
-    source: '🔗 الكود المصدري',
+    about: 'ℹ️ حول anonm\n\nرابط شخصي للرسائل المجهولة: شاركه، وكل من يفتحه يمكنه مراسلتك دون أن تعرف من هو. يمكنك الرد بشكل مجهول أو الحظر أو الإبلاغ.\n\nتفاصيل الخصوصية في «🔒 الخصوصية». مجاني ومفتوح المصدر.',
 
     inlineShareTitle: '📤 مشاركة رابطي المجهول',
     inlineCustomTitle: '✏️ مشاركة بهذا النص',
@@ -999,7 +1002,7 @@ const ar = (w) => {
 const ru = (w) => {
   const { num, ago, who, invitation, kindList } = helpers('ru', w);
   return {
-    ...w, num, ago, who, invitation, kindList,
+    ...w, locale: 'ru', num, ago, who, invitation, kindList,
 
     profile: {
       description:
@@ -1014,7 +1017,9 @@ const ru = (w) => {
 
     kb: {
       link: '🎭 Моя ссылка', stats: '📊 Статистика', settings: '⚙️ Настройки', language: '🌐 Язык',
-      privacy: '🔒 Конфиденциальность', source: '🔗 Исходный код',
+      privacy: '🔒 Конфиденциальность', about: 'ℹ️ О боте',
+      // The old button About replaced; keyboards sent before still show it.
+      source: '🔗 Исходный код',
     },
 
     welcome: (owner, link) =>
@@ -1300,8 +1305,7 @@ const ru = (w) => {
 
     chooseLanguage: '🌐 Выберите язык:',
     languageSet: (name) => `✅ Язык изменён на ${name}.`,
-    sourceHere: '📦 Исходный код:',
-    source: '🔗 Исходный код',
+    about: 'ℹ️ Об anonm\n\nЛичная ссылка для анонимных сообщений: поделись ей, и любой, кто её откроет, сможет написать тебе, а ты не узнаешь, кто это. Можно отвечать анонимно, блокировать и жаловаться.\n\nПодробности — в «🔒 Конфиденциальность». Бесплатный, с открытым кодом.',
 
     inlineShareTitle: '📤 Поделиться анонимной ссылкой',
     inlineCustomTitle: '✏️ Поделиться с этим текстом',
@@ -1316,7 +1320,7 @@ const ru = (w) => {
 const es = (w) => {
   const { num, ago, who, invitation, kindList } = helpers('es', w);
   return {
-    ...w, num, ago, who, invitation, kindList,
+    ...w, locale: 'es', num, ago, who, invitation, kindList,
 
     profile: {
       description:
@@ -1331,7 +1335,9 @@ const es = (w) => {
 
     kb: {
       link: '🎭 Mi enlace', stats: '📊 Estadísticas', settings: '⚙️ Ajustes', language: '🌐 Idioma',
-      privacy: '🔒 Privacidad', source: '🔗 Código fuente',
+      privacy: '🔒 Privacidad', about: 'ℹ️ Acerca de',
+      // The old button About replaced; keyboards sent before still show it.
+      source: '🔗 Código fuente',
     },
 
     welcome: (owner, link) =>
@@ -1617,8 +1623,7 @@ const es = (w) => {
 
     chooseLanguage: '🌐 Elige tu idioma:',
     languageSet: (name) => `✅ Idioma cambiado a ${name}.`,
-    sourceHere: '📦 Código fuente:',
-    source: '🔗 Código fuente',
+    about: 'ℹ️ Acerca de anonm\n\nUn enlace personal de mensajes anónimos: compártelo y cualquiera que lo abra podrá escribirte sin que sepas quién es. Puedes responder de forma anónima, bloquear o denunciar.\n\nLos detalles de privacidad están en 🔒 Privacidad. Gratis y de código abierto.',
 
     inlineShareTitle: '📤 Compartir mi enlace anónimo',
     inlineCustomTitle: '✏️ Compartir con este texto',
