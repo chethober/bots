@@ -1,0 +1,84 @@
+# CI/CD for chthmusicbot: tests every pull request and push to main; after the
+# tests pass on main, deploys to Telegram Serverless (tgcloud push) and applies
+# the safe schema changes (tgcloud migrate --safe). Destructive schema changes
+# are only listed in the log: apply them by hand with "npx tgcloud migrate".
+# Deploying needs the repository secret CHTHMUSICBOT_TGCLOUD_TOKEN (the bot's
+# tgcloud project token); until it's set the deploy is skipped. The service
+# credentials (CHTHMUSICBOT_SPOTIFY_CLIENT_ID, …) are optional.
+name: chthmusicbot CI/CD
+
+on:
+  push:
+    branches: [main]
+    paths: ['chthmusicbot/**', '.github/workflows/chthmusicbot-ci.yml']
+  pull_request:
+    paths: ['chthmusicbot/**', '.github/workflows/chthmusicbot-ci.yml']
+  workflow_dispatch:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    defaults:
+      run:
+        working-directory: chthmusicbot
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: chthmusicbot/package-lock.json
+      - run: npm ci
+      - run: cp secrets.example.js tgcloud/lib/secrets.js
+      - run: npm test
+
+  deploy:
+    needs: test
+    if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    # One deploy at a time: each push is conditional on the cloud's revision.
+    concurrency:
+      group: chthmusicbot-deploy
+      cancel-in-progress: false
+    defaults:
+      run:
+        working-directory: chthmusicbot
+    env:
+      TGCLOUD_TOKEN: ${{ secrets.CHTHMUSICBOT_TGCLOUD_TOKEN }}
+    steps:
+      - name: Check TGCLOUD_TOKEN
+        if: env.TGCLOUD_TOKEN == ''
+        working-directory: .
+        run: echo "::notice::Set the CHTHMUSICBOT_TGCLOUD_TOKEN repository secret to deploy chthmusicbot"
+      - uses: actions/checkout@v5
+        if: env.TGCLOUD_TOKEN != ''
+      - uses: actions/setup-node@v5
+        if: env.TGCLOUD_TOKEN != ''
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: chthmusicbot/package-lock.json
+      - if: env.TGCLOUD_TOKEN != ''
+        run: npm ci
+      - name: Write tgcloud/lib/secrets.js
+        if: env.TGCLOUD_TOKEN != ''
+        run: |
+          node -e 'const keys = ["SPOTIFY_CLIENT_ID", "GOOGLE_CLIENT_ID", "GOOGLE_CLIENT_SECRET", "APPLE_MUSIC_DEVELOPER_TOKEN", "SONGLINK_API_KEY"];
+            require("fs").writeFileSync("tgcloud/lib/secrets.js",
+              keys.map((k) => `export const ${k} = ${JSON.stringify(process.env[k] ?? "")};\n`).join(""))'
+        env:
+          SPOTIFY_CLIENT_ID: ${{ secrets.CHTHMUSICBOT_SPOTIFY_CLIENT_ID }}
+          GOOGLE_CLIENT_ID: ${{ secrets.CHTHMUSICBOT_GOOGLE_CLIENT_ID }}
+          GOOGLE_CLIENT_SECRET: ${{ secrets.CHTHMUSICBOT_GOOGLE_CLIENT_SECRET }}
+          APPLE_MUSIC_DEVELOPER_TOKEN: ${{ secrets.CHTHMUSICBOT_APPLE_MUSIC_DEVELOPER_TOKEN }}
+          SONGLINK_API_KEY: ${{ secrets.CHTHMUSICBOT_SONGLINK_API_KEY }}
+      # .tgcloud/ is git-ignored: fetch the cloud snapshot and revision into a
+      # fresh one so push sends only the diff and removes deleted modules.
+      - if: env.TGCLOUD_TOKEN != ''
+        run: mkdir -p .tgcloud && npx tgcloud fetch
+      - if: env.TGCLOUD_TOKEN != ''
+        run: npx tgcloud push
+      - if: env.TGCLOUD_TOKEN != ''
+        run: npx tgcloud migrate --safe

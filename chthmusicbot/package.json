@@ -1,0 +1,14 @@
+{
+  "name": "chthmusicbot",
+  "private": true,
+  "devDependencies": {
+    "@tgcloud/cli": "^0.2.0"
+  },
+  "scripts": {
+    "deploy": "tgcloud push",
+    "status": "tgcloud status",
+    "run": "tgcloud run",
+    "test": "node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON --import ./test/register.mjs test/imports.mjs && node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON --import ./test/register.mjs test/strings.mjs && node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON --import ./test/register.mjs test/refs.mjs && node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON --import ./test/register-fake.mjs test/flow.mjs",
+    "setup": "tgcloud run endpoints/setup '{}'"
+  }
+}

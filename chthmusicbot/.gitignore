@@ -1,0 +1,5 @@
+.tgcloud/
+node_modules/
+
+# Deployment secrets
+tgcloud/lib/secrets.js

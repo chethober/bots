@@ -1,0 +1,5 @@
+{
+  "$schema": "./node_modules/@tgcloud/cli/schema/tgcloud.json",
+  // The Mini App (Spotify and Apple Music logins) is plain static HTML, no build step.
+  "static": { "source": "web" }
+}
