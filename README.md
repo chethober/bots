@@ -35,7 +35,7 @@ instructions. Clone the repo, `cd` into the one you want, and follow its README.
 
 | Folder | Bot | What it does |
 |---|---|---|
-| [`chsbrbot`](chsbrbot) | [CVE alerts](https://t.me/chsbrbot) | Posts new High/Critical CVEs and trending ones (CISA KEV, GitHub PoCs, EPSS), with CVE search |
+| [`chsbrbot`](chsbrbot) | [CVE alerts](https://t.me/chsbrbot) | Posts new High/Critical CVEs and trending ones (CISA KEV, GitHub PoCs, EPSS), with CVE search, watchlists, digests and followed CVEs |
 | [`chthapibot`](chthapibot) | [Multi-utility bot](https://t.me/chthapibot) | Crypto prices, sports, food & drinks, random pickers and a daily briefing |
 | [`chthbrbot`](chthbrbot) | [anonm](https://t.me/chthbrbot) | Personal anonymous-message link bot: people message you without seeing who you are |
 | [`chthgamesbot`](chthgamesbot) | [Games](https://t.me/chthgamesbot) | Casino, poker, Persian card games (Hokm, Shelem) and party games: chat games, inline mode and a graphic Mini App. Play chips (buyable with Stars, never cashed out) |

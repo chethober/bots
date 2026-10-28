@@ -9,7 +9,10 @@
 //                alert for each one above MIN_CVSS
 //   3. trending  queue an alert for each new KEV entry or GitHub PoC
 //   4. enrich    fetch NVD details and EPSS scores for queued trending alerts
-//   5. deliver   send queued alerts chat by chat, until the time budget is used
+//   5. follows   look followed CVEs up on NVD again with the requests left
+//   6. deliver   send queued alerts chat by chat, until the time budget is used
+//   7. updates   tell chats about changes to the CVEs they follow
+//   8. digests   send the daily and weekly digests that are due
 //
 // The very first run records what is already out there as `seeded` instead of
 // sending it, so switching the bot over doesn't flood every chat.
@@ -25,6 +28,9 @@ import { saveCves, fromKev } from './cves.js';
 import { alertMessage, esc } from './format.js';
 import { isGone, migrate, setActive } from './chats.js';
 import { LOCALES } from './i18n.js';
+import { wantsAlert, modeOf } from './filters.js';
+import { refreshFollowed, notifyFollowers } from './follows.js';
+import { sendDigests } from './digest.js';
 
 const KEV_EVERY_MS = 12 * 3600_000;
 const FIRST_LOOKBACK_MS = 2 * 3600_000; // first run, or after the cursor is lost
@@ -51,6 +57,7 @@ export async function runTick({ budgetMs = 22_000, maxSends = 300 } = {}) {
       ['poll', () => pollNew(started, nvd, seeding)],
       ['trending', () => pollTrending(seeding)],
       ['enrich', () => enrich(nvd)],
+      ['follows', () => refreshFollowed(nvd)],
     ];
     let complete = true;
     for (const [name, step] of steps) {
@@ -68,11 +75,19 @@ export async function runTick({ budgetMs = 22_000, maxSends = 300 } = {}) {
     }
     // Seeding ends only after a run that recorded everything without errors.
     if (seeding && complete && !report.poll?.partial) await saveSetting('seeded', String(started));
-    try {
-      report.deliver = await deliver(deadline, maxSends);
-    } catch (e) {
-      console.error('tick deliver:', e);
-      report.errors.push(`deliver: ${e.message}`);
+    const after = [
+      ['deliver', () => deliver(deadline, maxSends)],
+      ['updates', () => notifyFollowers(deadline, chatLocale)],
+      ['digests', () => sendDigests(deadline)],
+    ];
+    for (const [name, step] of after) {
+      if (Date.now() > deadline) break;
+      try {
+        report[name] = await step();
+      } catch (e) {
+        console.error(`tick ${name}:`, e);
+        report.errors.push(`${name}: ${e.message}`);
+      }
     }
   } finally {
     await saveSetting('lock', '0');
@@ -80,6 +95,10 @@ export async function runTick({ budgetMs = 22_000, maxSends = 300 } = {}) {
   report.ms = Date.now() - started;
   await saveSetting('last_tick', JSON.stringify(report)).catch(() => {});
   return report;
+}
+
+async function chatLocale(id) {
+  return (await db.select({ locale: chats.locale }).from(chats).where(eq(chats.id, id)).get())?.locale;
 }
 
 // A lease in the settings table, so an admin's "run now" can't overlap the cron.
@@ -214,11 +233,13 @@ async function enrich(nvd) {
 
 // Send alerts oldest first. Each alert walks the active chats in id order;
 // `cursor` remembers the last chat it reached, so a run that stops halfway is
-// picked up by the next one. Admin broadcasts (kind 'broadcast', the text in
+// picked up by the next one. Chats whose filters (lib/filters.js) leave the
+// alert out, or that get digests instead, are skipped. Admin broadcasts (kind 'broadcast', the text in
 // `signals`) travel the same way.
 async function deliver(deadline, maxSends) {
   let sent = 0;
   let failed = 0;
+  let skipped = 0;
   let done = 0;
   for (;;) {
     const alert = await db.select().from(alerts).where(eq(alerts.status, 'sending')).orderBy(asc(alerts.id)).get();
@@ -227,33 +248,46 @@ async function deliver(deadline, maxSends) {
     const cve = broadcast ? null : await alertCve(alert.cveId);
     const rendered = {};
     let cursor = alert.cursor;
+    let saved = cursor;
     for (;;) {
-      if (Date.now() > deadline || sent >= maxSends) return { sent, failed, done, more: true };
+      if (Date.now() > deadline || sent >= maxSends) return { sent, failed, skipped, done, more: true };
       const where = [eq(chats.active, true)];
       if (cursor != null) where.push(gt(chats.id, cursor));
       if (broadcast && alert.signals?.channelsOnly) where.push(eq(chats.type, 'channel'));
-      const batch = await db.select({ id: chats.id, locale: chats.locale }).from(chats)
-        .where(and(...where)).orderBy(asc(chats.id)).limit(25).all();
+      const batch = await db.select({
+        id: chats.id, locale: chats.locale, level: chats.level, watch: chats.watch, mode: chats.mode,
+      }).from(chats).where(and(...where)).orderBy(asc(chats.id)).limit(25).all();
       if (!batch.length) break;
       for (const chat of batch) {
-        if (Date.now() > deadline || sent >= maxSends) return { sent, failed, done, more: true };
+        if (Date.now() > deadline || sent >= maxSends) return { sent, failed, skipped, done, more: true };
+        if (!broadcast && (modeOf(chat) !== 'instant' || !wantsAlert(chat, alert.kind, cve))) {
+          // Saved with the next send or at the end of the batch: a run that
+          // stops before then only looks at these chats again.
+          cursor = chat.id;
+          skipped++;
+          continue;
+        }
         const locale = LOCALES.includes(chat.locale) ? chat.locale : 'en';
         rendered[locale] ??= broadcast
           ? { text: `📢 ${esc(alert.signals?.text)}` }
           : alertMessage(cve, alert.kind, alert.signals, locale);
         const outcome = await sendAlert(chat.id, rendered[locale]);
-        if (outcome === 'retry') return { sent, failed, done, more: true, rateLimited: true };
+        if (outcome === 'retry') return { sent, failed, skipped, done, more: true, rateLimited: true };
         if (outcome === 'sent') sent++;
         else failed++;
-        cursor = chat.id;
+        cursor = saved = chat.id;
         await db.update(alerts).set({ cursor }).where(eq(alerts.id, alert.id)).run();
         await sleep(40);
+      }
+      if (cursor !== saved) {
+        saved = cursor;
+        await db.update(alerts).set({ cursor }).where(eq(alerts.id, alert.id)).run();
       }
     }
     await db.update(alerts).set({ status: 'sent', sentAt: nowSec() }).where(eq(alerts.id, alert.id)).run();
     done++;
   }
-  return { sent, failed, done };
+  return { sent, failed, skipped, done };
 }
 
 // The CVE to show in an alert: NVD's details, else the KEV entry, else the id.

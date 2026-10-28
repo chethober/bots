@@ -53,8 +53,9 @@ function kevAction(kev, locale) {
 }
 
 // The full card for one CVE. `kev` is its KEV entry if any; `back` is the
-// callback data of the list it was opened from.
-export function cveCard(cve, locale, { kev = null, back = null } = {}) {
+// callback data of the list it was opened from; `following` (true or false;
+// left out: no button) whether the chat follows it.
+export function cveCard(cve, locale, { kev = null, back = null, following = null } = {}) {
   const text = [
     `${severityEmoji(cve.severity)} <b><a href="${nvdUrl(cve.id)}">${cve.id}</a></b> · ${esc(badge(cve, locale))}`,
     `🕒 ${t(locale, 'lbl_published')}: <code>${when(cve.published)}</code>`,
@@ -74,6 +75,11 @@ export function cveCard(cve, locale, { kev = null, back = null } = {}) {
     [{ text: t(locale, 'btn_nvd'), url: nvdUrl(cve.id) }, { text: t(locale, 'btn_pocs'), url: pocSearchUrl(cve.id) }],
     [{ text: t(locale, 'btn_share'), url: shareUrl(cve) }],
   ];
+  if (following != null) {
+    rows[1].unshift({
+      text: t(locale, following ? 'btn_unfollow' : 'btn_follow'), callback_data: `fo:${cve.id}${back ? `:${back}` : ''}`,
+    });
+  }
   if (back) rows.push([{ text: t(locale, 'btn_back'), callback_data: back }]);
   return { text, reply_markup: { inline_keyboard: rows } };
 }
@@ -118,4 +124,40 @@ export function alertMessage(cve, kind, signals, locale) {
   ];
   if (s.kev) rows[0].push({ text: t(locale, 'btn_kev'), url: 'https://www.cisa.gov/known-exploited-vulnerabilities-catalog' });
   return { text, reply_markup: { inline_keyboard: rows } };
+}
+
+const DIGEST_MAX = 20;
+
+// A daily or weekly digest. `items` are { cve, kinds } (kinds: 'new' and/or
+// 'trending'), most important first.
+export function digestMessage(items, mode, locale) {
+  const lines = [t(locale, mode === 'weekly' ? 'digest_weekly' : 'digest_daily', { n: items.length }), ''];
+  for (const { cve, kinds } of items.slice(0, DIGEST_MAX)) {
+    const hot = kinds.includes('trending') ? ' 🔥' : '';
+    lines.push(`${severityEmoji(cve.severity)} <a href="${deepLink(cve.id)}">${cve.id}</a> · ${esc(badge(cve, locale))}${hot}`);
+    const about = cve.description || cve.software?.[0];
+    if (about) lines.push(esc(cut(about, 100)));
+    lines.push('');
+  }
+  if (items.length > DIGEST_MAX) lines.push(`<i>${t(locale, 'lbl_more', { n: items.length - DIGEST_MAX })}</i>`);
+  return { text: lines.join('\n').trimEnd() };
+}
+
+// An update on a followed CVE. `before` and `now` are { score, severity, kev,
+// poc } and `what` lists what changed: 'score', 'kev' and/or 'poc'.
+export function followUpdateMessage(id, before, now, what, locale) {
+  const lines = [t(locale, 'follow_update', { id: `<a href="${nvdUrl(id)}">${id}</a>` }), ''];
+  if (what.includes('score')) {
+    const was = before?.score != null ? ` (${t(locale, 'follow_was', { score: before.score })})` : '';
+    lines.push(`${severityEmoji(now.severity)} ${t(locale, 'follow_score', { badge: esc(`${now.severity ?? 'CVSS'} ${now.score}`) })}${was}`);
+  }
+  if (what.includes('kev')) lines.push(t(locale, 'follow_kev'));
+  if (what.includes('poc')) lines.push(t(locale, 'follow_poc'));
+  return {
+    text: lines.join('\n'),
+    reply_markup: { inline_keyboard: [[
+      { text: t(locale, 'btn_details'), url: deepLink(id) },
+      { text: t(locale, 'btn_unfollow'), callback_data: `uf:${id}` },
+    ]] },
+  };
 }

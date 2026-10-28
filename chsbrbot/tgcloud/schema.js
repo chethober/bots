@@ -8,7 +8,9 @@ export const settings = table('settings', {
 
 // Every chat the bot knows: private chats, groups and channels. Active ones
 // receive alerts. In a private chat the chat id is the user's id, and the
-// clean-chat message ids (home / screen) are kept here.
+// clean-chat message ids (home / screen) are kept here. `level` and `watch`
+// are the chat's alert filters (lib/filters.js); null means none. `mode` is
+// instant (null), daily or weekly, and `digestAt` when the last digest was due.
 export const chats = table('chats', {
   id:        integer('id').primaryKey(),
   type:      text('type').notNull().default('private'),
@@ -18,6 +20,10 @@ export const chats = table('chats', {
   locale:    text('locale'),
   homeMsg:   integer('home_msg'),
   screenMsg: integer('screen_msg'),
+  level:     text('level'),
+  watch:     json('watch'),
+  mode:      text('mode'),
+  digestAt:  integer('digest_at'),
   createdAt: integer('created_at').notNull(),
   updatedAt: integer('updated_at').notNull(),
 }, (t) => ({
@@ -74,4 +80,32 @@ export const alerts = table('alerts', {
 }, (t) => ({
   cveKind: uniqueIndex('idx_alerts_cve_kind').on(t.cveId, t.kind),
   status:  index('idx_alerts_status').on(t.status, t.id),
+}));
+
+// CVEs a private chat follows (🔔 Follow on a CVE card). `state` is what the
+// chat last heard about the CVE — { score, severity, kev, poc } — and an update
+// goes out when that changes (lib/follows.js).
+export const follows = table('follows', {
+  id:        integer('id').primaryKey({ autoIncrement: true }),
+  chatId:    integer('chat_id').notNull(),
+  cveId:     text('cve_id').notNull(),
+  state:     json('state'),
+  checkedAt: integer('checked_at').notNull().default(0),
+  createdAt: integer('created_at').notNull(),
+}, (t) => ({
+  chatCve: uniqueIndex('idx_follows_chat_cve').on(t.chatId, t.cveId),
+  checked: index('idx_follows_checked').on(t.checkedAt),
+}));
+
+// Who may change a group's or channel's alert settings from their private
+// chat: whoever added the bot, and admins who opened them with /settings or a
+// forwarded post. Admin rights are checked again on every change.
+export const managers = table('managers', {
+  id:        integer('id').primaryKey({ autoIncrement: true }),
+  chatId:    integer('chat_id').notNull(),
+  userId:    integer('user_id').notNull(),
+  createdAt: integer('created_at').notNull(),
+}, (t) => ({
+  chatUser: uniqueIndex('idx_managers_chat_user').on(t.chatId, t.userId),
+  user:     index('idx_managers_user').on(t.userId),
 }));

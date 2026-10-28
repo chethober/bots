@@ -44,3 +44,8 @@ export async function migrate(oldId, newId) {
     .onConflictDoNothing().run();
   await setActive(oldId, false);
 }
+
+// The chat's alert filters (lib/filters.js): any of { level, watch }.
+export async function setFilters(id, filters) {
+  await db.update(chats).set({ ...filters, updatedAt: nowSec() }).where(eq(chats.id, id)).run();
+}

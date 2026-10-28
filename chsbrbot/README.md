@@ -24,6 +24,20 @@ The interface follows the [shared style](../README.md#how-they-work): buttons on
   says why each one is trending (KEV, the FIRST EPSS score, the PoC repositories) and gives CISA's required action.
 - **Who gets alerts:** everyone who pressed Start (they can switch alerts off in ⚙️ Settings), and every group or
   channel that adds the bot. In a channel the bot has to be an admin who can post messages.
+- **Filters:** ⚙️ Settings sets which alerts arrive, and how:
+  - 🎚 **Alert level**: high and critical (the default), critical only (new CVEs from CVSS 9.0,
+    `CRITICAL_CVSS`), or exploited only (trending CVEs).
+  - 👁 **Watchlist**: up to 20 products, vendors or words, such as `nginx`, `Fortinet` or `linux kernel`. When it
+    isn't empty, an alert arrives only if a word names one of the CVE's affected products or appears in its
+    description (as a whole word). Search results offer to add the search to it.
+  - 📰 **Delivery**: each alert as it happens, or a daily or weekly digest of the alerts that pass the filters.
+- **Groups and channels** have the same settings, changed by their admins from the private chat: ⚙️ Settings →
+  📢 My groups and channels. A chat is listed for whoever added the bot; another admin can send
+  `/settings@chsbrbot` in the group, or forward a post from the channel to ➕ Add. Admin rights are checked with
+  Telegram on every change.
+- **Follow a CVE:** 🔔 Follow on a CVE card sends an update when the CVE gets (or changes) its CVSS score, lands in
+  CISA KEV, or gets a public exploit (up to 50 per user). Followed CVEs are looked up on NVD again every 12 hours
+  with the requests a run has left.
 - **Search:** in the private chat, type a product, vendor, bug type or CVE id. The 🆕 Latest, 🔥 Trending and
   ⚡ Categories buttons open lists, and a CVE opens as a card with its bug types, affected products, CVSS vector,
   KEV status and exploit links.
@@ -79,7 +93,7 @@ in this repo's history before the tgcloud port.
 ## Tests
 
 ```sh
-npm test      # renders real NVD records in every language and checks Telegram's limits
+npm test      # renders real NVD records in every language and checks Telegram's limits; tests the alert filters and follow updates
 ```
 
 ## How it works
@@ -92,20 +106,27 @@ amount of work and leaves the rest for the next one ([`lib/scheduler.js`](tgclou
 2. fetch the CVEs NVD published since the last run and queue an alert for each one above the threshold;
 3. queue an alert for each new trending CVE;
 4. fetch NVD details and EPSS scores for queued trending alerts;
-5. deliver queued alerts chat by chat. Each alert remembers the last chat it reached, so delivery picks up where the last run stopped.
+5. look followed CVEs up on NVD again, with the requests left;
+6. deliver queued alerts chat by chat, skipping chats whose filters leave the alert out or that get digests. Each alert remembers the last chat it reached, so delivery picks up where the last run stopped;
+7. send updates on followed CVEs;
+8. send the daily and weekly digests that are due.
 
 Without an NVD API key, NVD allows 5 requests per 30 s, so a run makes at most 3 NVD requests. With a key in
 `tgcloud/lib/secrets.js` it makes up to 20, which clears a backlog of trending CVEs faster.
 
 ```
 tgcloud/
-├── schema.js              tables: chats, cves, kev, alerts (the queue), settings
+├── schema.js              tables: chats, cves, kev, alerts (the queue), follows, managers, settings
 ├── handlers/              private chat (message), its buttons (callback_query), joining and leaving chats (my_chat_member)
 ├── endpoints/             tick (the scheduler), setup (bot profile), importChats (switch-over)
 └── lib/
-    ├── scheduler.js       the five steps above
+    ├── scheduler.js       the eight steps above
     ├── nvd.js · feeds.js  NVD, CISA KEV, EPSS and GitHub
     ├── cves.js            the CVE store: lookups, search, lists
+    ├── filters.js         each chat's alert level, watchlist and delivery
+    ├── digest.js · follows.js   daily and weekly digests, followed CVEs
+    ├── managers.js        who may change a group's or channel's settings
+    ├── input.js           questions answered by the next message
     ├── views.js · format.js · strings.js   screens, cards and alerts, translated texts
     └── config.js          thresholds and admin ids
 test/                      npm test
