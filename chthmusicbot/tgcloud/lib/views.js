@@ -107,7 +107,7 @@ export async function linkView(link, locale, note = '') {
   if (link.direction !== 'in' && relayAvailable()) {
     rows.push([{ text: t(locale, link.audio ? 'audio_on' : 'audio_off'), callback_data: `ln:${link.id}:audio` }]);
   }
-  if (link.direction !== 'out' && link.threadId !== -1) rows.push([{ text: t(locale, 'bf_button'), callback_data: `ln:${link.id}:bf` }]);
+  if (link.direction !== 'out') rows.push([{ text: t(locale, 'bf_button'), callback_data: `ln:${link.id}:bf` }]);
   if (link.playlistId) rows.push([{ text: t(locale, 'open_playlist'), url: p.playlistUrl(link.playlistId) }]);
   rows.push([{ text: t(locale, 'remove_sync'), callback_data: `ln:${link.id}:del` }, { text: t(locale, 'back'), callback_data: 'ln' }]);
   return { text: [note, lines.join('\n')].filter(Boolean).join('\n\n'), parse_mode: 'HTML', reply_markup: { inline_keyboard: rows } };

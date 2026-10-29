@@ -339,12 +339,20 @@ const strings = {
     es: 'No puedo leer el historial del chat yo solo, así que tráemelo aquí:\n• <b>Reenvía</b> publicaciones antiguas del chat: selecciona hasta 100 a la vez → Reenviar → este chat, y repite.\n• O envía <b>todo el historial</b>: Telegram Desktop → el chat → ⋮ → Exportar historial → sin multimedia, formato JSON → envíame result.json.\n\nLas canciones que ya están en la lista se omiten.',
   },
   bf_how_topic: {
-    en: 'I can\'t read the topic\'s history myself: <b>forward</b> its old posts to me here (select up to 100 at once → Forward → this chat, and repeat). Songs already in the playlist are skipped.',
-    fa: 'خودم نمی‌تونم تاریخچهٔ موضوع رو بخونم: پست‌های قدیمیش رو همین‌جا برام <b>فوروارد</b> کن (تا ۱۰۰ تا با هم ← Forward ← همین چت، و تکرار کن). آهنگ‌هایی که از قبل توی پلی‌لیست هستن رد می‌شن.',
-    ar: 'لا أستطيع قراءة سجل الموضوع بنفسي: <b>حوّل</b> منشوراته القديمة إليّ هنا (حتى 100 دفعة واحدة ← Forward ← هذه الدردشة، وكرّر). تُتخطّى الأغاني الموجودة في القائمة.',
-    ru: 'Сам я не могу читать историю темы: <b>перешли</b> мне её старые посты (до 100 сразу → Переслать → этот чат, и повтори). Песни, которые уже есть в плейлисте, пропускаются.',
-    es: 'No puedo leer el historial del tema yo solo: <b>reenvíame</b> sus publicaciones antiguas (hasta 100 a la vez → Reenviar → este chat, y repite). Las canciones que ya están en la lista se omiten.',
+    en: 'I can\'t read the topic\'s history myself, so bring it to me here:\n• <b>Forward</b> its old posts: select up to 100 at once → Forward → this chat, and repeat.\n• Or send the forum\'s <b>whole history</b>: Telegram Desktop → the forum → ⋮ → Export chat history → no media, format JSON → send me result.json. I take only this topic\'s posts.\n\nSongs already in the playlist are skipped.',
+    fa: 'خودم نمی‌تونم تاریخچهٔ موضوع رو بخونم، پس همین‌جا برام بیارش:\n• پست‌های قدیمیش رو <b>فوروارد</b> کن: تا ۱۰۰ تا با هم ← Forward ← همین چت، و تکرار کن.\n• یا <b>کل تاریخچهٔ</b> انجمن رو بفرست: تلگرام دسکتاپ ← انجمن ← ⋮ ← Export chat history ← بدون رسانه، فرمت JSON ← result.json رو بفرست. فقط پست‌های همین موضوع رو برمی‌دارم.\n\nآهنگ‌هایی که از قبل توی پلی‌لیست هستن رد می‌شن.',
+    ar: 'لا أستطيع قراءة سجل الموضوع بنفسي، فأحضره إليّ هنا:\n• <b>حوّل</b> منشوراته القديمة: حتى 100 دفعة واحدة ← Forward ← هذه الدردشة، وكرّر.\n• أو أرسل <b>سجل المنتدى كاملًا</b>: Telegram Desktop ← المنتدى ← ⋮ ← Export chat history ← بلا وسائط، بصيغة JSON ← أرسل result.json. آخذ منشورات هذا الموضوع فقط.\n\nتُتخطّى الأغاني الموجودة في القائمة.',
+    ru: 'Сам я не могу читать историю темы, так что принеси её сюда:\n• <b>Перешли</b> её старые посты: до 100 сразу → Переслать → этот чат, и повтори.\n• Или пришли <b>всю историю</b> форума: Telegram Desktop → форум → ⋮ → Экспорт истории чата → без медиа, формат JSON → пришли result.json. Я возьму только посты этой темы.\n\nПесни, которые уже есть в плейлисте, пропускаются.',
+    es: 'No puedo leer el historial del tema yo solo, así que tráemelo aquí:\n• <b>Reenvía</b> sus publicaciones antiguas: hasta 100 a la vez → Reenviar → este chat, y repite.\n• O envía <b>todo el historial</b> del foro: Telegram Desktop → el foro → ⋮ → Exportar historial → sin multimedia, formato JSON → envíame result.json. Solo tomo las publicaciones de este tema.\n\nLas canciones que ya están en la lista se omiten.',
   },
+  bf_how_topics: {
+    en: 'I can\'t read the forum\'s history myself: send me its export. Telegram Desktop → the forum → ⋮ → Export chat history → no media, format JSON → send me result.json.\n\nEach topic\'s songs go to its own playlist (found by the topic\'s name, or created). Posts in General are skipped, like live ones, and songs already in a playlist too.',
+    fa: 'خودم نمی‌تونم تاریخچهٔ انجمن رو بخونم: فایل خروجیش رو برام بفرست. تلگرام دسکتاپ ← انجمن ← ⋮ ← Export chat history ← بدون رسانه، فرمت JSON ← result.json رو بفرست.\n\nآهنگ‌های هر موضوع به پلی‌لیست خودش می‌رن (با اسم موضوع پیدا می‌شه یا ساخته می‌شه). پست‌های General رد می‌شن، مثل پست‌های زنده، و آهنگ‌هایی که از قبل توی پلی‌لیستن هم.',
+    ar: 'لا أستطيع قراءة سجل المنتدى بنفسي: أرسل لي تصديره. Telegram Desktop ← المنتدى ← ⋮ ← Export chat history ← بلا وسائط، بصيغة JSON ← أرسل result.json.\n\nتذهب أغاني كل موضوع إلى قائمته (يُعثر عليها باسم الموضوع أو تُنشأ). تُتخطّى منشورات General كما في المنشورات الحية، والأغاني الموجودة في القائمة أيضًا.',
+    ru: 'Сам я не могу читать историю форума: пришли мне её экспорт. Telegram Desktop → форум → ⋮ → Экспорт истории чата → без медиа, формат JSON → пришли result.json.\n\nПесни каждой темы попадут в её плейлист (найденный по названию темы или новый). Посты в General пропускаются, как и при живой синхронизации, а также песни, которые уже есть в плейлисте.',
+    es: 'No puedo leer el historial del foro yo solo: envíame su exportación. Telegram Desktop → el foro → ⋮ → Exportar historial → sin multimedia, formato JSON → envíame result.json.\n\nLas canciones de cada tema van a su propia lista (encontrada por el nombre del tema, o creada). Las publicaciones en General se omiten, como en vivo, y también las canciones que ya están en una lista.',
+  },
+
   bf_stats: {
     en: '✅ Added: {added}\n🔁 Already there: {known}\n❔ Not recognized: {missed}\n⚠️ Not added yet (🔄 Sync now retries): {failed}\n⏳ Waiting: {waiting}',
     fa: '✅ اضافه شد: {added}\n🔁 از قبل بود: {known}\n❔ تشخیص داده نشد: {missed}\n⚠️ هنوز اضافه نشده (🔄 همگام‌سازی دوباره امتحان می‌کنه): {failed}\n⏳ در انتظار: {waiting}',
@@ -357,10 +365,11 @@ const strings = {
     ru: '📥 Прочитано постов с музыкой из экспорта: {n}.', es: '📥 Publicaciones con música en la exportación: {n}.',
   },
   bf_limit: {
-    en: '⏸ song.link\'s limit for now is used up: tap ⏩ Continue in a minute.', fa: '⏸ سقف song.link فعلاً پر شده: یه دقیقه دیگه ⏩ ادامه رو بزن.',
-    ar: '⏸ استُنفد حد song.link مؤقتًا: اضغط ⏩ متابعة بعد دقيقة.', ru: '⏸ Лимит song.link пока исчерпан: нажми ⏩ Продолжить через минуту.',
-    es: '⏸ Se agotó por ahora el límite de song.link: toca ⏩ Continuar en un minuto.',
+    en: '⏸ A music service is limiting lookups for now: tap ⏩ Continue in a minute.', fa: '⏸ یکی از سرویس‌های موسیقی فعلاً جستجو رو محدود کرده: یه دقیقه دیگه ⏩ ادامه رو بزن.',
+    ar: '⏸ تحدّ خدمة موسيقى من عمليات البحث حاليًا: اضغط ⏩ متابعة بعد دقيقة.', ru: '⏸ Музыкальный сервис временно ограничил запросы: нажми ⏩ Продолжить через минуту.',
+    es: '⏸ Un servicio de música está limitando las búsquedas por ahora: toca ⏩ Continuar en un minuto.',
   },
+
   bf_continue: { en: '⏩ Continue', fa: '⏩ ادامه', ar: '⏩ متابعة', ru: '⏩ Продолжить', es: '⏩ Continuar' },
   bf_refresh: { en: '🔄 Refresh', fa: '🔄 به‌روزرسانی', ar: '🔄 تحديث', ru: '🔄 Обновить', es: '🔄 Actualizar' },
   bf_done: { en: '✅ Done', fa: '✅ تمام', ar: '✅ تم', ru: '✅ Готово', es: '✅ Listo' },
@@ -376,11 +385,28 @@ const strings = {
     ar: 'هذا التصدير من دردشة أخرى ({chat}). صدّر الدردشة المرتبطة بهذه المزامنة.', ru: 'Это экспорт другого чата ({chat}). Экспортируй чат, к которому привязана синхронизация.',
     es: 'Esa exportación es de otro chat ({chat}). Exporta el chat vinculado a esta sincronización.',
   },
-  bf_topic_json: {
-    en: 'An export mixes every topic of the forum: for a single topic, forward its posts instead.', fa: 'فایل خروجی همهٔ موضوع‌های انجمن رو قاطی داره: برای یه موضوع، پست‌هاش رو فوروارد کن.',
-    ar: 'التصدير يخلط كل مواضيع المنتدى: لموضوع واحد، حوّل منشوراته بدلًا من ذلك.', ru: 'Экспорт смешивает все темы форума: для одной темы лучше перешли её посты.',
-    es: 'Una exportación mezcla todos los temas del foro: para un solo tema, reenvía sus publicaciones.',
+  bf_no_topic_posts: {
+    en: 'I found no music posts of this topic in the export. Is it the right forum? Forwarding the topic\'s posts works too.',
+    fa: 'توی فایل هیچ پست آهنگ‌داری از این موضوع پیدا نکردم. انجمن درسته؟ فوروارد کردن پست‌های موضوع هم جواب می‌ده.',
+    ar: 'لم أجد منشورات موسيقى لهذا الموضوع في التصدير. هل هو المنتدى الصحيح؟ تحويل منشورات الموضوع يعمل أيضًا.',
+    ru: 'В экспорте нет постов с музыкой из этой темы. Это тот форум? Можно и переслать посты темы.',
+    es: 'No encontré publicaciones con música de este tema en la exportación. ¿Es el foro correcto? También puedes reenviar las publicaciones del tema.',
   },
+  bf_forward_topics: {
+    en: 'Forwarded posts don\'t say which topic they\'re from: for every topic, send the forum\'s export (result.json) instead.',
+    fa: 'پست‌های فورواردی نمی‌گن مال کدوم موضوعن: برای همهٔ موضوع‌ها، فایل خروجی انجمن (result.json) رو بفرست.',
+    ar: 'المنشورات المحوّلة لا تذكر موضوعها: لكل المواضيع، أرسل تصدير المنتدى (result.json) بدلًا من ذلك.',
+    ru: 'Пересланные посты не говорят, из какой они темы: для всех тем пришли экспорт форума (result.json).',
+    es: 'Las publicaciones reenviadas no dicen de qué tema son: para todos los temas, envía la exportación del foro (result.json).',
+  },
+  bf_queued_topics: {
+    en: '📥 Posts with music in the export: {n}, in {topics} topics. Each goes to its topic\'s playlist.',
+    fa: '📥 پست‌های آهنگ‌دار فایل: {n}، توی {topics} موضوع. هر کدوم به پلی‌لیست موضوع خودش می‌ره.',
+    ar: '📥 منشورات فيها موسيقى في التصدير: {n}، في {topics} موضوعًا. يذهب كل منها إلى قائمة موضوعه.',
+    ru: '📥 Постов с музыкой в экспорте: {n}, тем: {topics}. Каждый попадёт в плейлист своей темы.',
+    es: '📥 Publicaciones con música en la exportación: {n}, en {topics} temas. Cada una va a la lista de su tema.',
+  },
+
 
   // --- /playlist, /top, /random in groups and channels --------------------------------
   chat_playlists: {

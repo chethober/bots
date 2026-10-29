@@ -1,10 +1,10 @@
 // Finding the songs a message refers to, and matching them on a service.
 //
 // A "ref" is what a message carries: a track link on one of the services
-// ({ platform, id, url }), any other music link song.link knows ({ url }), or
-// an audio file's tags ({ query: { title, artist } }).
+// ({ platform, id, url }), any other music link ({ url }), or an audio file's
+// tags ({ query: { title, artist } }).
 
-import { songlink, idFor, metaOf } from './songlink.js';
+import { lookup, idFor, metaOf, LookupLimit } from './lookup.js';
 
 const PATTERNS = {
   spotify: /(?:open\.spotify\.com\/(?:intl-[a-z-]+\/)?track\/|spotify:track:)([A-Za-z0-9]{22})/,
@@ -60,27 +60,43 @@ export function extractRefs(message) {
 
 /**
  * The track on `provider` a ref points to: { id, title?, artist? } or null.
- * `memo` (a Map) shares song.link lookups between the playlists one post feeds.
- * Links are only matched through song.link, never by a loose search, so a
- * non-music YouTube video doesn't drag a random song in.
+ * `memo` (a Map) shares link lookups between the playlists one post feeds.
+ * A link on another service is matched by its id when the lookup knows it
+ * (song.link with a key), else by searching its title and artist; lookup.js
+ * only lets music through, so a random YouTube video doesn't drag a song in.
+ * `strict` rethrows LookupLimit instead of giving up on the link.
  */
-export async function resolveRef(ref, provider, acct, memo = new Map()) {
+export async function resolveRef(ref, provider, acct, memo = new Map(), { strict = false } = {}) {
   if (ref.platform === provider.id) return { id: ref.id };
   if (ref.url) {
-    if (!memo.has(ref.url)) memo.set(ref.url, await songlink(ref.url).catch(() => null));
-    const data = memo.get(ref.url);
-    const id = idFor(data, provider.id);
-    return id ? { id, ...metaOf(data) } : null;
+    const rec = await lookupOnce(ref, memo, strict);
+    const id = idFor(rec, provider.id);
+    if (id) return { id, ...metaOf(rec) };
+    if (!rec?.music || !rec.title) return null;
+    const hit = await provider.search(acct, { title: rec.title, artist: rec.artist }).catch(() => null);
+    return hit?.id ? { id: hit.id, title: rec.title, artist: rec.artist } : null;
   }
   if (ref.query) return provider.search(acct, ref.query).catch(() => null);
   return null;
 }
 
+async function lookupOnce(ref, memo, strict = false) {
+  if (!memo.has(ref.url)) {
+    try {
+      memo.set(ref.url, await lookup(ref.url, ref));
+    } catch (e) {
+      if (strict && e instanceof LookupLimit) throw e;
+      console.warn('lookup failed', ref.url, e.message);
+      return null; // not memoized: a later try may work
+    }
+  }
+  return memo.get(ref.url);
+}
+
 /** Title and artist of a ref, when they can be known. */
 export async function describeRef(ref, memo = new Map()) {
   if (ref.query) return ref.query;
-  if (!memo.has(ref.url)) memo.set(ref.url, await songlink(ref.url).catch(() => null));
-  return metaOf(memo.get(ref.url));
+  return metaOf(await lookupOnce(ref, memo));
 }
 
 /** A saved song ({ title, artist, url }) on `provider`: by its link first, then by name. */

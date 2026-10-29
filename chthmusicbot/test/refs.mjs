@@ -28,25 +28,14 @@ assert.deepEqual(extractRefs({ caption: 'x', caption_entities: [{ type: 'text_li
 assert.deepEqual(extractRefs(msg('no music here')), []);
 console.log('ok: music refs');
 
-// song.link records map a song to each service's id.
-import { idFor, metaOf, pageUrl } from '../tgcloud/lib/songlink.js';
-const record = {
-  entityUniqueId: 'ITUNES_SONG::1558534271',
-  entitiesByUniqueId: {
-    'ITUNES_SONG::1558534271': { id: '1558534271', type: 'song', title: 'Never Gonna Give You Up', artistName: 'Rick Astley' },
-    'SPOTIFY_SONG::4PTG3Z6ehGkBFwjybzWkR8': { id: '4PTG3Z6ehGkBFwjybzWkR8', type: 'song' },
-    'YOUTUBE_VIDEO::lYBUbBu4W08': { id: 'lYBUbBu4W08', type: 'song' },
-  },
-  linksByPlatform: {
-    appleMusic: { entityUniqueId: 'ITUNES_SONG::1558534271' },
-    spotify: { entityUniqueId: 'SPOTIFY_SONG::4PTG3Z6ehGkBFwjybzWkR8' },
-    youtubeMusic: { entityUniqueId: 'YOUTUBE_VIDEO::lYBUbBu4W08' },
-  },
-};
-assert.equal(idFor(record, 'spotify'), '4PTG3Z6ehGkBFwjybzWkR8');
-assert.equal(idFor(record, 'youtube'), 'lYBUbBu4W08');
+// Lookup records map a song to each service's id; titles are cleaned for searching.
+import { idFor, metaOf, pageUrl, cleanTitle } from '../tgcloud/lib/lookup.js';
+const record = { title: 'Never Gonna Give You Up', artist: 'Rick Astley', ids: { apple: '1558534271' }, music: true };
 assert.equal(idFor(record, 'apple'), '1558534271');
+assert.equal(idFor(record, 'spotify'), null);
 assert.equal(idFor(null, 'spotify'), null);
 assert.deepEqual(metaOf(record), { title: 'Never Gonna Give You Up', artist: 'Rick Astley' });
+assert.equal(cleanTitle('Never Gonna Give You Up (Official Music Video) [4K Remaster]'), 'Never Gonna Give You Up');
+assert.equal(cleanTitle('Song (feat. Someone)'), 'Song (feat. Someone)');
 assert.equal(pageUrl('youtube', 'lYBUbBu4W08'), 'https://song.link/y/lYBUbBu4W08');
-console.log('ok: song.link mapping');
+console.log('ok: link lookups');

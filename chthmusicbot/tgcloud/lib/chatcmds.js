@@ -15,7 +15,7 @@ import { links, linkTracks } from '../schema.js';
 import { BOT_USERNAME } from './config.js';
 import { providerOf } from './providers/index.js';
 import { getAccount } from './accounts.js';
-import { pageUrl } from './songlink.js';
+import { pageUrl } from './lookup.js';
 import { searchSongs } from './itunes.js';
 import { askSongAudio, saveSong, songKeyboard } from './songs.js';
 import { getSetting, saveSetting } from './settings.js';

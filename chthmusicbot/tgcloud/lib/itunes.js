@@ -1,5 +1,5 @@
-// Finding songs by name with the iTunes Search API (free, no key). Results carry
-// an Apple Music track id, which song.link maps to the other services.
+// Finding songs by name with the iTunes Search API (free, no key). Results link
+// to their song.link page, which lookup.js reads as an Apple Music id.
 
 import { fetch } from 'sdk';
 

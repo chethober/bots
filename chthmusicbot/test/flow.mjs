@@ -1,5 +1,5 @@
 // End-to-end flows against the in-memory SDK (sdk-fake.mjs) and a fake
-// Spotify / song.link / iTunes: the ➕ New sync wizard, chat → playlist on a
+// Spotify / iTunes / YouTube: the ➕ New sync wizard, chat → playlist on a
 // post, repost detection, 🔄 Sync now, 🔎 Find music, the group player and
 // /playlist, /top, /random in groups and channels.
 import assert from 'node:assert/strict';
@@ -34,13 +34,29 @@ const routes = [
     }
     return { items: playlist.map((item) => ({ item })), next: null };
   }],
+  [/itunes\.apple\.com\/lookup\?id=111/, () => ({ results: [{ trackId: 111, trackName: 'Never Gonna Give You Up', artistName: 'Rick Astley' }] })],
+  [/api\.spotify\.com\/v1\/search\?type=track&limit=1&q=track%3ANever%20Gonna/, () => ({ tracks: { items: [track(T('r'), 'Never Gonna Give You Up')] } })],
+  [/api\.spotify\.com\/v1\/search/, () => ({ tracks: { items: [] } })],
+  [/youtube\.com\/oembed/, (url) => (url.includes('NOTMUSIC000')
+    ? { title: 'My cat compilation', author_name: 'Cats Daily' }
+    : { title: 'Never Gonna Give You Up', author_name: 'Rick Astley - Topic' })],
   [/itunes\.apple\.com\/search/, () => ({ results: [{ trackId: 111, trackName: 'Never Gonna Give You Up', artistName: 'Rick Astley', collectionName: 'Whenever' }] })],
-  [/api\.song\.link/, () => ({
-    entityUniqueId: 'ITUNES_SONG::111',
-    entitiesByUniqueId: { 'ITUNES_SONG::111': { id: '111', type: 'song', title: 'Never Gonna Give You Up', artistName: 'Rick Astley' }, 'SPOTIFY_SONG::RICK': { id: T('r'), type: 'song' } },
-    linksByPlatform: { spotify: { entityUniqueId: 'SPOTIFY_SONG::RICK' } },
-  })],
 ];
+// Playlists the bot creates (per-topic syncs).
+const created = new Map();
+state.routes.push(
+  [/api\.spotify\.com\/v1\/me\/playlists$/, (url, init) => {
+    const { name } = JSON.parse(init.body);
+    const id = `N${created.size}`.padEnd(22, 'n');
+    created.set(id, { name, tracks: [] });
+    return { id, name };
+  }],
+  [/api\.spotify\.com\/v1\/playlists\/N\w+\/items/, (url, init) => {
+    const pl = created.get(/playlists\/(N\w+)\//.exec(url)[1]);
+    if (init.method === 'POST') pl.tracks.push(...JSON.parse(init.body).uris.map((u) => u.split(':')[2]));
+    return init.method === 'POST' ? { snapshot_id: 'x' } : { items: [], next: null };
+  }],
+);
 state.routes.push(...routes);
 
 const calls = (method) => state.calls.filter((c) => c.method === method);
@@ -93,6 +109,15 @@ reset();
 await post(`https://open.spotify.com/track/${T('c')}`, 50);
 assert.ok(playlist.some((x) => x.id === T('c')));
 assert.equal(last('setMessageReaction').reaction[0].emoji, '👌');
+
+// A YouTube music link is found on Spotify by name; a non-music video isn't.
+reset();
+await post('https://youtu.be/NOTMUSIC000', 53);
+assert.equal(calls('setMessageReaction').length, 0, 'a cat video is not a song');
+await post('https://music.youtube.com/watch?v=lYBUbBu4W08', 54);
+assert.ok(playlist.some((x) => x.id === T('r')), 'found on Spotify by title and artist');
+playlist.splice(playlist.findIndex((x) => x.id === T('r')), 1);
+state.tables.get('link_tracks').rows = state.tables.get('link_tracks').rows.filter((r) => r.trackId !== T('r'));
 
 // The same track again is recognized as a repost (deleting reposts is off).
 reset();
@@ -258,6 +283,36 @@ reset();
 await fwd(`https://open.spotify.com/track/${T('h')}`, 104);
 assert.ok(!playlist.some((x) => x.id === T('h')), 'after ✅ Done, forwards go to 🔎 Find music again');
 
+// An "every topic" sync takes a forum export: each topic's songs go to its own playlist.
+const { createLink } = await import('../tgcloud/lib/sync.js');
+const FORUM = { id: -100900, type: 'supergroup', title: 'Music Forum', is_forum: true };
+const forumLink = await createLink({ ownerId: USER.id, chatId: FORUM.id, threadId: -1, provider: 'spotify', direction: 'in' });
+const spLink = (c) => [{ type: 'link', text: `https://open.spotify.com/track/${T(c)}` }];
+state.files.F3 = JSON.stringify({ id: 100900, name: 'Music Forum', messages: [
+  { id: 10, type: 'service', action: 'topic_created', title: 'Rock' },
+  { id: 11, type: 'message', from: 'Ali', from_id: 'user50', reply_to_message_id: 10, text_entities: spLink('i') },
+  { id: 12, type: 'message', from: 'Sara', from_id: 'user77', reply_to_message_id: 11, text_entities: spLink('j') },
+  { id: 13, type: 'service', action: 'topic_created', title: 'Jazz' },
+  { id: 14, type: 'message', from: 'Ali', from_id: 'user50', reply_to_message_id: 13, text_entities: spLink('k') },
+  { id: 15, type: 'message', from: 'Ali', from_id: 'user50', text_entities: spLink('l') },
+  { id: 16, type: 'service', action: 'topic_edit', new_title: 'Classic Rock', reply_to_message_id: 10 },
+] });
+reset();
+await cb(`ln:${forumLink.id}:bf`);
+assert.match(last('editMessageText').text, /send me its export/);
+await fwd(`https://open.spotify.com/track/${T('m')}`, 110);
+assert.match(last('editMessageText').text, /don't say which topic/, 'forwards are refused for every topic');
+await priv({ message_id: 111, document: { file_id: 'F3', file_name: 'result.json' } });
+const byName = Object.fromEntries([...created.values()].map((p) => [p.name, p.tracks]));
+assert.deepEqual(byName['Classic Rock'], [T('i'), T('j')], 'a reply inside a topic stays in it; the renamed topic keeps its new name');
+assert.deepEqual(byName.Jazz, [T('k')]);
+assert.ok(![...created.values()].some((p) => p.tracks.includes(T('l'))), 'General is skipped');
+assert.match(last('editMessageText').text, /3, in 2 topics/);
+const children = state.tables.get('links').rows.filter((l) => l.parentId === forumLink.id);
+assert.deepEqual(children.map((l) => l.threadId).sort(), [10, 13]);
+await cb('bf:done');
+await cb(`ln:${forumLink.id}:del!`);
+
 // 🔗 My syncs lists the sync; removing it clears its tracks.
 reset();
 await priv({ text: '🔗 My syncs' });
@@ -308,4 +363,4 @@ state.googleAllowed = true;
 await newCb(ok.callback_data);
 assert.equal((await getAccount(NEW.id, 'youtube')).name, 'Sara Music');
 
-console.log('ok: flows (wizard, chat → playlist, reposts, sync now, find, inline, player, group and channel commands, song buttons, audio relay, backfill, logins)');
+console.log('ok: flows (wizard, chat → playlist, reposts, sync now, find, inline, player, group and channel commands, song buttons, audio relay, backfill, every-topic backfill, logins)');

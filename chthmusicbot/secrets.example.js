@@ -15,5 +15,6 @@ export const GOOGLE_CLIENT_SECRET = '';
 // made with scripts/apple-token.mjs.
 export const APPLE_MUSIC_DEVELOPER_TOKEN = '';
 
-// Optional song.link (Odesli) API key for a higher rate limit.
+// Optional song.link (Odesli) API key: links are then mapped between services by id.
+// Without it (song.link retired its keyless API) they're matched by title and artist.
 export const SONGLINK_API_KEY = '';

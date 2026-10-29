@@ -105,7 +105,7 @@ export const finds = table('finds', {
   title:     text('title'),
   artist:    text('artist'),
   album:     text('album'),
-  url:       text('url'),                            // a link song.link understands
+  url:       text('url'),                            // a music link (lookup.js)
   createdAt: integer('created_at').notNull(),
 }, (t) => ({
   byUser: index('idx_finds_user').on(t.userId),
@@ -131,7 +131,7 @@ export const songs = table('songs', {
   id:        integer('id').primaryKey({ autoIncrement: true }),
   title:     text('title'),
   artist:    text('artist'),
-  url:       text('url'),                            // a link song.link understands
+  url:       text('url'),                            // a music link (lookup.js)
   createdAt: integer('created_at').notNull(),
 }, (t) => ({
   byUrl: index('idx_songs_url').on(t.url),
@@ -148,7 +148,8 @@ export const players = table('players', {
 });
 
 // ⏮ Old posts queued for a sync's playlist (forwarded to the bot, or read from
-// a chat export). status: wait | added | known | missed | retry.
+// a chat export; an "every topic" sync's posts go to their topic's playlist).
+// status: wait | added | known | missed | retry.
 export const backfillItems = table('backfill_items', {
   id:         integer('id').primaryKey({ autoIncrement: true }),
   userId:     integer('user_id').notNull(),
@@ -157,6 +158,8 @@ export const backfillItems = table('backfill_items', {
   messageId:  integer('message_id'),
   posterId:   integer('poster_id'),
   posterName: text('poster_name'),
+  threadId:   integer('thread_id'),                    // the forum topic, read from an export
+  topicName:  text('topic_name'),
   status:     text('status').notNull().default('wait'),
   createdAt:  integer('created_at').notNull(),
 }, (t) => ({

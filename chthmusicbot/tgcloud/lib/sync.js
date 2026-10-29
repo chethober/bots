@@ -16,8 +16,8 @@ import { ADDED_REACTION, SYNC_BATCH } from './config.js';
 import { providerOf } from './providers/index.js';
 import { getAccount } from './accounts.js';
 import { resolveRef } from './tracks.js';
-import { pageUrl } from './songlink.js';
-import { getChat, topicName } from './chats.js';
+import { pageUrl } from './lookup.js';
+import { getChat, setTopicName, topicName } from './chats.js';
 import { getSetting, saveSetting } from './settings.js';
 import { localeFor } from './i18n.js';
 import { errorText } from './errors.js';
@@ -107,10 +107,20 @@ export async function addOldTracks(link, entries) {
 
 // --- chat → playlist ---------------------------------------------------------
 
+/**
+ * The per-topic link of a forum topic under an "every topic" link: the
+ * existing one, or a new one whose playlist is found by the topic's name or
+ * created. `name` is the topic's name when the caller knows it.
+ */
+export async function topicChild(parent, threadId, name = null) {
+  const existing = await db.select().from(links).where(and(eq(links.parentId, parent.id), eq(links.threadId, threadId))).get();
+  if (existing) return existing;
+  if (name && !(await topicName(parent.chatId, threadId))) await setTopicName(parent.chatId, threadId, name);
+  return topicLink(parent, name ?? await topicName(parent.chatId, threadId) ?? `Topic ${threadId}`, threadId);
+}
+
 /** Find (by name) or create the playlist of a forum topic under a per-topic link. */
-async function topicLink(parent, message, threadId) {
-  const name = message.reply_to_message?.forum_topic_created?.name
-    ?? await topicName(parent.chatId, threadId) ?? `Topic ${threadId}`;
+async function topicLink(parent, name, threadId) {
   const provider = providerOf(parent.provider);
   const acct = await getAccount(parent.ownerId, parent.provider);
   if (!acct) return null;
@@ -132,7 +142,8 @@ async function linksForPost(message, threadId) {
   if (threadId > 0) {
     for (const parent of rows.filter((l) => l.threadId === -1)) {
       if (rows.some((l) => l.parentId === parent.id && l.threadId === threadId)) continue;
-      const child = await topicLink(parent, message, threadId).catch((e) => reportError(parent, e));
+      const name = message.reply_to_message?.forum_topic_created?.name ?? await topicName(parent.chatId, threadId) ?? `Topic ${threadId}`;
+      const child = await topicLink(parent, name, threadId).catch((e) => reportError(parent, e));
       if (child) out.push(child);
     }
   }

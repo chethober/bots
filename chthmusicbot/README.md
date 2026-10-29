@@ -25,8 +25,9 @@ Anyone can use it with their own accounts: connect a music service, pick a chat,
 - **Directions.**
   - 💬 → 🎧 **Chat to playlist, live:** every track posted in the chat is added to the playlist and the post
     gets a 👌. Recognized: Spotify, YouTube / YouTube Music and Apple Music links; Deezer, SoundCloud, Tidal,
-    Amazon Music and other links song.link knows; audio files (by their tags). Optionally, reposts of a track
-    already in the playlist are deleted.
+    Amazon Music and other music links; audio files (by their tags). A link from another service is found on the
+    playlist's service by its title and artist (see *Matching songs across services*); YouTube videos that aren't
+    music are ignored. Optionally, reposts of a track already in the playlist are deleted.
   - 🎧 → 💬 **Playlist to chat, on demand:** 🔄 Sync now posts the playlist's tracks the chat hasn't seen yet,
     20 at a time (Telegram's per-group flood limit), with a "Listen anywhere" song.link page, and its audio file
     from **@chethoberbot** follows as a reply (🎵 Audio files, on by default). When the sync is created you choose
@@ -41,8 +42,10 @@ Anyone can use it with their own accounts: connect a music service, pick a chat,
   the user brings it: forward old posts to the bot (up to 100 at a time), or send the chat's history export
   (Telegram Desktop → ⋮ → Export chat history → JSON, no media → `result.json`). Their tracks are added to the
   playlist oldest first, skipping ones it has, and count for `/top`. An export is checked against the sync's chat
-  and worked through 25 posts per ⏩ Continue. For a single forum topic only forwards work, since an export mixes
-  every topic. Not available for "every topic" syncs.
+  and worked through 25 posts per ⏩ Continue. In a forum export each post's topic is followed through its replies:
+  an **every topic** sync sends each post to its topic's playlist (found by the topic's name or created; General is
+  skipped, like live posts), and a one-topic sync takes only its topic's posts. Forwarded posts don't say their
+  topic, so an every topic sync takes the export only.
 - **🔗 My syncs.** Sync now, change the direction, toggle the reaction, repost deletion and audio files, add old
   songs, open or remove.
   Tracks that couldn't be added (an expired login, a quota) are retried by Sync now; the owner gets a private
@@ -57,7 +60,7 @@ Anyone can use it with their own accounts: connect a music service, pick a chat,
     only their owner can open).
 - **🔎 Find music.** Send a song name, a link or an audio file in the private chat: its audio arrives from
   **@chethoberbot** (over bot-to-bot messages), and you can like it, add it to any of your playlists (synced ones
-  also post it in their chat) or play it next on your Spotify. Songs are found by name with the iTunes Search API and mapped to each service by song.link.
+  also post it in their chat) or play it next on your Spotify. Songs are found by name with the iTunes Search API.
 - **🎶 Group player.** `/player` in a group shares the sender's Spotify: the card shows what's playing and
   what's next with ⏮ ⏯ ⏭ (host and admins). Anyone queues songs by posting a link or audio file, or with
   inline mode (`@chthmusicbot song name`, also behind the card's ➕ button).
@@ -69,7 +72,7 @@ Anyone can use it with their own accounts: connect a music service, pick a chat,
   (Spotify gives the extended quota only to registered businesses). That's what the bring-your-own-app option is for.
   Controlling playback (the group player, "play next") needs Spotify Premium and an open Spotify device.
 - **YouTube** gives a project 10,000 API units a day: adding a track costs 50 and a search 100, so roughly 200
-  added tracks a day across all users. Tracks are matched through song.link first to save quota.
+  added tracks a day across all users. A YouTube link is used by its id; a link from another service costs a search.
 - **Apple Music** lets apps add tracks to library playlists but not remove them. A user's sign-in lasts about six
   months. MusicKit's sign-in popup can be blocked inside Telegram: the page then offers to finish in the browser.
 - **No live audio:** bots can't join Telegram voice chats, so the group player controls the host's Spotify
@@ -81,6 +84,16 @@ Anyone can use it with their own accounts: connect a music service, pick a chat,
   `USER_BOT_TO_BOT_DISABLED` and the bot says it can't reach @chethoberbot.
 - **❤️ Like on Spotify** needs the `user-library-modify` permission: accounts connected before it was added must be
   connected again (the bot says so).
+
+### Matching songs across services
+
+A link from one service has to be found on the playlist's service. song.link (Odesli) used to map links between
+services for free, but it retired its keyless API in 2026 (calls answer `401 PUBLIC_API_ACCESS_DEPRECATED`) and
+mostly stopped issuing keys. So the bot reads the song's title and artist from each service's free metadata
+(the Spotify track page, YouTube oEmbed, the iTunes lookup API, the Deezer API, SoundCloud oEmbed, or a page's
+`og:title`) and searches the playlist's service for it. That works without any key, but a name search can now
+and then pick a different version of a song (a live or remastered one). With a song.link key in `SONGLINK_API_KEY`
+the bot maps links by id first. song.link's web pages ("Listen anywhere") still work without a key.
 
 ## Run your own
 
@@ -108,7 +121,8 @@ You need Node.js 18+ and a bot from [@BotFather](https://t.me/BotFather). In Bot
    - **Apple Music:** needs an Apple Developer account. Create a key with MusicKit enabled, then
      `node scripts/apple-token.mjs AuthKey_XXXX.p8 <KEY_ID> <TEAM_ID>` and set `APPLE_MUSIC_DEVELOPER_TOKEN`
      (renew it every 6 months).
-   - **song.link:** works without a key (10 requests a minute); `SONGLINK_API_KEY` raises the limit.
+   - **song.link:** optional. Its keyless API was retired in 2026 and keys are hard to get (see *Matching songs
+     across services*); with `SONGLINK_API_KEY` set, links are mapped by id instead of searched by name.
 
 CI deploys `main` when the repository secret `CHTHMUSICBOT_TGCLOUD_TOKEN` is set, writing `secrets.js` from
 the optional `CHTHMUSICBOT_SPOTIFY_CLIENT_ID`, `CHTHMUSICBOT_GOOGLE_CLIENT_ID`, `CHTHMUSICBOT_GOOGLE_CLIENT_SECRET`,
@@ -133,7 +147,7 @@ tgcloud/
     ├── providers/            spotify.js · youtube.js · apple.js: one shape (playlists, search, links, player)
     ├── sync.js               links: chat → playlist on post, playlist → chat on Sync now
     ├── chatcmds.js           /playlist, /top, /random and /song in groups, topics and channels
-    ├── tracks.js · songlink.js · itunes.js   recognizing songs and matching them across services
+    ├── tracks.js · lookup.js · itunes.js   recognizing songs and matching them across services
     ├── songs.js              posted songs and their ❤️ ➕ 🎵 buttons (handled in find.js)
     ├── backfill.js           ⏮ Add old songs: forwarded posts and chat exports
     ├── wizard.js · views.js · find.js · player.js · relay.js · login.js

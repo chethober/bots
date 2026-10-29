@@ -3,7 +3,7 @@
 // at google.com/device, so no redirect is needed.
 //
 // Quota: a project gets 10,000 units a day; adding a video costs 50 and a
-// search 100, so tracks are matched through song.link first.
+// search 100, so a YouTube link is used by its id whenever there is one.
 
 import { request, ProviderError } from '../http.js';
 import { authed } from '../accounts.js';
