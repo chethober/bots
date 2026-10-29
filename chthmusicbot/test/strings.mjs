@@ -11,6 +11,9 @@ for (const [key, entry] of Object.entries(STRINGS)) {
 }
 
 const root = new URL('../tgcloud/', import.meta.url);
+// A key written twice silently keeps only the last one.
+const keys = [...readFileSync(new URL('lib/strings.js', root), 'utf8').matchAll(/^ {2}([a-z_]+): \{/gm)].map((m) => m[1]);
+assert.deepEqual(keys.filter((k, i) => keys.indexOf(k) !== i), [], 'strings.js has duplicate keys');
 const walk = (dir) => readdirSync(new URL(dir, root)).flatMap((f) => {
   const rel = `${dir}/${f}`;
   return statSync(new URL(rel, root)).isDirectory() ? walk(rel) : f.endsWith('.js') ? [rel] : [];

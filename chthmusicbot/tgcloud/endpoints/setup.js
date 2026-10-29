@@ -1,6 +1,6 @@
 // endpoints/setup.js — one-off: applies the bot profile. Descriptions in every
 // language, no command menu in private chats (users have the reply keyboard)
-// and /player, /sync, /playlist, /top and /random in groups.
+// and /player, /sync, /playlist, /top, /random and /song in groups.
 //
 //   npx tgcloud run endpoints/setup '{}'
 //
@@ -22,11 +22,11 @@ const PROFILE = {
 };
 
 const GROUP_COMMANDS = {
-  en: [['player', 'Group player: share your Spotify queue'], ['sync', 'Admins: link this chat or topic to a playlist'], ['playlist', 'The playlists synced with this chat'], ['top', 'Who posted the most music'], ['random', 'A random song from the playlist']],
-  fa: [['player', 'پخش گروهی: صف اسپاتیفای‌ت رو به اشتراک بذار'], ['sync', 'مدیرها: این چت یا موضوع رو به یه پلی‌لیست وصل کن'], ['playlist', 'پلی‌لیست‌های همگام با این چت'], ['top', 'کی بیشتر آهنگ فرستاده'], ['random', 'یه آهنگ تصادفی از پلی‌لیست']],
-  ar: [['player', 'مشغل المجموعة: شارك قائمة انتظار Spotify'], ['sync', 'للمشرفين: اربط هذه الدردشة أو الموضوع بقائمة تشغيل'], ['playlist', 'قوائم التشغيل المتزامنة مع هذه الدردشة'], ['top', 'من نشر أكثر الموسيقى'], ['random', 'أغنية عشوائية من القائمة']],
-  ru: [['player', 'Плеер группы: общая очередь твоего Spotify'], ['sync', 'Админам: привязать чат или тему к плейлисту'], ['playlist', 'Плейлисты, связанные с этим чатом'], ['top', 'Кто прислал больше всего музыки'], ['random', 'Случайная песня из плейлиста']],
-  es: [['player', 'Reproductor del grupo: comparte tu cola de Spotify'], ['sync', 'Admins: vincular este chat o tema a una lista'], ['playlist', 'Las listas sincronizadas con este chat'], ['top', 'Quién ha compartido más música'], ['random', 'Una canción al azar de la lista']],
+  en: [['player', 'Group player: share your Spotify queue'], ['sync', 'Admins: link this chat or topic to a playlist'], ['playlist', 'The playlists synced with this chat'], ['top', 'Who posted the most music'], ['random', 'A random song from the playlist'], ['song', 'Find a song and post it with its audio']],
+  fa: [['player', 'پخش گروهی: صف اسپاتیفای‌ت رو به اشتراک بذار'], ['sync', 'مدیرها: این چت یا موضوع رو به یه پلی‌لیست وصل کن'], ['playlist', 'پلی‌لیست‌های همگام با این چت'], ['top', 'کی بیشتر آهنگ فرستاده'], ['random', 'یه آهنگ تصادفی از پلی‌لیست'], ['song', 'یه آهنگ رو پیدا کن و با فایلش بفرست']],
+  ar: [['player', 'مشغل المجموعة: شارك قائمة انتظار Spotify'], ['sync', 'للمشرفين: اربط هذه الدردشة أو الموضوع بقائمة تشغيل'], ['playlist', 'قوائم التشغيل المتزامنة مع هذه الدردشة'], ['top', 'من نشر أكثر الموسيقى'], ['random', 'أغنية عشوائية من القائمة'], ['song', 'ابحث عن أغنية وانشرها مع ملفها الصوتي']],
+  ru: [['player', 'Плеер группы: общая очередь твоего Spotify'], ['sync', 'Админам: привязать чат или тему к плейлисту'], ['playlist', 'Плейлисты, связанные с этим чатом'], ['top', 'Кто прислал больше всего музыки'], ['random', 'Случайная песня из плейлиста'], ['song', 'Найти песню и прислать её с аудио']],
+  es: [['player', 'Reproductor del grupo: comparte tu cola de Spotify'], ['sync', 'Admins: vincular este chat o tema a una lista'], ['playlist', 'Las listas sincronizadas con este chat'], ['top', 'Quién ha compartido más música'], ['random', 'Una canción al azar de la lista'], ['song', 'Busca una canción y publícala con su audio']],
 };
 
 export default async function (input, ctx) {

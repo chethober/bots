@@ -106,6 +106,12 @@ export const apple = {
     }
   },
 
+  /** ❤️ Love the song and add it to the library. */
+  async like(acct, id) {
+    await call(acct, 'PUT', `/me/ratings/songs/${id}`, { type: 'rating', attributes: { value: 1 } });
+    await call(acct, 'POST', `/me/library?ids%5Bsongs%5D=${id}`).catch((e) => console.warn('apple library add failed', e.message));
+  },
+
   async search(acct, { title, artist }) {
     const sf = storefront(acct);
     const term = encodeURIComponent([artist, title].filter(Boolean).join(' '));

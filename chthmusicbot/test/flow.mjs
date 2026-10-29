@@ -10,14 +10,17 @@ import inline from '../tgcloud/handlers/inline_query.js';
 import { saveAccount } from '../tgcloud/lib/accounts.js';
 
 const USER = { id: 42, is_bot: false, first_name: 'Omid', language_code: 'en' };
+const NEW_FAN = { id: 43, is_bot: false, first_name: 'Nima', language_code: 'en' };
 const GROUP = { id: -100500, type: 'supergroup', title: 'Music Club' };
 const PL = 'P'.repeat(22);
 const T = (n) => `${n}`.repeat(22).slice(0, 22);
 const track = (id, name) => ({ type: 'track', id, name, artists: [{ name: 'Artist' }], uri: `spotify:track:${id}` });
 const playlist = [track(T('a'), 'Old One'), track(T('b'), 'Old Two')];
 const queued = [];
+const liked = [];
 
 const routes = [
+  [/api\.spotify\.com\/v1\/me\/library\?uris=/, (url) => { liked.push(decodeURIComponent(url.split('uris=')[1])); return null; }],
   [/api\.spotify\.com\/v1\/me\/playlists/, () => ({ items: [{ id: PL, name: 'Club Hits', owner: { id: 'u1' }, items: { total: playlist.length } }], next: null })],
   [/api\.spotify\.com\/v1\/me\/player\/queue\?uri=/, (url) => { queued.push(decodeURIComponent(url.split('uri=')[1])); return null; }],
   [/api\.spotify\.com\/v1\/me\/player\/queue$/, () => ({ queue: queued.map((u) => track(u.split(':')[2], 'Queued')) })],
@@ -128,7 +131,7 @@ const card = buttons(last('editMessageText').reply_markup);
 const add = card.find((b) => b.callback_data?.endsWith(':add'));
 assert.ok(add && card.some((b) => b.callback_data?.endsWith(':q')) && card.some((b) => b.callback_data?.endsWith(':aud')));
 await cb(add.callback_data);
-const to = buttons(last('editMessageText').reply_markup).find((b) => b.callback_data?.includes(':to:'));
+const to = buttons(last('editMessageText').reply_markup).find((b) => b.callback_data === `fd:${result.callback_data.split(':')[1]}:pl:spotify:${PL}`);
 reset();
 await cb(to.callback_data);
 assert.ok(playlist.some((x) => x.id === T('r')), 'found song added to the playlist');
@@ -160,7 +163,8 @@ await groupCmd('/top@chthmusicbot', 71);
 assert.match(last('sendMessage').text, /🥇 Omid · 🎵 1/);
 reset();
 await groupCmd('/random', 72);
-assert.match(last('sendMessage').text, /random pick from <b>Club Hits/);
+assert.match(calls('sendMessage').find((c) => c.params.chat_id === GROUP.id).params.text, /random pick from <b>Club Hits/);
+assert.ok(calls('sendMessage').some((c) => c.params.chat_id === '@chethoberbot'), 'and its audio is asked for');
 reset();
 await groupCmd('/random', 73);
 assert.equal(calls('sendMessage').length, 0, '/random is throttled');
@@ -174,6 +178,85 @@ await channelPost({ message_id: 80, chat: CHANNEL, date: 0, text: '/playlist' })
 assert.equal(last('sendMessage').chat_id, CHANNEL.id);
 assert.match(last('sendMessage').text, /Playlists synced/);
 state.tables.get('links').rows.pop();
+
+// A synced post carries ❤️ ➕ 🎵 and its audio is asked from @chethoberbot.
+const relayed = () => calls('sendMessage').filter((c) => c.params.chat_id === '@chethoberbot');
+playlist.push(track(T('e'), 'With Audio'));
+reset();
+await cb(`ln:${link.id}:sync`);
+const syncPost = calls('sendMessage').find((c) => c.params.chat_id === GROUP.id);
+const songBtns = buttons(syncPost.params.reply_markup);
+assert.deepEqual(songBtns.slice(0, 3).map((b) => b.callback_data.split(':')[2]), ['like', 'add', 'aud']);
+assert.equal(relayed().at(-1).params.text, 'Artist - With Audio');
+const songId = songBtns[0].callback_data.split(':')[1];
+
+// ❤️ in the group likes it on the tapper's own Spotify; ➕ sends them to the private chat.
+reset();
+await cb(`sg:${songId}:like`, GROUP.id);
+assert.deepEqual(liked, [`spotify:track:${T('e')}`]);
+assert.match(last('answerCallbackQuery').text, /Liked on Spotify/);
+await callback({ id: 'q', from: NEW_FAN, data: `sg:${songId}:like`, message: { message_id: 7, chat: GROUP } });
+assert.match(last('answerCallbackQuery').url, /start=accounts/, 'no accounts: open the bot');
+await cb(`sg:${songId}:add`, GROUP.id);
+assert.match(last('answerCallbackQuery').url, new RegExp(`start=sg${songId}$`));
+reset();
+await priv({ text: `/start sg${songId}` });
+assert.match(last('sendMessage').text, /With Audio/);
+
+// /song posts the song in the group; @chethoberbot's file arrives as a reply with ❤️ ➕.
+reset();
+await message({ message_id: 90, from: USER, chat: GROUP, date: 0, text: '/song never gonna' });
+const songPost = calls('sendMessage').find((c) => c.params.chat_id === GROUP.id);
+assert.match(songPost.params.text, /Never Gonna Give You Up/);
+assert.equal(relayed().at(-1).params.text, 'Rick Astley - Never Gonna Give You Up');
+const request = state.tables.get('relays').rows.at(-1);
+const RELAY_BOT = { id: 555, is_bot: true, first_name: 'Joozi', username: 'chethoberbot' };
+reset();
+await message({ message_id: 901, from: RELAY_BOT, chat: { id: 555, type: 'private' }, date: 0, text: 'Searching…', reply_to_message: { message_id: request.sentMessageId } });
+assert.equal(calls('copyMessage').length, 0, 'groups only get the file');
+await message({ message_id: 902, from: RELAY_BOT, chat: { id: 555, type: 'private' }, date: 0, audio: { title: 'Never Gonna Give You Up' }, reply_to_message: { message_id: request.sentMessageId } });
+const copied = last('copyMessage');
+assert.equal(copied.chat_id, GROUP.id);
+assert.equal(copied.reply_parameters.message_id, request.replyTo);
+assert.deepEqual(buttons(copied.reply_markup).map((b) => b.callback_data.split(':')[2]), ['like', 'add']);
+
+// Without a reply_to, a file goes to the open request with its title.
+reset();
+await message({ message_id: 903, from: RELAY_BOT, chat: { id: 555, type: 'private' }, date: 0, audio: { title: 'With Audio' } });
+assert.equal(last('copyMessage').chat_id, GROUP.id);
+assert.equal(last('copyMessage').reply_parameters.message_id, state.tables.get('relays').rows.find((r) => /With Audio/.test(r.query) && r.chatId).replyTo);
+
+// ⏮ Add old songs: forwarded posts are added as they come, known ones skipped.
+const bfRows = () => state.tables.get('backfill_items').rows;
+reset();
+await cb(`ln:${link.id}:bf`);
+assert.match(last('editMessageText').text, /Adding old songs to Club Hits/);
+const fwd = (url, id) => priv({ message_id: id, forward_origin: { type: 'user', sender_user: { id: 50, first_name: 'Ali' }, date: 0 }, text: url, entities: [{ type: 'url', offset: 0, length: url.length }] });
+await fwd(`https://open.spotify.com/track/${T('f')}`, 100);
+await fwd(`https://open.spotify.com/track/${T('c')}`, 101);
+assert.ok(playlist.some((x) => x.id === T('f')));
+assert.deepEqual(bfRows().map((r) => r.status), ['added', 'known']);
+assert.ok(calls('deleteMessage').some((c) => c.params.message_id === 100), 'forwards are cleaned up');
+assert.ok(state.tables.get('link_tracks').rows.some((r) => r.trackId === T('f') && r.posterName === 'Ali'), 'and count for /top');
+
+// A chat export: its music posts are queued and added; an export of another chat is refused.
+state.files.F1 = JSON.stringify({ id: 100500, name: 'Music Club', messages: [
+  { id: 5, type: 'message', from: 'Sara', from_id: 'user77', text_entities: [{ type: 'plain', text: 'old: ' }, { type: 'link', text: `https://open.spotify.com/track/${T('g')}` }] },
+  { id: 6, type: 'message', from: 'Sara', from_id: 'user77', text_entities: [{ type: 'plain', text: 'no music' }] },
+  { id: 7, type: 'service', action: 'pin_message' },
+] });
+state.files.F2 = JSON.stringify({ id: 999, name: 'Elsewhere', messages: [] });
+reset();
+await priv({ message_id: 102, document: { file_id: 'F2', file_name: 'result.json' } });
+assert.match(last('editMessageText').text, /from another chat \(Elsewhere\)/);
+await priv({ message_id: 103, document: { file_id: 'F1', file_name: 'result.json' } });
+assert.ok(playlist.some((x) => x.id === T('g')));
+assert.match(last('editMessageText').text, /Added: 2[\s\S]*Posts with music in the export: 1/);
+await cb('bf:done');
+assert.equal(bfRows().length, 0);
+reset();
+await fwd(`https://open.spotify.com/track/${T('h')}`, 104);
+assert.ok(!playlist.some((x) => x.id === T('h')), 'after ✅ Done, forwards go to 🔎 Find music again');
 
 // 🔗 My syncs lists the sync; removing it clears its tracks.
 reset();
@@ -225,4 +308,4 @@ state.googleAllowed = true;
 await newCb(ok.callback_data);
 assert.equal((await getAccount(NEW.id, 'youtube')).name, 'Sara Music');
 
-console.log('ok: flows (wizard, chat → playlist, reposts, sync now, find, inline, player, group and channel commands, logins)');
+console.log('ok: flows (wizard, chat → playlist, reposts, sync now, find, inline, player, group and channel commands, song buttons, audio relay, backfill, logins)');

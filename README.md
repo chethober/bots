@@ -19,6 +19,8 @@
   <a href="https://t.me/chthbrbot"><img alt="Anonymous messages" src="https://img.shields.io/badge/🎭_Anonymous_messages-@chthbrbot-2CA5E0?logo=telegram&logoColor=white"></a>
   <a href="https://t.me/chthapibot"><img alt="Multi-tool" src="https://img.shields.io/badge/🧰_Multi--tool-@chthapibot-2CA5E0?logo=telegram&logoColor=white"></a>
   <a href="https://t.me/chsbrbot"><img alt="CVE alerts" src="https://img.shields.io/badge/🚨_CVE_alerts-@chsbrbot-2CA5E0?logo=telegram&logoColor=white"></a>
+  <a href="https://t.me/chthmusicbot"><img alt="Music sync" src="https://img.shields.io/badge/🎧_Music_sync-@chthmusicbot-2CA5E0?logo=telegram&logoColor=white"></a>
+  <a href="https://t.me/chthgrambot"><img alt="AI secretary" src="https://img.shields.io/badge/🤵_AI_secretary-@chthgrambot-2CA5E0?logo=telegram&logoColor=white"></a>
 </p>
 
 <p align="center">
@@ -35,13 +37,13 @@ instructions. Clone the repo, `cd` into the one you want, and follow its README.
 
 | Folder | Bot | What it does |
 |---|---|---|
-| [`chsbrbot`](chsbrbot) | [CVE alerts](https://t.me/chsbrbot) | Posts new High/Critical CVEs and trending ones (CISA KEV, GitHub PoCs, EPSS), with CVE search, watchlists, digests and followed CVEs |
-| [`chthapibot`](chthapibot) | [Multi-utility bot](https://t.me/chthapibot) | Crypto prices, sports, food & drinks, random pickers and a daily briefing |
-| [`chthbrbot`](chthbrbot) | [anonm](https://t.me/chthbrbot) | Personal anonymous-message link bot: people message you without seeing who you are |
-| [`chthgamesbot`](chthgamesbot) | [Games](https://t.me/chthgamesbot) | Casino, poker, Persian card games (Hokm, Shelem) and party games: chat games, inline mode and a graphic Mini App. Play chips (buyable with Stars, never cashed out) |
-| [`chthgrambot`](chthgrambot) | Secretary | Telegram Business secretary assistant, powered by Cloudflare Workers AI |
-| [`chthmusicbot`](chthmusicbot) | [Music sync](https://t.me/chthmusicbot) | Syncs Spotify, YouTube Music and Apple Music playlists with groups, forum topics and channels, both ways; a shared Spotify queue for groups, /playlist, /top and /random in chats, and song search |
-| [`chthvpnbot`](chthvpnbot) | [Community VPN](https://t.me/chthvpnbot) | A directory of VPNs shared by their owners: public listings, private invites with passwords, anonymous memberships. Works best with [xtune](https://github.com/chethober/xtune) public profiles (an account per member), and manages xtune servers' users through management links |
+| [`chsbrbot`](chsbrbot) | [CVEs](https://t.me/chsbrbot) | Posts new High/Critical CVEs and trending ones (CISA KEV, GitHub PoCs, EPSS), with CVE search, watchlists, digests and followed CVEs |
+| [`chthapibot`](chthapibot) | [APIs](https://t.me/chthapibot) | Crypto prices, sports, food & drinks, random pickers and a daily briefing |
+| [`chthbrbot`](chthbrbot) | [Anonymous](https://t.me/chthbrbot) | Personal anonymous-message link bot: people message you without seeing who you are |
+| [`chthgamesbot`](chthgamesbot) | [Games 🎲](https://t.me/chthgamesbot) | Casino, poker, Persian card games (Hokm, Shelem) and party games: chat games, inline mode and a graphic Mini App. Play chips (buyable with Stars, never cashed out) |
+| [`chthgrambot`](chthgrambot) | [Secretary](https://t.me/chthgrambot) | An AI secretary for your Telegram Business account: answers your private chats while you're away, in your tone or your own style. Anyone can use it with their own free Cloudflare Workers AI key |
+| [`chthmusicbot`](chthmusicbot) | [Music](https://t.me/chthmusicbot) | Syncs Spotify, YouTube Music and Apple Music playlists with groups, forum topics and channels, both ways; a shared Spotify queue for groups, /playlist, /top and /random in chats, and song search |
+| [`chthvpnbot`](chthvpnbot) | [VPN](https://t.me/chthvpnbot) | A directory of VPNs shared by their owners: public listings, private invites with passwords, anonymous memberships. Works best with [xtune](https://github.com/chethober/xtune) public profiles (an account per member), and manages xtune servers' users through management links |
 
 ## How they work
 

@@ -28,22 +28,36 @@ Anyone can use it with their own accounts: connect a music service, pick a chat,
     Amazon Music and other links song.link knows; audio files (by their tags). Optionally, reposts of a track
     already in the playlist are deleted.
   - 🎧 → 💬 **Playlist to chat, on demand:** 🔄 Sync now posts the playlist's tracks the chat hasn't seen yet,
-    20 at a time (Telegram's per-group flood limit), with a "Listen anywhere" song.link page. When the sync is
-    created you choose whether the tracks already there get posted too.
+    20 at a time (Telegram's per-group flood limit), with a "Listen anywhere" song.link page, and its audio file
+    from **@chethoberbot** follows as a reply (🎵 Audio files, on by default). When the sync is created you choose
+    whether the tracks already there get posted too.
   - 🔄 **Both ways.**
-- **🔗 My syncs.** Sync now, change the direction, toggle the reaction and repost deletion, open or remove.
+- **❤️ ➕ 🎵 under every song the bot posts**, in groups, topics, channels and the private chat. They act for whoever
+  taps them, on their own accounts: ❤️ Like saves the song to their liked songs on every service they connected
+  (Spotify Liked Songs, a 👍 on YouTube Music, ❤️ and the library on Apple Music), ➕ Add opens the song in their
+  private chat to add it to any of their playlists, 🎵 Audio gets the file from @chethoberbot and posts it under the
+  song. Someone who hasn't connected an account is sent to the bot to do it.
+- **⏮ Add old songs.** A sync only sees posts from after it was created, and a bot can't read a chat's history, so
+  the user brings it: forward old posts to the bot (up to 100 at a time), or send the chat's history export
+  (Telegram Desktop → ⋮ → Export chat history → JSON, no media → `result.json`). Their tracks are added to the
+  playlist oldest first, skipping ones it has, and count for `/top`. An export is checked against the sync's chat
+  and worked through 25 posts per ⏩ Continue. For a single forum topic only forwards work, since an export mixes
+  every topic. Not available for "every topic" syncs.
+- **🔗 My syncs.** Sync now, change the direction, toggle the reaction, repost deletion and audio files, add old
+  songs, open or remove.
   Tracks that couldn't be added (an expired login, a quota) are retried by Sync now; the owner gets a private
   message when a sync fails (at most once an hour).
 - **In groups, topics and channels** (anyone can use them; the bot answers in the same topic):
   - `/playlist` lists the playlists synced with the chat, with their track counts and 🎧 open buttons. In a forum's
     General topic it shows every topic's playlist.
   - `/top` ranks who posted the most tracks that made it into those playlists (a channel's signed posts count too).
-  - `/random` posts a random track from one of them (once every 30 seconds per chat).
+  - `/random` posts a random track from one of them (once every 30 seconds per chat), with its audio.
+  - `/song <name>` finds a song and posts it with its audio (once every 10 seconds per chat).
   - Tracks posted by 🔄 Sync now carry a 🎧 Open playlist button (except Apple Music library playlists, which
     only their owner can open).
-- **🔎 Find music.** Send a song name, a link or an audio file in the private chat: add it to one of your
-  synced playlists, play it next on your Spotify, or get its audio from **@chethoberbot** (over bot-to-bot
-  messages). Songs are found by name with the iTunes Search API and mapped to each service by song.link.
+- **🔎 Find music.** Send a song name, a link or an audio file in the private chat: its audio arrives from
+  **@chethoberbot** (over bot-to-bot messages), and you can like it, add it to any of your playlists (synced ones
+  also post it in their chat) or play it next on your Spotify. Songs are found by name with the iTunes Search API and mapped to each service by song.link.
 - **🎶 Group player.** `/player` in a group shares the sender's Spotify: the card shows what's playing and
   what's next with ⏮ ⏯ ⏭ (host and admins). Anyone queues songs by posting a link or audio file, or with
   inline mode (`@chthmusicbot song name`, also behind the card's ➕ button).
@@ -60,8 +74,13 @@ Anyone can use it with their own accounts: connect a music service, pick a chat,
   months. MusicKit's sign-in popup can be blocked inside Telegram: the page then offers to finish in the browser.
 - **No live audio:** bots can't join Telegram voice chats, so the group player controls the host's Spotify
   instead of streaming into the chat.
-- **@chethoberbot** gets plain "Artist - Title" messages and its replies are copied back; if it answers with
-  buttons, those can't be pressed by a bot.
+- **@chethoberbot** gets plain "Artist - Title" messages and its replies are copied back: everything to a private
+  chat, only the file to a group or channel. A reply is matched to its request by `reply_to_message`, else by the
+  file's title, else to the oldest open request (given up after 5 minutes). If it answers with buttons, those can't
+  be pressed by a bot. Both bots need bot-to-bot communication on in @BotFather: otherwise Telegram refuses with
+  `USER_BOT_TO_BOT_DISABLED` and the bot says it can't reach @chethoberbot.
+- **❤️ Like on Spotify** needs the `user-library-modify` permission: accounts connected before it was added must be
+  connected again (the bot says so).
 
 ## Run your own
 
@@ -99,7 +118,7 @@ the optional `CHTHMUSICBOT_SPOTIFY_CLIENT_ID`, `CHTHMUSICBOT_GOOGLE_CLIENT_ID`, 
 
 ```
 tgcloud/
-├── schema.js                 accounts, logins, chats, topics, links, link_tracks, drafts, finds, relays, players
+├── schema.js                 accounts, logins, chats, topics, links, link_tracks, backfill_items, drafts, finds, songs, relays, players
 ├── handlers/
 │   ├── message.js            private chat (buttons, wizard, find), group posts and commands, @chethoberbot replies
 │   ├── channel_post.js       channel posts feed the channel's syncs; channel commands
@@ -113,8 +132,10 @@ tgcloud/
 └── lib/
     ├── providers/            spotify.js · youtube.js · apple.js: one shape (playlists, search, links, player)
     ├── sync.js               links: chat → playlist on post, playlist → chat on Sync now
-    ├── chatcmds.js           /playlist, /top and /random in groups, topics and channels
+    ├── chatcmds.js           /playlist, /top, /random and /song in groups, topics and channels
     ├── tracks.js · songlink.js · itunes.js   recognizing songs and matching them across services
+    ├── songs.js              posted songs and their ❤️ ➕ 🎵 buttons (handled in find.js)
+    ├── backfill.js           ⏮ Add old songs: forwarded posts and chat exports
     ├── wizard.js · views.js · find.js · player.js · relay.js · login.js
     └── accounts.js · chats.js · drafts.js · http.js · errors.js · strings.js · i18n.js · screen.js · tips.js
 web/

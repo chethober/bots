@@ -189,6 +189,8 @@ const strings = {
   reaction_off: { en: '🔕 Reaction: off', fa: '🔕 واکنش: خاموش', ar: '🔕 التفاعل: متوقف', ru: '🔕 Реакция: выкл', es: '🔕 Reacción: no' },
   dedupe_on: { en: '🔁 Delete reposts: on', fa: '🔁 حذف تکراری: روشن', ar: '🔁 حذف المكرر: مفعّل', ru: '🔁 Удалять повторы: вкл', es: '🔁 Borrar repetidos: sí' },
   dedupe_off: { en: '🔁 Delete reposts: off', fa: '🔁 حذف تکراری: خاموش', ar: '🔁 حذف المكرر: متوقف', ru: '🔁 Удалять повторы: выкл', es: '🔁 Borrar repetidos: no' },
+  audio_on: { en: '🎵 Audio files: on', fa: '🎵 فایل صوتی: روشن', ar: '🎵 الملفات الصوتية: مفعّلة', ru: '🎵 Аудиофайлы: вкл', es: '🎵 Archivos de audio: sí' },
+  audio_off: { en: '🎵 Audio files: off', fa: '🎵 فایل صوتی: خاموش', ar: '🎵 الملفات الصوتية: متوقفة', ru: '🎵 Аудиофайлы: выкл', es: '🎵 Archivos de audio: no' },
   open_playlist: { en: '🔗 Open playlist', fa: '🔗 باز کردن پلی‌لیست', ar: '🔗 افتح القائمة', ru: '🔗 Открыть плейлист', es: '🔗 Abrir lista' },
   remove_sync: { en: '🗑 Remove', fa: '🗑 حذف', ar: '🗑 إزالة', ru: '🗑 Удалить', es: '🗑 Eliminar' },
   remove_confirm: {
@@ -316,11 +318,68 @@ const strings = {
     es: 'Toca abajo para vincular este chat a una lista.',
   },
   group_welcome: {
-    en: '👋 Hi! I sync this chat with music playlists.\n\nAdmins: set it up in a private chat with @{bot} (➕ New sync), or post /sync here.\nEveryone: /player shares a Spotify queue with the group, /playlist opens the synced playlists, /top shows who posts the most music and /random picks a song.',
-    fa: '👋 سلام! این چت رو با پلی‌لیست‌های موسیقی همگام می‌کنم.\n\nمدیرها: توی چت خصوصی با @{bot} راهش بندازید (➕ همگام‌سازی جدید)، یا همین‌جا /sync بفرستید.\nهمه: /player یه صف اسپاتیفای رو با گروه به اشتراک می‌ذاره، /playlist پلی‌لیست‌های همگام رو باز می‌کنه، /top نشون می‌ده کی بیشتر آهنگ می‌فرسته و /random یه آهنگ تصادفی انتخاب می‌کنه.',
-    ar: '👋 مرحبًا! أزامن هذه الدردشة مع قوائم الموسيقى.\n\nللمشرفين: اضبطوها في دردشة خاصة مع @{bot} (➕ مزامنة جديدة)، أو أرسلوا /sync هنا.\nللجميع: يشارك /player قائمة انتظار Spotify مع المجموعة، ويفتح /playlist القوائم المتزامنة، ويعرض /top من ينشر أكثر الموسيقى، ويختار /random أغنية عشوائية.',
-    ru: '👋 Привет! Я синхронизирую этот чат с музыкальными плейлистами.\n\nАдминам: настройте это в личке с @{bot} (➕ Новая синхронизация) или отправьте /sync здесь.\nВсем: /player делится очередью Spotify с группой, /playlist открывает связанные плейлисты, /top показывает, кто присылает больше всего музыки, а /random выбирает случайную песню.',
-    es: '👋 ¡Hola! Sincronizo este chat con listas de música.\n\nAdmins: configuradlo en un chat privado con @{bot} (➕ Nueva sincronización) o enviad /sync aquí.\nTodos: /player comparte una cola de Spotify con el grupo, /playlist abre las listas sincronizadas, /top muestra quién comparte más música y /random elige una canción.',
+    en: '👋 Hi! I sync this chat with music playlists.\n\nAdmins: set it up in a private chat with @{bot} (➕ New sync), or post /sync here.\nEveryone: /player shares a Spotify queue with the group, /playlist opens the synced playlists, /top shows who posts the most music, /random picks a song and /song finds one, with its audio.',
+    fa: '👋 سلام! این چت رو با پلی‌لیست‌های موسیقی همگام می‌کنم.\n\nمدیرها: توی چت خصوصی با @{bot} راهش بندازید (➕ همگام‌سازی جدید)، یا همین‌جا /sync بفرستید.\nهمه: /player یه صف اسپاتیفای رو با گروه به اشتراک می‌ذاره، /playlist پلی‌لیست‌های همگام رو باز می‌کنه، /top نشون می‌ده کی بیشتر آهنگ می‌فرسته، /random یه آهنگ تصادفی انتخاب می‌کنه و /song یه آهنگ رو با فایلش پیدا می‌کنه.',
+    ar: '👋 مرحبًا! أزامن هذه الدردشة مع قوائم الموسيقى.\n\nللمشرفين: اضبطوها في دردشة خاصة مع @{bot} (➕ مزامنة جديدة)، أو أرسلوا /sync هنا.\nللجميع: يشارك /player قائمة انتظار Spotify مع المجموعة، ويفتح /playlist القوائم المتزامنة، ويعرض /top من ينشر أكثر الموسيقى، ويختار /random أغنية عشوائية، ويجد /song أغنية مع ملفها الصوتي.',
+    ru: '👋 Привет! Я синхронизирую этот чат с музыкальными плейлистами.\n\nАдминам: настройте это в личке с @{bot} (➕ Новая синхронизация) или отправьте /sync здесь.\nВсем: /player делится очередью Spotify с группой, /playlist открывает связанные плейлисты, /top показывает, кто присылает больше всего музыки, /random выбирает случайную песню, а /song находит песню вместе с аудио.',
+    es: '👋 ¡Hola! Sincronizo este chat con listas de música.\n\nAdmins: configuradlo en un chat privado con @{bot} (➕ Nueva sincronización) o enviad /sync aquí.\nTodos: /player comparte una cola de Spotify con el grupo, /playlist abre las listas sincronizadas, /top muestra quién comparte más música, /random elige una canción y /song busca una, con su audio.',
+  },
+
+  // --- ⏮ Add old songs ------------------------------------------------------------------
+  bf_button: { en: '⏮ Add old songs', fa: '⏮ اضافه کردن آهنگ‌های قدیمی', ar: '⏮ أضف الأغاني القديمة', ru: '⏮ Добавить старые песни', es: '⏮ Añadir canciones antiguas' },
+  bf_title: {
+    en: '⏮ <b>Adding old songs to {playlist}</b>', fa: '⏮ <b>اضافه کردن آهنگ‌های قدیمی به {playlist}</b>', ar: '⏮ <b>إضافة الأغاني القديمة إلى {playlist}</b>',
+    ru: '⏮ <b>Добавляю старые песни в {playlist}</b>', es: '⏮ <b>Añadiendo canciones antiguas a {playlist}</b>',
+  },
+  bf_how: {
+    en: 'I can\'t read the chat\'s history myself, so bring it to me here:\n• <b>Forward</b> old posts from the chat: select up to 100 at once → Forward → this chat, and repeat.\n• Or send the <b>whole history</b>: Telegram Desktop → the chat → ⋮ → Export chat history → no media, format JSON → send me result.json.\n\nSongs already in the playlist are skipped.',
+    fa: 'خودم نمی‌تونم تاریخچهٔ چت رو بخونم، پس همین‌جا برام بیارش:\n• پست‌های قدیمی چت رو <b>فوروارد</b> کن: تا ۱۰۰ تا رو با هم انتخاب کن ← Forward ← همین چت، و تکرار کن.\n• یا <b>کل تاریخچه</b> رو بفرست: تلگرام دسکتاپ ← اون چت ← ⋮ ← Export chat history ← بدون رسانه، فرمت JSON ← فایل result.json رو برام بفرست.\n\nآهنگ‌هایی که از قبل توی پلی‌لیست هستن رد می‌شن.',
+    ar: 'لا أستطيع قراءة سجل الدردشة بنفسي، فأحضره إليّ هنا:\n• <b>حوّل</b> المنشورات القديمة من الدردشة: اختر حتى 100 دفعة واحدة ← Forward ← هذه الدردشة، وكرّر.\n• أو أرسل <b>السجل كاملًا</b>: Telegram Desktop ← الدردشة ← ⋮ ← Export chat history ← بلا وسائط، بصيغة JSON ← أرسل لي result.json.\n\nتُتخطّى الأغاني الموجودة في القائمة.',
+    ru: 'Сам я не могу читать историю чата, так что принеси её сюда:\n• <b>Перешли</b> старые посты из чата: выдели до 100 сразу → Переслать → этот чат, и повтори.\n• Или пришли <b>всю историю</b>: Telegram Desktop → чат → ⋮ → Экспорт истории чата → без медиа, формат JSON → пришли мне result.json.\n\nПесни, которые уже есть в плейлисте, пропускаются.',
+    es: 'No puedo leer el historial del chat yo solo, así que tráemelo aquí:\n• <b>Reenvía</b> publicaciones antiguas del chat: selecciona hasta 100 a la vez → Reenviar → este chat, y repite.\n• O envía <b>todo el historial</b>: Telegram Desktop → el chat → ⋮ → Exportar historial → sin multimedia, formato JSON → envíame result.json.\n\nLas canciones que ya están en la lista se omiten.',
+  },
+  bf_how_topic: {
+    en: 'I can\'t read the topic\'s history myself: <b>forward</b> its old posts to me here (select up to 100 at once → Forward → this chat, and repeat). Songs already in the playlist are skipped.',
+    fa: 'خودم نمی‌تونم تاریخچهٔ موضوع رو بخونم: پست‌های قدیمیش رو همین‌جا برام <b>فوروارد</b> کن (تا ۱۰۰ تا با هم ← Forward ← همین چت، و تکرار کن). آهنگ‌هایی که از قبل توی پلی‌لیست هستن رد می‌شن.',
+    ar: 'لا أستطيع قراءة سجل الموضوع بنفسي: <b>حوّل</b> منشوراته القديمة إليّ هنا (حتى 100 دفعة واحدة ← Forward ← هذه الدردشة، وكرّر). تُتخطّى الأغاني الموجودة في القائمة.',
+    ru: 'Сам я не могу читать историю темы: <b>перешли</b> мне её старые посты (до 100 сразу → Переслать → этот чат, и повтори). Песни, которые уже есть в плейлисте, пропускаются.',
+    es: 'No puedo leer el historial del tema yo solo: <b>reenvíame</b> sus publicaciones antiguas (hasta 100 a la vez → Reenviar → este chat, y repite). Las canciones que ya están en la lista se omiten.',
+  },
+  bf_stats: {
+    en: '✅ Added: {added}\n🔁 Already there: {known}\n❔ Not recognized: {missed}\n⚠️ Not added yet (🔄 Sync now retries): {failed}\n⏳ Waiting: {waiting}',
+    fa: '✅ اضافه شد: {added}\n🔁 از قبل بود: {known}\n❔ تشخیص داده نشد: {missed}\n⚠️ هنوز اضافه نشده (🔄 همگام‌سازی دوباره امتحان می‌کنه): {failed}\n⏳ در انتظار: {waiting}',
+    ar: '✅ أُضيفت: {added}\n🔁 موجودة مسبقًا: {known}\n❔ لم يُتعرف عليها: {missed}\n⚠️ لم تُضف بعد (🔄 زامن الآن يعيد المحاولة): {failed}\n⏳ في الانتظار: {waiting}',
+    ru: '✅ Добавлено: {added}\n🔁 Уже были: {known}\n❔ Не распознано: {missed}\n⚠️ Пока не добавлено (🔄 синхронизация повторит): {failed}\n⏳ В очереди: {waiting}',
+    es: '✅ Añadidas: {added}\n🔁 Ya estaban: {known}\n❔ No reconocidas: {missed}\n⚠️ Aún sin añadir (🔄 Sincronizar ahora reintenta): {failed}\n⏳ En espera: {waiting}',
+  },
+  bf_queued: {
+    en: '📥 Posts with music in the export: {n}.', fa: '📥 {n} پست آهنگ‌دار از فایل خونده شد.', ar: '📥 قُرئ {n} منشورًا فيه موسيقى من الملف.',
+    ru: '📥 Прочитано постов с музыкой из экспорта: {n}.', es: '📥 Publicaciones con música en la exportación: {n}.',
+  },
+  bf_limit: {
+    en: '⏸ song.link\'s limit for now is used up: tap ⏩ Continue in a minute.', fa: '⏸ سقف song.link فعلاً پر شده: یه دقیقه دیگه ⏩ ادامه رو بزن.',
+    ar: '⏸ استُنفد حد song.link مؤقتًا: اضغط ⏩ متابعة بعد دقيقة.', ru: '⏸ Лимит song.link пока исчерпан: нажми ⏩ Продолжить через минуту.',
+    es: '⏸ Se agotó por ahora el límite de song.link: toca ⏩ Continuar en un minuto.',
+  },
+  bf_continue: { en: '⏩ Continue', fa: '⏩ ادامه', ar: '⏩ متابعة', ru: '⏩ Продолжить', es: '⏩ Continuar' },
+  bf_refresh: { en: '🔄 Refresh', fa: '🔄 به‌روزرسانی', ar: '🔄 تحديث', ru: '🔄 Обновить', es: '🔄 Actualizar' },
+  bf_done: { en: '✅ Done', fa: '✅ تمام', ar: '✅ تم', ru: '✅ Готово', es: '✅ Listo' },
+  bf_bad_file: {
+    en: 'I couldn\'t read that file. Send result.json from Export chat history, in JSON format and without media (up to 20 MB).',
+    fa: 'نتونستم این فایل رو بخونم. result.json رو از Export chat history بفرست، با فرمت JSON و بدون رسانه (تا ۲۰ مگابایت).',
+    ar: 'لم أستطع قراءة هذا الملف. أرسل result.json من Export chat history، بصيغة JSON وبلا وسائط (حتى 20 ميغابايت).',
+    ru: 'Не удалось прочитать файл. Пришли result.json из экспорта истории чата, в формате JSON и без медиа (до 20 МБ).',
+    es: 'No pude leer ese archivo. Envía result.json de Exportar historial, en formato JSON y sin multimedia (hasta 20 MB).',
+  },
+  bf_wrong_chat: {
+    en: 'That export is from another chat ({chat}). Export the chat this sync is linked to.', fa: 'این فایل مال یه چت دیگه‌ست ({chat}). از چتی که این همگام‌سازی بهش وصله خروجی بگیر.',
+    ar: 'هذا التصدير من دردشة أخرى ({chat}). صدّر الدردشة المرتبطة بهذه المزامنة.', ru: 'Это экспорт другого чата ({chat}). Экспортируй чат, к которому привязана синхронизация.',
+    es: 'Esa exportación es de otro chat ({chat}). Exporta el chat vinculado a esta sincronización.',
+  },
+  bf_topic_json: {
+    en: 'An export mixes every topic of the forum: for a single topic, forward its posts instead.', fa: 'فایل خروجی همهٔ موضوع‌های انجمن رو قاطی داره: برای یه موضوع، پست‌هاش رو فوروارد کن.',
+    ar: 'التصدير يخلط كل مواضيع المنتدى: لموضوع واحد، حوّل منشوراته بدلًا من ذلك.', ru: 'Экспорт смешивает все темы форума: для одной темы лучше перешли её посты.',
+    es: 'Una exportación mezcla todos los temas del foro: para un solo tema, reenvía sus publicaciones.',
   },
 
   // --- /playlist, /top, /random in groups and channels --------------------------------
@@ -349,7 +408,11 @@ const strings = {
   chat_random_empty: {
     en: '<b>{playlist}</b> is empty.', fa: '<b>{playlist}</b> خالیه.', ar: '<b>{playlist}</b> فارغة.', ru: '<b>{playlist}</b> пуст.', es: '<b>{playlist}</b> está vacía.',
   },
-  open_playlist: { en: '🎧 Open playlist', fa: '🎧 باز کردن پلی‌لیست', ar: '🎧 افتح القائمة', ru: '🎧 Открыть плейлист', es: '🎧 Abrir la lista' },
+  chat_song_usage: {
+    en: 'Send /song and a song name, like /song bohemian rhapsody.', fa: '/song رو با اسم یه آهنگ بفرست، مثلاً /song bohemian rhapsody.',
+    ar: 'أرسل /song واسم أغنية، مثل /song bohemian rhapsody.', ru: 'Отправь /song и название песни, например /song bohemian rhapsody.',
+    es: 'Envía /song y el nombre de una canción, como /song bohemian rhapsody.',
+  },
 
   // --- 🔎 Find music -------------------------------------------------------------------
   find_prompt: {
@@ -366,7 +429,18 @@ const strings = {
     en: 'I couldn\'t recognize that song.', fa: 'نتونستم این آهنگ رو تشخیص بدم.', ar: 'لم أتعرف على هذه الأغنية.',
     ru: 'Не удалось распознать эту песню.', es: 'No pude reconocer esa canción.',
   },
-  find_add: { en: '➕ Add to a synced playlist', fa: '➕ اضافه به یه پلی‌لیست همگام', ar: '➕ أضف إلى قائمة متزامنة', ru: '➕ В синхронизированный плейлист', es: '➕ Añadir a una lista sincronizada' },
+  find_add: { en: '➕ Add to playlist', fa: '➕ اضافه به پلی‌لیست', ar: '➕ أضف إلى قائمة', ru: '➕ В плейлист', es: '➕ Añadir a una lista' },
+  find_no_playlists: {
+    en: 'You have no playlist I can add to: create one in your music app first.', fa: 'هیچ پلی‌لیستی نداری که بتونم بهش اضافه کنم: اول توی برنامهٔ موسیقی‌ت یکی بساز.',
+    ar: 'ليست لديك قائمة يمكنني الإضافة إليها: أنشئ واحدة في تطبيق الموسيقى أولًا.', ru: 'Нет плейлистов, в которые я могу добавлять: сначала создай плейлист в музыкальном приложении.',
+    es: 'No tienes ninguna lista a la que pueda añadir: crea una en tu app de música primero.',
+  },
+  btn_like: { en: '❤️ Like', fa: '❤️ لایک', ar: '❤️ إعجاب', ru: '❤️ Лайк', es: '❤️ Me gusta' },
+  btn_add: { en: '➕ Add', fa: '➕ اضافه', ar: '➕ أضف', ru: '➕ Добавить', es: '➕ Añadir' },
+  btn_audio: { en: '🎵 Audio', fa: '🎵 فایل', ar: '🎵 الصوت', ru: '🎵 Аудио', es: '🎵 Audio' },
+  liked: { en: '❤️ Liked on {services}.', fa: '❤️ توی {services} لایک شد.', ar: '❤️ تم الإعجاب على {services}.', ru: '❤️ Лайк в {services}.', es: '❤️ Te gusta en {services}.' },
+  audio_asked: { en: '⏳ Getting the audio from @{bot}…', fa: '⏳ دارم فایل رو از @{bot} می‌گیرم…', ar: '⏳ أجلب الملف الصوتي من @{bot}…', ru: '⏳ Получаю аудио у @{bot}…', es: '⏳ Pidiendo el audio a @{bot}…' },
+  audio_coming: { en: '⏳ The audio is on its way.', fa: '⏳ فایل داره میاد.', ar: '⏳ الملف الصوتي في الطريق.', ru: '⏳ Аудио уже в пути.', es: '⏳ El audio ya está en camino.' },
   find_queue: { en: '▶️ Play next on my Spotify', fa: '▶️ پخش بعدی روی اسپاتیفای من', ar: '▶️ شغّلها تاليًا على Spotify', ru: '▶️ Следующей в моём Spotify', es: '▶️ Siguiente en mi Spotify' },
   find_audio: { en: '⬇️ Get the audio (@{bot})', fa: '⬇️ گرفتن فایل صوتی (@{bot})', ar: '⬇️ احصل على الملف الصوتي (@{bot})', ru: '⬇️ Получить аудио (@{bot})', es: '⬇️ Conseguir el audio (@{bot})' },
   find_pick_sync: {
@@ -459,6 +533,11 @@ const strings = {
     en: 'YouTube\'s daily limit for this bot is used up. Try again tomorrow.', fa: 'سقف روزانهٔ یوتیوب برای این بات پر شده. فردا دوباره امتحان کن.',
     ar: 'استُنفد الحد اليومي لـ YouTube لهذا البوت. حاول غدًا.', ru: 'Дневной лимит YouTube для этого бота исчерпан. Попробуй завтра.',
     es: 'Se agotó el límite diario de YouTube para este bot. Inténtalo mañana.',
+  },
+  err_scope: {
+    en: 'Connect {service} again in 🎧 Accounts to allow this.', fa: 'برای این کار {service} رو توی 🎧 حساب‌ها دوباره وصل کن.',
+    ar: 'اربط {service} مجددًا في 🎧 الحسابات للسماح بذلك.', ru: 'Подключи {service} заново в 🎧 Аккаунты, чтобы это разрешить.',
+    es: 'Vuelve a conectar {service} en 🎧 Cuentas para permitirlo.',
   },
   err_forbidden: {
     en: 'Not allowed: is this playlist yours?', fa: 'اجازه نداری: این پلی‌لیست مال توئه؟', ar: 'غير مسموح: هل هذه القائمة لك؟',

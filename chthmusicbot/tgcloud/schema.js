@@ -68,6 +68,7 @@ export const links = table('links', {
   direction:    text('direction').notNull().default('both'),
   reaction:     integer('reaction').notNull().default(1),
   dedupe:       integer('dedupe').notNull().default(0),
+  audio:        integer('audio').notNull().default(1),     // posts get their audio from @chethoberbot
   createdAt:    integer('created_at').notNull(),
 }, (t) => ({
   byChat:  index('idx_links_chat').on(t.chatId),
@@ -110,7 +111,8 @@ export const finds = table('finds', {
   byUser: index('idx_finds_user').on(t.userId),
 }));
 
-// Audio asked from @chethoberbot, waiting for its reply.
+// Audio asked from @chethoberbot, waiting for its reply. It goes to chatId (a
+// group or channel, as a reply to replyTo) or, when that's null, to userId.
 export const relays = table('relays', {
   id:            integer('id').primaryKey({ autoIncrement: true }),
   userId:        integer('user_id').notNull(),
@@ -118,7 +120,22 @@ export const relays = table('relays', {
   sentMessageId: integer('sent_message_id'),
   done:          integer('done').notNull().default(0),
   createdAt:     integer('created_at').notNull(),
+  chatId:        integer('chat_id'),
+  threadId:      integer('thread_id'),
+  replyTo:       integer('reply_to'),
+  songId:        integer('song_id'),
 });
+
+// Songs the bot posted in chats, so the ❤️ ➕ 🎵 buttons under them stay short.
+export const songs = table('songs', {
+  id:        integer('id').primaryKey({ autoIncrement: true }),
+  title:     text('title'),
+  artist:    text('artist'),
+  url:       text('url'),                            // a link song.link understands
+  createdAt: integer('created_at').notNull(),
+}, (t) => ({
+  byUrl: index('idx_songs_url').on(t.url),
+}));
 
 // A group's player: the host's Spotify, shared with the group.
 export const players = table('players', {
@@ -129,3 +146,19 @@ export const players = table('players', {
   queuePosts: integer('queue_posts').notNull().default(1),
   createdAt:  integer('created_at').notNull(),
 });
+
+// ⏮ Old posts queued for a sync's playlist (forwarded to the bot, or read from
+// a chat export). status: wait | added | known | missed | retry.
+export const backfillItems = table('backfill_items', {
+  id:         integer('id').primaryKey({ autoIncrement: true }),
+  userId:     integer('user_id').notNull(),
+  linkId:     integer('link_id').notNull(),
+  refs:       json('refs'),
+  messageId:  integer('message_id'),
+  posterId:   integer('poster_id'),
+  posterName: text('poster_name'),
+  status:     text('status').notNull().default('wait'),
+  createdAt:  integer('created_at').notNull(),
+}, (t) => ({
+  byUser: index('idx_backfill_items_user').on(t.userId, t.status),
+}));

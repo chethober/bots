@@ -1,6 +1,6 @@
 // handlers/message.js — the private chat (buttons, wizard input, 🔎 Find music),
 // groups and forums (music posts feed their syncs and the group player; /player,
-// /sync, /playlist, /top, /random) and replies from @chethoberbot.
+// /sync, /playlist, /top, /random, /song) and replies from @chethoberbot.
 
 import { api } from 'sdk';
 import { ADMIN_IDS, BOT_USERNAME, SOURCE_URL } from '../lib/config.js';
@@ -10,7 +10,9 @@ import { drop, showScreen } from '../lib/screen.js';
 import { clearDraft } from '../lib/drafts.js';
 import { accountsView, linksView, sendHome } from '../lib/views.js';
 import { startNewSync, startTopicSync, onChatShared, onWizardText } from '../lib/wizard.js';
-import { findFromMessage } from '../lib/find.js';
+import { findFromMessage, showSongCard } from '../lib/find.js';
+import { onBackfillMessage } from '../lib/backfill.js';
+import { getSong, relayMarkup } from '../lib/songs.js';
 import { connectFromChat } from '../lib/login.js';
 import { isRelayBot, onRelayMessage } from '../lib/relay.js';
 import { extractRefs } from '../lib/tracks.js';
@@ -56,6 +58,8 @@ async function onCommand(message, { cmd, args }) {
     if (topic) return startTopicSync(from, Number(topic[1]), Number(topic[2]));
     if (args === 'accounts') return showScreen(from.id, await accountsView(from.id, locale));
     if (args === 'find') return showScreen(from.id, { text: t(locale, 'find_prompt') });
+    const song = /^sg(\d+)$/.exec(args) && await getSong(Number(args.slice(2)));
+    if (song) return showSongCard(from, song);
   }
   return sendHome(from);
 }
@@ -67,6 +71,7 @@ async function onPrivate(message) {
   if (button) return onButton(message, button);
   const command = parseCommand(message.text);
   if (command) return onCommand(message, command);
+  if (await onBackfillMessage(message)) return null;
   if (message.text && await onWizardText(message)) return null;
   if (message.text) await drop(message.chat.id, message.message_id);
   if (message.text || message.audio || message.caption) return findFromMessage(message);
@@ -93,7 +98,7 @@ async function onGroup(message) {
       reply_markup: { inline_keyboard: [[{ text: t(locale, 'open_bot'), url: `https://t.me/${BOT_USERNAME}?start=s${chatId}_${threadId}` }]] },
     });
   }
-  if (command) return onChatCommand(message, command.cmd, threadId);
+  if (command) return onChatCommand(message, command, threadId);
 
   const refs = extractRefs(message);
   if (!refs.length) return null;
@@ -102,7 +107,7 @@ async function onGroup(message) {
 }
 
 export default async function (message) {
-  if (message.chat.type === 'private' && isRelayBot(message.from)) return onRelayMessage(message);
+  if (message.chat.type === 'private' && isRelayBot(message.from)) return onRelayMessage(message, relayMarkup);
   if (message.chat.type === 'private') return onPrivate(message);
   if (message.chat.type === 'group' || message.chat.type === 'supergroup') return onGroup(message);
   return null;

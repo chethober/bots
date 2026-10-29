@@ -131,6 +131,11 @@ export const youtube = {
     }
   },
 
+  /** 👍 the video, which puts it in YouTube Music's Liked music. Costs 50 units. */
+  like(acct, videoId) {
+    return call(acct, 'POST', `/videos/rate?id=${encodeURIComponent(videoId)}&rating=like`);
+  },
+
   async search(acct, { title, artist }) {
     const q = encodeURIComponent([artist, title].filter(Boolean).join(' '));
     const hit = (await call(acct, 'GET', `/search?part=snippet&type=video&videoCategoryId=10&maxResults=1&q=${q}`)).items?.[0];

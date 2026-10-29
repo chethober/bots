@@ -2,8 +2,9 @@
 //
 //   chat → playlist  live: every music post in the chat is added (handlers).
 //   playlist → chat  on demand: 🔄 Sync now posts the playlist's tracks the chat
-//                    hasn't seen, SYNC_BATCH at a time. It also retries posts
-//                    whose tracks couldn't be added.
+//                    hasn't seen, SYNC_BATCH at a time, each with its audio
+//                    from @chethoberbot (🎵 Audio files). It also retries
+//                    posts whose tracks couldn't be added.
 //
 // link_tracks remembers every track a link has on both sides, so a track is
 // never added or posted twice, and a repost is recognized.
@@ -22,6 +23,7 @@ import { localeFor } from './i18n.js';
 import { errorText } from './errors.js';
 import { t } from './strings.js';
 import { publicPlaylistUrl } from './chatcmds.js';
+import { askSongAudio, saveSong, songKeyboard } from './songs.js';
 import { esc, now, unique } from './util.js';
 
 export const getLink = (id) => db.select().from(links).where(eq(links.id, id)).get();
@@ -74,6 +76,33 @@ export async function baseline(link) {
   const tracks = await provider.playlistTracks(acct, link.playlistId);
   await remember(link.id, tracks.map((x) => x.id), { source: 'playlist' });
   return tracks.length;
+}
+
+/**
+ * ⏮ Old posts: remember their tracks and add the new ones to the playlist in
+ * one go. entries: [{ ids, messageId, posterId, posterName }]. Returns how many
+ * of each entry's tracks were new. When adding fails they stay pending (🔄 Sync now
+ * retries them) and the error is thrown with `.fresh` set.
+ */
+export async function addOldTracks(link, entries) {
+  const counts = [];
+  const fresh = [];
+  for (const e of entries) {
+    const claimed = await remember(link.id, e.ids, { messageId: e.messageId ?? null, source: 'chat', posterId: e.posterId ?? null, posterName: e.posterName ?? null });
+    counts.push(claimed.length);
+    fresh.push(...claimed);
+  }
+  if (!fresh.length) return counts;
+  const provider = providerOf(link.provider);
+  try {
+    await provider.addTracks(await getAccount(link.ownerId, link.provider), link.playlistId, fresh);
+  } catch (e) {
+    await db.update(linkTracks).set({ pending: 1 })
+      .where(and(eq(linkTracks.linkId, link.id), inArray(linkTracks.trackId, fresh))).run();
+    e.fresh = counts;
+    throw e;
+  }
+  return counts;
 }
 
 // --- chat → playlist ---------------------------------------------------------
@@ -183,17 +212,26 @@ function postText(locale, provider, track) {
   return `${head}\n<a href="${esc(track.url)}">${provider.name}</a> · <a href="${pageUrl(provider.id, track.id)}">${t(locale, 'listen_anywhere')}</a>`;
 }
 
-/** A playlist → chat post: the track, and a button to the playlist when others can open it. */
-function postMessage(locale, provider, link, track) {
+/**
+ * Post a playlist track in the link's chat, with ❤️ ➕ 🎵 and a button to the
+ * playlist when others can open it; with the link's 🎵 Audio on, its file
+ * follows from @chethoberbot as a reply. Returns the sent message.
+ */
+async function postTrack(locale, provider, link, track) {
+  const song = await saveSong(track);
   const url = publicPlaylistUrl(link);
-  return {
+  const sent = await api.sendMessage({
     chat_id: link.chatId,
     message_thread_id: link.threadId > 0 ? link.threadId : undefined,
     text: postText(locale, provider, track),
     parse_mode: 'HTML',
     link_preview_options: { url: track.url, prefer_small_media: true },
-    reply_markup: url ? { inline_keyboard: [[{ text: t(locale, 'open_playlist'), url }]] } : undefined,
-  };
+    reply_markup: songKeyboard(locale, song, { extra: url ? [[{ text: t(locale, 'open_playlist'), url }]] : [] }),
+  });
+  if (link.audio) {
+    await askSongAudio(song, link.ownerId, { chatId: link.chatId, threadId: link.threadId > 0 ? link.threadId : 0, replyTo: sent.message_id });
+  }
+  return sent;
 }
 
 async function syncOne(link, budget, locale) {
@@ -219,7 +257,7 @@ async function syncOne(link, budget, locale) {
     .filter((x) => !known.has(x.id) && !seen.has(x.id) && seen.add(x.id));
   for (const track of fresh.slice(0, budget)) {
     try {
-      const sent = await api.sendMessage(postMessage(locale, provider, link, track));
+      const sent = await postTrack(locale, provider, link, track);
       await remember(link.id, [track.id], { messageId: sent.message_id, source: 'playlist' });
       result.posted++;
     } catch (e) {
@@ -251,7 +289,7 @@ export async function addFromBot(link, track) {
   }
   if (link.direction === 'both') {
     const locale = await localeFor({ id: link.ownerId });
-    const sent = await api.sendMessage(postMessage(locale, provider, link, track)).catch(() => null);
+    const sent = await postTrack(locale, provider, link, track).catch(() => null);
     if (sent) {
       await db.update(linkTracks).set({ messageId: sent.message_id })
         .where(and(eq(linkTracks.linkId, link.id), eq(linkTracks.trackId, track.id))).run();

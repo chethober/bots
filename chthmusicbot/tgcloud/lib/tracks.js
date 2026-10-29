@@ -27,7 +27,8 @@ function messageUrls(message) {
   return [...new Set(urls)];
 }
 
-function audioQuery(audio) {
+/** Title and artist from an audio file's tags, or its file name. */
+export function audioQuery(audio) {
   if (audio.title) return { title: audio.title, artist: audio.performer };
   const name = (audio.file_name ?? '').replace(/\.[a-z0-9]+$/i, '').replace(/_/g, ' ').trim();
   if (!name) return null;
@@ -80,4 +81,12 @@ export async function describeRef(ref, memo = new Map()) {
   if (ref.query) return ref.query;
   if (!memo.has(ref.url)) memo.set(ref.url, await songlink(ref.url).catch(() => null));
   return metaOf(memo.get(ref.url));
+}
+
+/** A saved song ({ title, artist, url }) on `provider`: by its link first, then by name. */
+export async function matchSong(song, provider, acct, memo = new Map()) {
+  const ref = (song.url && refOfUrl(song.url)) || { query: { title: song.title, artist: song.artist } };
+  const hit = await resolveRef(ref, provider, acct, memo);
+  if (hit?.id || !song.title || ref.query) return hit?.id ? hit : null;
+  return provider.search(acct, { title: song.title, artist: song.artist }).catch(() => null);
 }

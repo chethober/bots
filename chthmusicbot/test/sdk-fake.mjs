@@ -1,6 +1,6 @@
 // An in-memory stand-in for the tgcloud SDK, for flow tests: a tiny query
 // builder over arrays, a recording Bot API and a routable fetch.
-export const state = { tables: new Map(), calls: [], routes: [], msgId: 1000 };
+export const state = { tables: new Map(), calls: [], routes: [], msgId: 1000, files: {} };
 
 const colFactory = (type) => (name, opts) => {
   const c = { type, name, opts, mods: {} };
@@ -127,6 +127,7 @@ const apiResults = {
   getMe: () => ({ id: 1, is_bot: true, username: 'chthmusicbot' }),
   getChat: (p) => ({ id: p.chat_id, type: 'supergroup', title: 'Music Club', is_forum: false }),
   getChatMember: () => ({ status: 'administrator' }),
+  getFileContent: (id) => new TextEncoder().encode(state.files[id]),
 };
 export const api = new Proxy({}, {
   get: (_, method) => async (params = {}) => {

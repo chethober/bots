@@ -6,10 +6,14 @@
 </p>
 
 <p align="center">
-  <a href="../LICENSE">MIT License</a>
+  <a href="https://t.me/chthgrambot">Try it: @chthgrambot</a> · <a href="../LICENSE">MIT License</a>
 </p>
 
 ---
+
+**@chthgrambot is public**: anyone can use it for their own account. Press Start, connect your own free Cloudflare
+Workers AI key with 🔑 Connect AI (the bot walks you through it), then add the bot in Telegram Settings → Telegram
+Business → Chatbots. Each user's key, settings, chats and style are their own. Telegram Business needs Telegram Premium.
 
 The bot uses **Telegram Business chatbot mode** ("secretary"). A Mini App panel lets you tune mood, emoji style,
 temperature, length, language, knowledge, schedule and more.
@@ -71,8 +75,9 @@ You need Node.js 18+ and a bot from [@BotFather](https://t.me/BotFather).
    npx tgcloud migrate   # creates the database tables
    ```
 4. **Configure.** Put the printed Mini App URL (`https://app<id>.tgcloud.ai/`) in
-   `PANEL_URL` in `tgcloud/lib/config.js`. Add your Telegram user ID to `ALLOWED_USER_IDS`
-   to keep the bot private. Then run `npx tgcloud push` again.
+   `PANEL_URL` in `tgcloud/lib/config.js`. Leave `ALLOWED_USER_IDS` empty for a public bot where every user brings
+   their own Cloudflare key (like @chthgrambot), or list Telegram user IDs to keep yours private. Then run
+   `npx tgcloud push` again.
 5. **Connect Cloudflare AI.** Send `/start` to your bot, then tap **🔑 Connect AI**. The bot walks you through
    it with links: open the [Workers AI dashboard](https://dash.cloudflare.com/?to=/:account/ai/workers-ai)
    → **Use REST API** → paste the **Account ID** → **Create a Workers AI API Token** → paste the token.

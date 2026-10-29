@@ -14,6 +14,7 @@ const MAX_PLAYLISTS = 200;
 export const SCOPES = [
   'playlist-read-private', 'playlist-read-collaborative', 'playlist-modify-private', 'playlist-modify-public',
   'user-read-playback-state', 'user-modify-playback-state', 'user-read-currently-playing',
+  'user-library-modify',
 ].join(' ');
 
 const clientOf = (acct) => acct.clientId || SPOTIFY_CLIENT_ID;
@@ -123,6 +124,16 @@ export const spotify = {
   async addTracks(acct, playlistId, ids) {
     for (let i = 0; i < ids.length; i += 100) {
       await call(acct, 'POST', `/playlists/${playlistId}/items`, { uris: ids.slice(i, i + 100).map((id) => `spotify:track:${id}`) });
+    }
+  },
+
+  /** Save to Liked Songs (/me/library; older apps only have /me/tracks). */
+  async like(acct, id) {
+    try {
+      await call(acct, 'PUT', `/me/library?uris=${encodeURIComponent(`spotify:track:${id}`)}`);
+    } catch (e) {
+      if (e.status !== 404) throw e;
+      await call(acct, 'PUT', `/me/tracks?ids=${id}`);
     }
   },
 

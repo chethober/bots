@@ -14,6 +14,7 @@ export function errorText(locale, e) {
     if (e.reason === 'PREMIUM_REQUIRED') return t(locale, 'err_premium');
     if (e.reason === 'quotaExceeded') return t(locale, 'err_quota');
     if (e.reason === 'invalid_grant') return t(locale, 'err_expired', { service });
+    if (e.status === 403 && /scope/i.test(e.message)) return t(locale, 'err_scope', { service });
     if (e.status === 403) return t(locale, 'err_forbidden');
     if (e.status === 429) return t(locale, 'err_rate');
     return e.message;

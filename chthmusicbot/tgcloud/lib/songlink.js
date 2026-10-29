@@ -9,10 +9,14 @@ const PLATFORMS = {
   apple: ['appleMusic', 'itunes'],
 };
 
-/** The song.link record for `url`, or null if it doesn't know the link. */
+/** song.link's rate limit (10 requests a minute without a key) is used up. */
+export class SonglinkLimit extends Error {}
+
+/** The song.link record for `url`, or null if it doesn't know the link. Throws SonglinkLimit on 429. */
 export async function songlink(url) {
   const key = SONGLINK_API_KEY ? `&key=${encodeURIComponent(SONGLINK_API_KEY)}` : '';
   const res = await fetch(`https://api.song.link/v1-alpha.1/links?userCountry=US&url=${encodeURIComponent(url)}${key}`);
+  if (res.status === 429) throw new SonglinkLimit('song.link rate limit');
   if (!res.ok) return null;
   return res.json().catch(() => null);
 }

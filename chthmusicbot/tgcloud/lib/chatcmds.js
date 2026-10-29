@@ -3,9 +3,11 @@
 //   /playlist  the playlists synced with this chat (or topic), with open buttons
 //   /top       who posted the most tracks that made it into those playlists
 //   /random    a random track from one of those playlists
+//   /song <name>  finds a song and posts it
 //
 // The command post is deleted (when the bot may) and the answer is posted in
-// the same topic. /random is throttled per chat, since it reads the playlist.
+// the same topic. Songs come with ❤️ ➕ 🎵 and their audio from @chethoberbot
+// as a reply. /random and /song are throttled per chat.
 
 import { api, db } from 'sdk';
 import { and, eq, inArray } from 'sdk/db';
@@ -14,15 +16,17 @@ import { BOT_USERNAME } from './config.js';
 import { providerOf } from './providers/index.js';
 import { getAccount } from './accounts.js';
 import { pageUrl } from './songlink.js';
+import { searchSongs } from './itunes.js';
+import { askSongAudio, saveSong, songKeyboard } from './songs.js';
 import { getSetting, saveSetting } from './settings.js';
 import { localeFor } from './i18n.js';
 import { errorText } from './errors.js';
 import { t } from './strings.js';
 import { esc, now } from './util.js';
 
-export const CHAT_COMMANDS = ['playlist', 'top', 'random'];
+export const CHAT_COMMANDS = ['playlist', 'top', 'random', 'song'];
 
-const RANDOM_EVERY = 30; // seconds between two /random in one chat
+const EVERY = { random: 30, song: 10 }; // seconds between two of them in one chat
 const TOP_SIZE = 10;
 const MEDALS = ['🥇', '🥈', '🥉'];
 
@@ -86,11 +90,17 @@ async function topView(rows, locale) {
   return { text: lines.join('\n'), parse_mode: 'HTML' };
 }
 
+/** False when the chat used `cmd` too recently. */
+async function allowed(cmd, chatId) {
+  const key = `${cmd}:${chatId}`;
+  if (now() - (Number(await getSetting(key)) || 0) < EVERY[cmd]) return false;
+  await saveSetting(key, String(now()));
+  return true;
+}
+
 async function randomView(rows, locale, chatId) {
   if (!rows.length) return { text: t(locale, 'chat_no_playlists') };
-  const key = `rnd:${chatId}`;
-  if (now() - (Number(await getSetting(key)) || 0) < RANDOM_EVERY) return null;
-  await saveSetting(key, String(now()));
+  if (!(await allowed('random', chatId))) return null;
   const link = rows[Math.floor(Math.random() * rows.length)];
   const provider = providerOf(link.provider);
   try {
@@ -99,6 +109,7 @@ async function randomView(rows, locale, chatId) {
     const tracks = await provider.playlistTracks(acct, link.playlistId);
     if (!tracks.length) return { text: t(locale, 'chat_random_empty', { playlist: esc(link.playlistName ?? '—') }), parse_mode: 'HTML' };
     const track = tracks[Math.floor(Math.random() * tracks.length)];
+    const song = await saveSong(track);
     const url = publicPlaylistUrl(link);
     return {
       text: [
@@ -108,18 +119,33 @@ async function randomView(rows, locale, chatId) {
       ].join('\n'),
       parse_mode: 'HTML',
       link_preview_options: { url: track.url, prefer_small_media: true },
-      reply_markup: url ? { inline_keyboard: [[{ text: t(locale, 'open_playlist'), url }]] } : undefined,
+      reply_markup: songKeyboard(locale, song, { extra: url ? [[{ text: t(locale, 'open_playlist'), url }]] : [] }),
+      song,
     };
   } catch (e) {
     return { text: `⚠️ ${errorText(locale, e)}` };
   }
 }
 
+async function songView(query, locale, chatId) {
+  if (!query) return { text: t(locale, 'chat_song_usage') };
+  if (!(await allowed('song', chatId))) return null;
+  const [hit] = await searchSongs(query, 1);
+  if (!hit) return { text: t(locale, 'find_none', { query: esc(query) }), parse_mode: 'HTML' };
+  const song = await saveSong(hit);
+  return {
+    text: `🎵 <b>${esc(hit.title)}</b>${hit.artist ? ` — ${esc(hit.artist)}` : ''}\n<a href="${esc(hit.url)}">${t(locale, 'listen_anywhere')}</a>`,
+    parse_mode: 'HTML',
+    reply_markup: songKeyboard(locale, song),
+    song,
+  };
+}
+
 /**
- * /playlist, /top or /random in a group, topic or channel. False if `cmd`
- * isn't one of them.
+ * /playlist, /top, /random or /song in a group, topic or channel. False if
+ * the command isn't one of them.
  */
-export async function onChatCommand(message, cmd, threadId) {
+export async function onChatCommand(message, { cmd, args }, threadId) {
   if (!CHAT_COMMANDS.includes(cmd)) return false;
   const chatId = message.chat.id;
   await api.deleteMessage({ chat_id: chatId, message_id: message.message_id }).catch(() => {});
@@ -128,10 +154,14 @@ export async function onChatCommand(message, cmd, threadId) {
   const locale = await localeFor(message.from ?? (rows[0] ? { id: rows[0].ownerId } : null));
   const view = cmd === 'playlist' ? await playlistView(rows, locale)
     : cmd === 'top' ? await topView(rows, locale)
-      : await randomView(rows, locale, chatId);
-  if (view) {
-    await api.sendMessage({ chat_id: chatId, message_thread_id: threadId || undefined, link_preview_options: { is_disabled: true }, ...view })
-      .catch((e) => console.warn('cannot answer', cmd, chatId, e.description ?? e.message));
-  }
+      : cmd === 'random' ? await randomView(rows, locale, chatId)
+        : await songView(args, locale, chatId);
+  if (!view) return true;
+  const { song, ...params } = view;
+  const sent = await api.sendMessage({ chat_id: chatId, message_thread_id: threadId || undefined, link_preview_options: { is_disabled: true }, ...params })
+    .catch((e) => console.warn('cannot answer', cmd, chatId, e.description ?? e.message));
+  // The song's file follows as a reply, asked for whoever sent the command (or the sync's owner).
+  const asker = message.from?.id ?? rows[0]?.ownerId;
+  if (sent && song && asker) await askSongAudio(song, asker, { chatId, threadId, replyTo: sent.message_id });
   return true;
 }

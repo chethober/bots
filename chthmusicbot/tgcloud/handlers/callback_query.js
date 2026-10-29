@@ -2,7 +2,8 @@
 //   lang:<code>   language          tip…        ⭐ Tip (lib/tips.js)
 //   ac[:…]        🎧 Accounts        nw[:…]      ➕ New sync wizard
 //   ln[:<id>[:op]] 🔗 My syncs        fd:<id>…    🔎 Find music
-//   pl:<action>   the group player
+//   pl:<action>   the group player   sg:<id>:op  ❤️ ➕ 🎵 under a posted song
+//   bf:<op>       ⏮ Add old songs (lib/backfill.js)
 
 import { api } from 'sdk';
 import { SOURCE_URL } from '../lib/config.js';
@@ -10,8 +11,9 @@ import { setLocale, LOCALE_NAMES, localeFor } from '../lib/i18n.js';
 import { aboutKeyboard, isTipCallback, onTipCallback } from '../lib/tips.js';
 import { accountsView, linksView, linkView, sendHome } from '../lib/views.js';
 import { onWizardCallback } from '../lib/wizard.js';
-import { onFindCallback } from '../lib/find.js';
+import { onFindCallback, onSongCallback } from '../lib/find.js';
 import { onPlayerCallback } from '../lib/player.js';
+import { onBackfillCallback, startBackfill } from '../lib/backfill.js';
 import { deleteAccount } from '../lib/accounts.js';
 import { youtubeStart, youtubePoll } from '../lib/login.js';
 import { getLink, updateLink, deleteLink, syncNow } from '../lib/sync.js';
@@ -102,12 +104,16 @@ async function onLinks(q, locale, arg) {
     await answer(q, t(locale, `dir_${next}`));
     return edit(q, await linkView({ ...link, direction: next }, locale));
   }
-  if (op === 'react' || op === 'dedupe') {
-    const key = op === 'react' ? 'reaction' : 'dedupe';
+  if (op === 'react' || op === 'dedupe' || op === 'audio') {
+    const key = op === 'react' ? 'reaction' : op;
     const value = link[key] ? 0 : 1;
     await updateLink(link, { [key]: value });
     await answer(q);
     return edit(q, await linkView({ ...link, [key]: value }, locale));
+  }
+  if (op === 'bf') {
+    await answer(q);
+    return startBackfill(link, locale, q.message.message_id);
   }
   if (op === 'del') {
     await answer(q);
@@ -149,6 +155,8 @@ export default async function (q) {
       return await onWizardCallback(q, arg);
     }
     if (head === 'fd') return await onFindCallback(q, arg);
+    if (head === 'sg') return await onSongCallback(q, arg);
+    if (head === 'bf') return await onBackfillCallback(q, arg);
   } catch (e) {
     console.error(e);
     return answer(q, errorText(locale, e).slice(0, 190), true);
