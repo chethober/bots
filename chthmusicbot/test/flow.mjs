@@ -1,6 +1,7 @@
 // End-to-end flows against the in-memory SDK (sdk-fake.mjs) and a fake
 // Spotify / song.link / iTunes: the ➕ New sync wizard, chat → playlist on a
-// post, repost detection, 🔄 Sync now, 🔎 Find music and the group player.
+// post, repost detection, 🔄 Sync now, 🔎 Find music, the group player and
+// /playlist, /top, /random in groups and channels.
 import assert from 'node:assert/strict';
 import { state } from './sdk-fake.mjs';
 import message from '../tgcloud/handlers/message.js';
@@ -147,6 +148,33 @@ await post('https://song.link/i/111', 61);
 assert.deepEqual(queued, [`spotify:track:${T('r')}`]);
 assert.ok(calls('setMessageReaction').some((c) => c.params.reaction[0].emoji === '⚡'));
 
+// /playlist, /top and /random in the group answer there and delete the command.
+const groupCmd = (text, id) => message({ message_id: id, from: USER, chat: GROUP, date: 0, text });
+reset();
+await groupCmd('/playlist', 70);
+assert.ok(calls('deleteMessage').some((c) => c.params.message_id === 70));
+assert.match(last('sendMessage').text, /Club Hits/);
+assert.equal(buttons(last('sendMessage').reply_markup)[0].url, `https://open.spotify.com/playlist/${PL}`);
+reset();
+await groupCmd('/top@chthmusicbot', 71);
+assert.match(last('sendMessage').text, /🥇 Omid · 🎵 1/);
+reset();
+await groupCmd('/random', 72);
+assert.match(last('sendMessage').text, /random pick from <b>Club Hits/);
+reset();
+await groupCmd('/random', 73);
+assert.equal(calls('sendMessage').length, 0, '/random is throttled');
+
+// The same commands work in a channel, answering in the sync owner's language.
+const { default: channelPost } = await import('../tgcloud/handlers/channel_post.js');
+const CHANNEL = { id: -100700, type: 'channel', title: 'Radio' };
+state.tables.get('links').rows.push({ ...link, id: 99, chatId: CHANNEL.id });
+reset();
+await channelPost({ message_id: 80, chat: CHANNEL, date: 0, text: '/playlist' });
+assert.equal(last('sendMessage').chat_id, CHANNEL.id);
+assert.match(last('sendMessage').text, /Playlists synced/);
+state.tables.get('links').rows.pop();
+
 // 🔗 My syncs lists the sync; removing it clears its tracks.
 reset();
 await priv({ text: '🔗 My syncs' });
@@ -197,4 +225,4 @@ state.googleAllowed = true;
 await newCb(ok.callback_data);
 assert.equal((await getAccount(NEW.id, 'youtube')).name, 'Sara Music');
 
-console.log('ok: flows (wizard, chat → playlist, reposts, sync now, find, inline, player, logins)');
+console.log('ok: flows (wizard, chat → playlist, reposts, sync now, find, inline, player, group and channel commands, logins)');

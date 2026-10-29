@@ -76,6 +76,7 @@ export const links = table('links', {
 
 // Every track a link knows is on both sides, so nothing is added or posted twice.
 // pending = 1: seen in the chat but adding it to the playlist failed (🔄 Sync now retries).
+// posterId/posterName: who posted it in the chat (a channel post's signature), for /top.
 export const linkTracks = table('link_tracks', {
   id:        integer('id').primaryKey({ autoIncrement: true }),
   linkId:    integer('link_id').notNull(),
@@ -83,6 +84,8 @@ export const linkTracks = table('link_tracks', {
   messageId: integer('message_id'),
   source:    text('source'),                         // chat | playlist | bot
   pending:   integer('pending').notNull().default(0),
+  posterId:  integer('poster_id'),
+  posterName: text('poster_name'),
   addedAt:   integer('added_at').notNull(),
 }, (t) => ({
   linkTrack: uniqueIndex('idx_link_tracks_link_track').on(t.linkId, t.trackId),

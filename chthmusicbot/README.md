@@ -34,6 +34,13 @@ Anyone can use it with their own accounts: connect a music service, pick a chat,
 - **🔗 My syncs.** Sync now, change the direction, toggle the reaction and repost deletion, open or remove.
   Tracks that couldn't be added (an expired login, a quota) are retried by Sync now; the owner gets a private
   message when a sync fails (at most once an hour).
+- **In groups, topics and channels** (anyone can use them; the bot answers in the same topic):
+  - `/playlist` lists the playlists synced with the chat, with their track counts and 🎧 open buttons. In a forum's
+    General topic it shows every topic's playlist.
+  - `/top` ranks who posted the most tracks that made it into those playlists (a channel's signed posts count too).
+  - `/random` posts a random track from one of them (once every 30 seconds per chat).
+  - Tracks posted by 🔄 Sync now carry a 🎧 Open playlist button (except Apple Music library playlists, which
+    only their owner can open).
 - **🔎 Find music.** Send a song name, a link or an audio file in the private chat: add it to one of your
   synced playlists, play it next on your Spotify, or get its audio from **@chethoberbot** (over bot-to-bot
   messages). Songs are found by name with the iTunes Search API and mapped to each service by song.link.
@@ -94,8 +101,8 @@ the optional `CHTHMUSICBOT_SPOTIFY_CLIENT_ID`, `CHTHMUSICBOT_GOOGLE_CLIENT_ID`, 
 tgcloud/
 ├── schema.js                 accounts, logins, chats, topics, links, link_tracks, drafts, finds, relays, players
 ├── handlers/
-│   ├── message.js            private chat (buttons, wizard, find), group posts and /player, /sync, @chethoberbot replies
-│   ├── channel_post.js       channel posts feed the channel's syncs
+│   ├── message.js            private chat (buttons, wizard, find), group posts and commands, @chethoberbot replies
+│   ├── channel_post.js       channel posts feed the channel's syncs; channel commands
 │   ├── callback_query.js     every inline button
 │   ├── inline_query.js       "@bot song" search
 │   ├── my_chat_member.js     added to / removed from a chat
@@ -106,6 +113,7 @@ tgcloud/
 └── lib/
     ├── providers/            spotify.js · youtube.js · apple.js: one shape (playlists, search, links, player)
     ├── sync.js               links: chat → playlist on post, playlist → chat on Sync now
+    ├── chatcmds.js           /playlist, /top and /random in groups, topics and channels
     ├── tracks.js · songlink.js · itunes.js   recognizing songs and matching them across services
     ├── wizard.js · views.js · find.js · player.js · relay.js · login.js
     └── accounts.js · chats.js · drafts.js · http.js · errors.js · strings.js · i18n.js · screen.js · tips.js

@@ -21,6 +21,7 @@ import { getSetting, saveSetting } from './settings.js';
 import { localeFor } from './i18n.js';
 import { errorText } from './errors.js';
 import { t } from './strings.js';
+import { publicPlaylistUrl } from './chatcmds.js';
 import { esc, now, unique } from './util.js';
 
 export const getLink = (id) => db.select().from(links).where(eq(links.id, id)).get();
@@ -56,11 +57,11 @@ async function knownIds(linkId) {
   return new Set(rows.map((r) => r.trackId));
 }
 
-async function remember(linkId, trackIds, { messageId = null, source, pending = 0 }) {
+async function remember(linkId, trackIds, { messageId = null, source, pending = 0, posterId = null, posterName = null }) {
   const ids = unique(trackIds);
   const claimed = [];
   for (let i = 0; i < ids.length; i += 200) {
-    const rows = ids.slice(i, i + 200).map((trackId) => ({ linkId, trackId, messageId, source, pending, addedAt: now() }));
+    const rows = ids.slice(i, i + 200).map((trackId) => ({ linkId, trackId, messageId, source, pending, posterId, posterName, addedAt: now() }));
     claimed.push(...await db.insert(linkTracks).values(rows).onConflictDoNothing().returning().run());
   }
   return claimed.map((r) => r.trackId);
@@ -123,7 +124,10 @@ async function addPost(link, refs, message, memo) {
   if (!ids.length) return 'none';
 
   // Claim new tracks first; the unique index makes a concurrent repost lose.
-  const fresh = await remember(link.id, ids, { messageId: message.message_id, source: 'chat' });
+  const fresh = await remember(link.id, ids, {
+    messageId: message.message_id, source: 'chat',
+    posterId: message.from?.id ?? null, posterName: message.from?.first_name ?? message.author_signature ?? null,
+  });
   if (fresh.length) {
     try {
       await provider.addTracks(acct, link.playlistId, fresh);
@@ -179,6 +183,19 @@ function postText(locale, provider, track) {
   return `${head}\n<a href="${esc(track.url)}">${provider.name}</a> · <a href="${pageUrl(provider.id, track.id)}">${t(locale, 'listen_anywhere')}</a>`;
 }
 
+/** A playlist → chat post: the track, and a button to the playlist when others can open it. */
+function postMessage(locale, provider, link, track) {
+  const url = publicPlaylistUrl(link);
+  return {
+    chat_id: link.chatId,
+    message_thread_id: link.threadId > 0 ? link.threadId : undefined,
+    text: postText(locale, provider, track),
+    parse_mode: 'HTML',
+    link_preview_options: { url: track.url, prefer_small_media: true },
+    reply_markup: url ? { inline_keyboard: [[{ text: t(locale, 'open_playlist'), url }]] } : undefined,
+  };
+}
+
 async function syncOne(link, budget, locale) {
   const provider = providerOf(link.provider);
   const acct = await getAccount(link.ownerId, link.provider);
@@ -202,13 +219,7 @@ async function syncOne(link, budget, locale) {
     .filter((x) => !known.has(x.id) && !seen.has(x.id) && seen.add(x.id));
   for (const track of fresh.slice(0, budget)) {
     try {
-      const sent = await api.sendMessage({
-        chat_id: link.chatId,
-        message_thread_id: link.threadId > 0 ? link.threadId : undefined,
-        text: postText(locale, provider, track),
-        parse_mode: 'HTML',
-        link_preview_options: { url: track.url, prefer_small_media: true },
-      });
+      const sent = await api.sendMessage(postMessage(locale, provider, link, track));
       await remember(link.id, [track.id], { messageId: sent.message_id, source: 'playlist' });
       result.posted++;
     } catch (e) {
@@ -240,13 +251,7 @@ export async function addFromBot(link, track) {
   }
   if (link.direction === 'both') {
     const locale = await localeFor({ id: link.ownerId });
-    const sent = await api.sendMessage({
-      chat_id: link.chatId,
-      message_thread_id: link.threadId > 0 ? link.threadId : undefined,
-      text: postText(locale, provider, track),
-      parse_mode: 'HTML',
-      link_preview_options: { url: track.url, prefer_small_media: true },
-    }).catch(() => null);
+    const sent = await api.sendMessage(postMessage(locale, provider, link, track)).catch(() => null);
     if (sent) {
       await db.update(linkTracks).set({ messageId: sent.message_id })
         .where(and(eq(linkTracks.linkId, link.id), eq(linkTracks.trackId, track.id))).run();

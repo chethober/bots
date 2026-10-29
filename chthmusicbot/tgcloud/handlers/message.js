@@ -1,6 +1,6 @@
 // handlers/message.js — the private chat (buttons, wizard input, 🔎 Find music),
 // groups and forums (music posts feed their syncs and the group player; /player,
-// /sync) and replies from @chethoberbot.
+// /sync, /playlist, /top, /random) and replies from @chethoberbot.
 
 import { api } from 'sdk';
 import { ADMIN_IDS, BOT_USERNAME, SOURCE_URL } from '../lib/config.js';
@@ -16,17 +16,12 @@ import { isRelayBot, onRelayMessage } from '../lib/relay.js';
 import { extractRefs } from '../lib/tracks.js';
 import { onChatPost } from '../lib/sync.js';
 import { startPlayer, queueFromPost } from '../lib/player.js';
+import { onChatCommand, parseCommand } from '../lib/chatcmds.js';
 import { isChatAdmin, setTopicName, threadOf, upsertChat, getChat } from '../lib/chats.js';
 import { errorText } from '../lib/errors.js';
 import { PROVIDERS } from '../lib/providers/index.js';
 import { t } from '../lib/strings.js';
 import { esc } from '../lib/util.js';
-
-function parseCommand(text) {
-  const m = /^\/([a-z_]+)(?:@(\w+))?(?:\s+([\s\S]*))?$/i.exec(text ?? '');
-  if (!m || (m[2] && m[2].toLowerCase() !== BOT_USERNAME.toLowerCase())) return null;
-  return { cmd: m[1].toLowerCase(), args: (m[3] ?? '').trim() };
-}
 
 async function onButton(message, button) {
   const { from } = message;
@@ -98,7 +93,7 @@ async function onGroup(message) {
       reply_markup: { inline_keyboard: [[{ text: t(locale, 'open_bot'), url: `https://t.me/${BOT_USERNAME}?start=s${chatId}_${threadId}` }]] },
     });
   }
-  if (command) return null;
+  if (command) return onChatCommand(message, command.cmd, threadId);
 
   const refs = extractRefs(message);
   if (!refs.length) return null;

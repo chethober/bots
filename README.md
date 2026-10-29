@@ -40,8 +40,7 @@ instructions. Clone the repo, `cd` into the one you want, and follow its README.
 | [`chthbrbot`](chthbrbot) | [anonm](https://t.me/chthbrbot) | Personal anonymous-message link bot: people message you without seeing who you are |
 | [`chthgamesbot`](chthgamesbot) | [Games](https://t.me/chthgamesbot) | Casino, poker, Persian card games (Hokm, Shelem) and party games: chat games, inline mode and a graphic Mini App. Play chips (buyable with Stars, never cashed out) |
 | [`chthgrambot`](chthgrambot) | Secretary | Telegram Business secretary assistant, powered by Cloudflare Workers AI |
-| [`chthmusicbot`](chthmusicbot) | Music sync | Syncs Spotify, YouTube Music and Apple Music playlists with groups, forum topics and channels, both ways; a shared Spotify queue for groups and song search |
-| [`chtht2sbot`](chtht2sbot) | t2s | Watches a forum's topics and files every posted track into a per-topic Spotify playlist |
+| [`chthmusicbot`](chthmusicbot) | [Music sync](https://t.me/chthmusicbot) | Syncs Spotify, YouTube Music and Apple Music playlists with groups, forum topics and channels, both ways; a shared Spotify queue for groups, /playlist, /top and /random in chats, and song search |
 | [`chthvpnbot`](chthvpnbot) | [Community VPN](https://t.me/chthvpnbot) | A directory of VPNs shared by their owners: public listings, private invites with passwords, anonymous memberships. Works best with [xtune](https://github.com/chethober/xtune) public profiles (an account per member), and manages xtune servers' users through management links |
 
 ## How they work
@@ -97,7 +96,7 @@ The workflows read these repository secrets:
 | every bot | `<BOT>_TGCLOUD_TOKEN`, the bot's tgcloud project token (e.g. `CHTHVPNBOT_TGCLOUD_TOKEN`) |
 | `chsbrbot` | `CHSBRBOT_NVD_API_KEY`, `CHSBRBOT_GITHUB_TOKEN` (both optional) |
 | `chthgamesbot` | `CHTHGAMESBOT_BUTTON_SECRET`, `CHTHGAMESBOT_ADMIN_IDS` (a JSON array such as `[12345]`) |
-| `chtht2sbot` | `CHTHT2SBOT_SPOTIFY_CLIENT_ID`, `CHTHT2SBOT_SPOTIFY_CLIENT_SECRET` |
+| `chthmusicbot` | `CHTHMUSICBOT_SPOTIFY_CLIENT_ID`, `CHTHMUSICBOT_GOOGLE_CLIENT_ID`, `CHTHMUSICBOT_GOOGLE_CLIENT_SECRET`, `CHTHMUSICBOT_APPLE_MUSIC_DEVELOPER_TOKEN`, `CHTHMUSICBOT_SONGLINK_API_KEY` (all optional) |
 
 See [`<bot>/AGENTS.md`](chthapibot/AGENTS.md) in any bot for the platform's module rules and
 `<bot>/docs/tgcloud-sdk.md` for the SDK reference.

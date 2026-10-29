@@ -25,6 +25,7 @@ export const BOTS = [
   { user: 'chthbrbot', ico: '🎭', name: { en: 'Anonymous messages', fa: 'پیام ناشناس', ar: 'رسائل مجهولة', ru: 'Анонимные сообщения', es: 'Mensajes anónimos' } },
   { user: 'chthapibot', ico: '🧰', name: { en: 'Multi-tool', fa: 'ابزار همه‌کاره', ar: 'أدوات متعددة', ru: 'Мультитул', es: 'Multiherramienta' } },
   { user: 'chsbrbot', ico: '🚨', name: { en: 'CVE alerts', fa: 'هشدار CVE', ar: 'تنبيهات CVE', ru: 'Оповещения CVE', es: 'Alertas CVE' } },
+  { user: 'chthmusicbot', ico: '🎧', name: { en: 'Music sync', fa: 'همگام‌سازی موسیقی', ar: 'مزامنة الموسيقى', ru: 'Синхронизация музыки', es: 'Sincronizar música' } },
 ];
 
 const S = {

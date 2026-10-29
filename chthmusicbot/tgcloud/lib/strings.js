@@ -316,12 +316,40 @@ const strings = {
     es: 'Toca abajo para vincular este chat a una lista.',
   },
   group_welcome: {
-    en: '👋 Hi! I sync this chat with music playlists.\n\nAdmins: set it up in a private chat with @{bot} (➕ New sync), or post /sync here.\nEveryone: /player shares a Spotify queue with the group.',
-    fa: '👋 سلام! این چت رو با پلی‌لیست‌های موسیقی همگام می‌کنم.\n\nمدیرها: توی چت خصوصی با @{bot} راهش بندازید (➕ همگام‌سازی جدید)، یا همین‌جا /sync بفرستید.\nهمه: /player یه صف اسپاتیفای رو با گروه به اشتراک می‌ذاره.',
-    ar: '👋 مرحبًا! أزامن هذه الدردشة مع قوائم الموسيقى.\n\nللمشرفين: اضبطوها في دردشة خاصة مع @{bot} (➕ مزامنة جديدة)، أو أرسلوا /sync هنا.\nللجميع: يشارك /player قائمة انتظار Spotify مع المجموعة.',
-    ru: '👋 Привет! Я синхронизирую этот чат с музыкальными плейлистами.\n\nАдминам: настройте это в личке с @{bot} (➕ Новая синхронизация) или отправьте /sync здесь.\nВсем: /player делится очередью Spotify с группой.',
-    es: '👋 ¡Hola! Sincronizo este chat con listas de música.\n\nAdmins: configuradlo en un chat privado con @{bot} (➕ Nueva sincronización) o enviad /sync aquí.\nTodos: /player comparte una cola de Spotify con el grupo.',
+    en: '👋 Hi! I sync this chat with music playlists.\n\nAdmins: set it up in a private chat with @{bot} (➕ New sync), or post /sync here.\nEveryone: /player shares a Spotify queue with the group, /playlist opens the synced playlists, /top shows who posts the most music and /random picks a song.',
+    fa: '👋 سلام! این چت رو با پلی‌لیست‌های موسیقی همگام می‌کنم.\n\nمدیرها: توی چت خصوصی با @{bot} راهش بندازید (➕ همگام‌سازی جدید)، یا همین‌جا /sync بفرستید.\nهمه: /player یه صف اسپاتیفای رو با گروه به اشتراک می‌ذاره، /playlist پلی‌لیست‌های همگام رو باز می‌کنه، /top نشون می‌ده کی بیشتر آهنگ می‌فرسته و /random یه آهنگ تصادفی انتخاب می‌کنه.',
+    ar: '👋 مرحبًا! أزامن هذه الدردشة مع قوائم الموسيقى.\n\nللمشرفين: اضبطوها في دردشة خاصة مع @{bot} (➕ مزامنة جديدة)، أو أرسلوا /sync هنا.\nللجميع: يشارك /player قائمة انتظار Spotify مع المجموعة، ويفتح /playlist القوائم المتزامنة، ويعرض /top من ينشر أكثر الموسيقى، ويختار /random أغنية عشوائية.',
+    ru: '👋 Привет! Я синхронизирую этот чат с музыкальными плейлистами.\n\nАдминам: настройте это в личке с @{bot} (➕ Новая синхронизация) или отправьте /sync здесь.\nВсем: /player делится очередью Spotify с группой, /playlist открывает связанные плейлисты, /top показывает, кто присылает больше всего музыки, а /random выбирает случайную песню.',
+    es: '👋 ¡Hola! Sincronizo este chat con listas de música.\n\nAdmins: configuradlo en un chat privado con @{bot} (➕ Nueva sincronización) o enviad /sync aquí.\nTodos: /player comparte una cola de Spotify con el grupo, /playlist abre las listas sincronizadas, /top muestra quién comparte más música y /random elige una canción.',
   },
+
+  // --- /playlist, /top, /random in groups and channels --------------------------------
+  chat_playlists: {
+    en: '🎧 <b>Playlists synced with this chat</b>', fa: '🎧 <b>پلی‌لیست‌های همگام با این چت</b>', ar: '🎧 <b>قوائم التشغيل المتزامنة مع هذه الدردشة</b>',
+    ru: '🎧 <b>Плейлисты, связанные с этим чатом</b>', es: '🎧 <b>Listas sincronizadas con este chat</b>',
+  },
+  chat_no_playlists: {
+    en: 'No playlist is synced with this chat yet. Admins can link one with /sync.', fa: 'هنوز هیچ پلی‌لیستی با این چت همگام نشده. مدیرها می‌تونن با /sync یکی وصل کنن.',
+    ar: 'لا توجد قائمة تشغيل متزامنة مع هذه الدردشة بعد. يمكن للمشرفين ربط واحدة بـ /sync.', ru: 'К этому чату пока не привязан ни один плейлист. Админы могут привязать его через /sync.',
+    es: 'Aún no hay ninguna lista sincronizada con este chat. Los admins pueden vincular una con /sync.',
+  },
+  chat_top: {
+    en: '🏆 <b>Top music posters</b>', fa: '🏆 <b>بیشترین آهنگ‌فرست‌ها</b>', ar: '🏆 <b>أكثر من نشر الأغاني</b>',
+    ru: '🏆 <b>Больше всех музыки прислали</b>', es: '🏆 <b>Quién más música ha compartido</b>',
+  },
+  chat_top_empty: {
+    en: 'No tracks from this chat have made it into a playlist yet: post a song link to start.', fa: 'هنوز هیچ آهنگی از این چت به پلی‌لیست نرفته: یه لینک آهنگ بفرست تا شروع بشه.',
+    ar: 'لم تُضف أي مقاطع من هذه الدردشة إلى قائمة بعد: انشر رابط أغنية للبدء.', ru: 'Пока ни один трек из этого чата не попал в плейлист: пришли ссылку на песню, чтобы начать.',
+    es: 'Aún no ha llegado ninguna pista de este chat a una lista: publica un enlace de una canción para empezar.',
+  },
+  chat_random: {
+    en: '🎲 A random pick from <b>{playlist}</b>:', fa: '🎲 یه انتخاب تصادفی از <b>{playlist}</b>:', ar: '🎲 اختيار عشوائي من <b>{playlist}</b>:',
+    ru: '🎲 Случайный трек из <b>{playlist}</b>:', es: '🎲 Una elección al azar de <b>{playlist}</b>:',
+  },
+  chat_random_empty: {
+    en: '<b>{playlist}</b> is empty.', fa: '<b>{playlist}</b> خالیه.', ar: '<b>{playlist}</b> فارغة.', ru: '<b>{playlist}</b> пуст.', es: '<b>{playlist}</b> está vacía.',
+  },
+  open_playlist: { en: '🎧 Open playlist', fa: '🎧 باز کردن پلی‌لیست', ar: '🎧 افتح القائمة', ru: '🎧 Открыть плейлист', es: '🎧 Abrir la lista' },
 
   // --- 🔎 Find music -------------------------------------------------------------------
   find_prompt: {
