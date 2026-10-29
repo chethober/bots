@@ -42,7 +42,8 @@ Anyone can use it with their own accounts: connect a music service, pick a chat,
   the user brings it: forward old posts to the bot (up to 100 at a time), or send the chat's history export
   (Telegram Desktop → ⋮ → Export chat history → JSON, no media → `result.json`). Their tracks are added to the
   playlist oldest first, skipping ones it has, and count for `/top`. An export is checked against the sync's chat
-  and worked through 25 posts per ⏩ Continue. In a forum export each post's topic is followed through its replies:
+  and worked through for about 20 seconds per ⏩ Continue (tgcloud stops a handler after about 30 seconds, and a
+  bot can't schedule itself to carry on), looking up four songs at a time. In a forum export each post's topic is followed through its replies:
   an **every topic** sync sends each post to its topic's playlist (found by the topic's name or created; General is
   skipped, like live posts), and a one-topic sync takes only its topic's posts. Forwarded posts don't say their
   topic, so an every topic sync takes the export only.

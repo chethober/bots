@@ -283,6 +283,15 @@ reset();
 await fwd(`https://open.spotify.com/track/${T('h')}`, 104);
 assert.ok(!playlist.some((x) => x.id === T('h')), 'after ✅ Done, forwards go to 🔎 Find music again');
 
+// A big export goes through in one go (as many posts as fit in the time budget, not 25).
+state.files.F4 = JSON.stringify({ id: 100500, name: 'Music Club', messages: Array.from({ length: 60 }, (_, n) => (
+  { id: 1000 + n, type: 'message', from: 'Ali', from_id: 'user50', text_entities: [{ type: 'link', text: `https://open.spotify.com/track/${`X${n}`.padEnd(22, 'x')}` }] })) });
+await cb(`ln:${link.id}:bf`);
+reset();
+await priv({ message_id: 105, document: { file_id: 'F4', file_name: 'result.json' } });
+assert.match(last('editMessageText').text, /Added: 60[\s\S]*Waiting: 0/);
+await cb('bf:done');
+
 // An "every topic" sync takes a forum export: each topic's songs go to its own playlist.
 const { createLink } = await import('../tgcloud/lib/sync.js');
 const FORUM = { id: -100900, type: 'supergroup', title: 'Music Forum', is_forum: true };

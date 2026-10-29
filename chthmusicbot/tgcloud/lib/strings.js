@@ -370,6 +370,7 @@ const strings = {
     es: '⏸ Un servicio de música está limitando las búsquedas por ahora: toca ⏩ Continuar en un minuto.',
   },
 
+  bf_working: { en: '⏳ Adding… (up to 20 seconds)', fa: '⏳ در حال اضافه کردن… (تا ۲۰ ثانیه)', ar: '⏳ جارٍ الإضافة… (حتى 20 ثانية)', ru: '⏳ Добавляю… (до 20 секунд)', es: '⏳ Añadiendo… (hasta 20 segundos)' },
   bf_continue: { en: '⏩ Continue', fa: '⏩ ادامه', ar: '⏩ متابعة', ru: '⏩ Продолжить', es: '⏩ Continuar' },
   bf_refresh: { en: '🔄 Refresh', fa: '🔄 به‌روزرسانی', ar: '🔄 تحديث', ru: '🔄 Обновить', es: '🔄 Actualizar' },
   bf_done: { en: '✅ Done', fa: '✅ تمام', ar: '✅ تم', ru: '✅ Готово', es: '✅ Listo' },

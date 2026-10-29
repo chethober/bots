@@ -2,7 +2,9 @@
 // read a chat's history, so the user brings it to the private chat:
 //   - forwarded posts (up to 100 at a time), each added as it arrives, or
 //   - the chat's history export (Telegram Desktop → Export chat history → JSON,
-//     result.json), queued and added BATCH posts per ⏩ Continue.
+//     result.json), queued and worked through for up to WORK_MS per ⏩ Continue
+//     (handlers are cut off after about 30 seconds, and a bot can't schedule
+//     itself to carry on), BATCH posts at a time, LOOKUPS songs looked up at once.
 // In a forum export each post's topic is worked out from its reply chain
 // (see exportItems): an "every topic" sync sends each post to its topic's
 // playlist (found by name or created, like live posts), and a one-topic sync
@@ -29,7 +31,9 @@ import { errorText } from './errors.js';
 import { t } from './strings.js';
 import { esc, now, unique } from './util.js';
 
-const BATCH = 25; // posts per ⏩ Continue
+const BATCH = 25; // posts per database round
+const WORK_MS = 20_000; // how long one tap (or the export's upload) keeps adding
+const LOOKUPS = 4; // songs looked up at the same time
 const SCREEN_EVERY = 3; // seconds between progress updates while forwards pour in
 
 const activeKey = (userId) => `bf:${userId}`;
@@ -77,26 +81,38 @@ export async function startBackfill(link, locale, messageId) {
   return showProgress(link, locale, '', messageId);
 }
 
-/** Add queued posts (oldest first). Returns a note for the progress screen. */
-async function processItems(link, locale, items) {
+/** The track ids of one post's songs on the sync's service. Throws LookupLimit. */
+async function idsOf(item, provider, acct, memo) {
+  const ids = [];
+  for (const ref of item.refs ?? []) {
+    const hit = await resolveRef(ref, provider, acct, memo, { strict: true });
+    if (hit?.id) ids.push(hit.id);
+  }
+  return unique(ids);
+}
+
+/**
+ * Add queued posts (oldest first), LOOKUPS at a time, until `deadline`.
+ * Posts not reached stay waiting. Returns a note for the progress screen.
+ */
+async function processItems(link, locale, items, deadline = Infinity) {
   const provider = providerOf(link.provider);
   const acct = await getAccount(link.ownerId, link.provider);
   if (!acct) return t(locale, 'err_not_connected', { service: provider.name });
   const memo = new Map();
   const entries = [];
   let note = '';
-  for (const item of items) {
-    try {
-      const ids = [];
-      for (const ref of item.refs ?? []) {
-        const hit = await resolveRef(ref, provider, acct, memo, { strict: true });
-        if (hit?.id) ids.push(hit.id);
+  for (let i = 0; i < items.length && !note && Date.now() < deadline; i += LOOKUPS) {
+    const chunk = items.slice(i, i + LOOKUPS);
+    const results = await Promise.allSettled(chunk.map((item) => idsOf(item, provider, acct, memo)));
+    for (const [j, r] of results.entries()) {
+      if (r.status === 'rejected') {
+        if (!(r.reason instanceof LookupLimit)) throw r.reason;
+        note = t(locale, 'bf_limit'); // this post stays waiting for the next ⏩
+        continue;
       }
-      entries.push({ item, ids: unique(ids), messageId: item.messageId, posterId: item.posterId, posterName: item.posterName });
-    } catch (e) {
-      if (!(e instanceof LookupLimit)) throw e;
-      note = t(locale, 'bf_limit');
-      break;
+      const item = chunk[j];
+      entries.push({ item, ids: r.value, messageId: item.messageId, posterId: item.posterId, posterName: item.posterName });
     }
   }
   const found = entries.filter((e) => e.ids.length);
@@ -144,6 +160,18 @@ async function queue(userId, link, items) {
 const waiting = (link) => db.select().from(backfillItems)
   .where(and(eq(backfillItems.userId, link.ownerId), eq(backfillItems.linkId, link.id), eq(backfillItems.status, 'wait')))
   .orderBy(asc(backfillItems.id)).limit(BATCH).all();
+
+/** Work through waiting posts, BATCH at a time, until WORK_MS after `started`. */
+async function work(link, locale, started = Date.now()) {
+  const deadline = started + WORK_MS;
+  let note = '';
+  while (!note && Date.now() < deadline) {
+    const items = await waiting(link);
+    if (!items.length) break;
+    note = await processItems(link, locale, items, deadline);
+  }
+  return note;
+}
 
 // --- what the user sends ---------------------------------------------------------
 
@@ -269,13 +297,15 @@ export async function onBackfillMessage(message) {
     return true;
   }
 
+  const started = Date.now();
+  await showProgress(link, locale, t(locale, 'bf_working'));
   const { items, topics, note } = await readExport(message, link, locale);
   if (!items) {
     await showProgress(link, locale, note);
     return true;
   }
   await queue(message.from.id, link, items);
-  const more = await processItems(link, locale, await waiting(link));
+  const more = await work(link, locale, started);
   const read = link.threadId === -1 ? t(locale, 'bf_queued_topics', { n: items.length, topics }) : t(locale, 'bf_queued', { n: items.length });
   await showProgress(link, locale, more || read);
   return true;
@@ -292,6 +322,7 @@ export async function onBackfillCallback(q, op) {
     const view = link ? await linkView(link, locale) : { text: t(locale, 'expired') };
     return api.editMessageText({ chat_id: q.message.chat.id, message_id: q.message.message_id, link_preview_options: { is_disabled: true }, ...view }).catch(() => {});
   }
-  const note = await processItems(link, locale, await waiting(link));
+  await showProgress(link, locale, t(locale, 'bf_working'), q.message.message_id);
+  const note = await work(link, locale);
   return showProgress(link, locale, note, q.message.message_id);
 }
