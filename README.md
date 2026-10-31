@@ -60,7 +60,7 @@ The bots share one interface style:
   🍟 fries, 🍔 burger or 🍕 pizza (50, 100, 250 or 500 Telegram Stars). A tip unlocks nothing; the
   bot thanks the tipper and tells its admins. ✨ More from CHTH links to the CHTH websites
   ([café](https://chth.cafe), [gym](https://chth.space), [shop](https://chth.shop)) and the other bots here.
-  Each bot carries the same `tgcloud/lib/tips.js`, generated with `chth-products.js` and `report.js`
+  Each bot carries the same `tgcloud/lib/tips.js`, generated with `chth_products.js` and `report.js`
   from the shared CHTH kit; edit the kit, not these copies.
 
 Every bot follows it. The multi-utility bot also keeps its slash commands as typed shortcuts (and
@@ -77,7 +77,7 @@ The workflow is the same for every bot:
 ```sh
 git clone https://github.com/chethober/bots && cd bots/<bot>
 npm install
-cp hub.secrets.example.js tgcloud/lib/hub.secrets.js   # hub reporting, off by default
+cp hub_secrets.example.js tgcloud/lib/hub_secrets.js   # hub reporting, off by default
 npx tgcloud login     # link the project to your bot
 npx tgcloud push      # deploy the code
 npx tgcloud migrate   # apply schema changes to the database
@@ -92,7 +92,7 @@ Each bot can report a few events to a private CHTH hub: a `/start` (with the CHT
 brought the user, from `?start=src_<product>`), tips, the bot joining or leaving a group or
 channel, and handler errors. Only counts and pseudonymous ids are sent, never message contents.
 `tgcloud/lib/report.js` reads `HUB_URL`, `HUB_SECRET` and `HUB_SOURCE` from the git-ignored
-`tgcloud/lib/hub.secrets.js`: copy `hub.secrets.example.js` there before a local deploy or
+`tgcloud/lib/hub_secrets.js`: copy `hub_secrets.example.js` there before a local deploy or
 test run. Empty values (the example's default) switch reporting off, and a hub that is down
 never affects the bot.
 
