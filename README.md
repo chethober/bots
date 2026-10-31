@@ -59,7 +59,7 @@ The bots share one interface style:
 - **ℹ️ About.** What the bot does, with 🔗 Source code and ⭐ Tip the developer: a ☕ coffee,
   🍟 fries, 🍔 burger or 🍕 pizza (50, 100, 250 or 500 Telegram Stars). A tip unlocks nothing; the
   bot thanks the tipper and tells its admins. ✨ More from CHTH links to the CHTH websites
-  ([café](https://chth.cafe), [gym](https://chth.gym), [shop](https://chth.shop)) and the other bots here.
+  ([café](https://chth.cafe), [gym](https://chth.space), [shop](https://chth.shop)) and the other bots here.
   Each bot carries the same `tgcloud/lib/tips.js`, generated with `chth-products.js` and `report.js`
   from the shared CHTH kit; edit the kit, not these copies.
 

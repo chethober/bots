@@ -19,7 +19,7 @@ export const PRODUCTS = Object.freeze([
     },
   },
   {
-    id: 'gym', kind: 'site', ico: '🏋️', url: 'https://chth.gym',
+    id: 'gym', kind: 'site', ico: '🏋️', url: 'https://chth.space',
     name: { en: 'CHTH Gym', fa: 'باشگاه CHTH', ar: 'نادي CHTH', ru: 'CHTH Gym', es: 'CHTH Gym' },
     tagline: {
       en: 'Workout tracker, routines and progress charts',
