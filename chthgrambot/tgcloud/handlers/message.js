@@ -14,8 +14,12 @@ import { startSetup, handleSetupInput } from '../lib/setup.js';
 import { deliverAnswer } from '../lib/relay.js';
 import { aboutKeyboard, thankTip } from '../lib/tips.js';
 import { drop, localeOf, mainKeyboard, matchButton, showHome, showScreen } from '../lib/screen.js';
+import { reportStart, reportError } from '../lib/report.js';
 
 export default async function (message) {
+  // A /start reaches the hub with the CHTH link that brought the user (src_ tags are
+  // stripped here, so the rest of the bot sees a plain /start).
+  await reportStart(message);
   if (message.chat.type !== 'private' || !message.from) return;
   const userId = message.from.id;
   const chat_id = message.chat.id;
@@ -94,6 +98,9 @@ export default async function (message) {
     const reply = await previewReply(userId, null, text, message.from.first_name);
     return send(t(locale, 'preview', { text: reply.join('\n\n') }));
   } catch (e) {
+    // AI errors with a kind (no key, quota, network…) are about the user's own AI account;
+    // only unexpected failures are bot errors.
+    if (!e.kind) await reportError('handlers/message', e);
     const fix = e.kind === 'nocreds' || e.kind === 'auth' ? [[setupButton(locale)]] : [];
     return send(`⚠️ ${describeAiError(e, locale)}`, { reply_markup: panelKeyboard(locale, fix) });
   }

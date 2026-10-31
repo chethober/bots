@@ -10,10 +10,12 @@ import { upsertChat, setActive } from '../lib/chats.js';
 import { addManager } from '../lib/managers.js';
 import { esc } from '../lib/format.js';
 import { t } from '../lib/strings.js';
+import { reportChatMember } from '../lib/report.js';
 
 const notifyAdmins = (text) => Promise.all(ADMIN_IDS.map((id) => api.sendMessage({ chat_id: id, text, parse_mode: 'HTML' }).catch(() => {})));
 
 export default async function (update) {
+  await reportChatMember(update);
   const { chat } = update;
   const status = update.new_chat_member?.status;
   const wasOut = ['left', 'kicked', undefined].includes(update.old_chat_member?.status);

@@ -1,13 +1,14 @@
+// Generated from the CHTH kit (chth.hub/kit) by `npm run sync`. Do not edit here: edit the kit and sync.
 // ⭐ Tip the developer with Telegram Stars, from the ℹ️ About screen. A tip buys nothing:
 // no chips, features or perks, just a thank-you. Flow: the About screen's ⭐ Tip button
 // (callback `tip`) swaps its buttons for the four treats below, each a Stars invoice link
 // → handlers/pre_checkout_query.js checks it with validTip → message.successful_payment
-// → thankTip. `tip:back` puts the About buttons back. 🤖 More bots (callback `tip:more`)
-// swaps them for links to the developer's other bots, the same way.
-//
-// Every bot in this repo carries the same copy of this file; keep them identical.
+// → thankTip. `tip:back` puts the About buttons back. ✨ More from CHTH (callback `tip:more`)
+// swaps them for links to the other CHTH websites and bots, the same way.
 
 import { api } from 'sdk';
+import { otherProducts, productLink } from './chth-products.js';
+import { report } from './report.js';
 
 // The invoice payload carries the treat and its price, so a price edited after the link
 // was made is refused instead of charged.
@@ -18,21 +19,10 @@ export const TIPS = [
   { key: 'pizza', ico: '🍕', stars: 500 },
 ];
 
-// The developer's public bots, for 🤖 More bots. The bot showing the list leaves itself out.
-export const BOTS = [
-  { user: 'chthgamesbot', ico: '🎰', name: { en: 'Games', fa: 'بازی‌ها', ar: 'ألعاب', ru: 'Игры', es: 'Juegos' } },
-  { user: 'chthvpnbot', ico: '🛡', name: { en: 'Community VPN', fa: 'وی‌پی‌ان اشتراکی', ar: 'VPN مجتمعي', ru: 'VPN сообщества', es: 'VPN comunitaria' } },
-  { user: 'chthbrbot', ico: '🎭', name: { en: 'Anonymous messages', fa: 'پیام ناشناس', ar: 'رسائل مجهولة', ru: 'Анонимные сообщения', es: 'Mensajes anónimos' } },
-  { user: 'chthapibot', ico: '🧰', name: { en: 'Multi-tool', fa: 'ابزار همه‌کاره', ar: 'أدوات متعددة', ru: 'Мультитул', es: 'Multiherramienta' } },
-  { user: 'chsbrbot', ico: '🚨', name: { en: 'CVE alerts', fa: 'هشدار CVE', ar: 'تنبيهات CVE', ru: 'Оповещения CVE', es: 'Alertas CVE' } },
-  { user: 'chthmusicbot', ico: '🎧', name: { en: 'Music sync', fa: 'همگام‌سازی موسیقی', ar: 'مزامنة الموسيقى', ru: 'Синхронизация музыки', es: 'Sincronizar música' } },
-  { user: 'chthgrambot', ico: '🤵', name: { en: 'AI secretary', fa: 'منشی هوش مصنوعی', ar: 'سكرتير ذكي', ru: 'ИИ-секретарь', es: 'Secretario IA' } },
-];
-
 const S = {
   tip: { en: '⭐ Tip the developer', fa: '⭐ حمایت از سازنده', ar: '⭐ ادعم المطوّر', ru: '⭐ Поддержать разработчика', es: '⭐ Invita al desarrollador' },
   source: { en: '🔗 Source code', fa: '🔗 کد منبع', ar: '🔗 الكود المصدري', ru: '🔗 Исходный код', es: '🔗 Código fuente' },
-  more: { en: '🤖 More bots', fa: '🤖 بات‌های دیگه', ar: '🤖 بوتات أخرى', ru: '🤖 Другие боты', es: '🤖 Más bots' },
+  more: { en: '✨ More from CHTH', fa: '✨ بقیهٔ CHTH', ar: '✨ المزيد من CHTH', ru: '✨ Ещё от CHTH', es: '✨ Más de CHTH' },
   back: { en: '« Back', fa: '« برگشت', ar: '« رجوع', ru: '« Назад', es: '« Atrás' },
   coffee: { en: 'Coffee', fa: 'قهوه', ar: 'قهوة', ru: 'Кофе', es: 'Café' },
   fries: { en: 'Fries', fa: 'سیب‌زمینی', ar: 'بطاطا مقلية', ru: 'Картошка фри', es: 'Papas fritas' },
@@ -61,7 +51,7 @@ const esc = (s) => String(s ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').
 export const isTipCallback = (data) => data === 'tip' || data === 'tip:back' || data === 'tip:more';
 
 // The About screen's buttons: the bot's own rows (if any), then 🔗 Source code, ⭐ Tip and
-// 🤖 More bots.
+// ✨ More from CHTH.
 export function aboutKeyboard(locale, sourceUrl, rows = []) {
   return {
     inline_keyboard: [
@@ -72,12 +62,15 @@ export function aboutKeyboard(locale, sourceUrl, rows = []) {
   };
 }
 
-// The other bots, one link per row. `self` is this bot's username.
+// The other CHTH websites, then the other bots, one link per row. `self` is this bot's
+// username; links carry it (?ref= / ?start=src_) so the hub can see where visitors come from.
 export function moreKeyboard(locale, self) {
-  const others = BOTS.filter((b) => b.user.toLowerCase() !== String(self ?? '').toLowerCase());
+  const me = String(self ?? '').toLowerCase();
+  const row = (p) => [{ text: `${p.ico} ${p.name[locale] ?? p.name.en}`, url: productLink(p, me || undefined) }];
   return {
     inline_keyboard: [
-      ...others.map((b) => [{ text: `${b.ico} ${b.name[locale] ?? b.name.en}`, url: `https://t.me/${b.user}` }]),
+      ...otherProducts(me, 'site').map(row),
+      ...otherProducts(me, 'bot').map(row),
       [{ text: tr(locale, 'back'), callback_data: 'tip:back' }],
     ],
   };
@@ -125,6 +118,7 @@ export async function thankTip(message, locale, adminIds = []) {
   const tip = validTip(pay) ?? { ico: '⭐' };
   await api.sendMessage({ chat_id: message.chat.id, text: tr(locale, 'thanks', { ico: tip.ico }) })
     .catch((e) => console.warn('tip thanks failed', e.description));
+  await report('tip', { stars: pay.total_amount, item: tip.key ?? null }, message.from?.id);
   const from = message.from;
   const name = esc([from.first_name, from.last_name].filter(Boolean).join(' ') || from.username || from.id);
   const text = `${tip.ico} <b>Tip</b>: ⭐ ${pay.total_amount} from ${name} (<code>${from.id}</code>)\n<code>${esc(pay.telegram_payment_charge_id)}</code>`;

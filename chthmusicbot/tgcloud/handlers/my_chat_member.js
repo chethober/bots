@@ -6,8 +6,10 @@ import { upsertChat } from '../lib/chats.js';
 import { localeFor } from '../lib/i18n.js';
 import { BOT_USERNAME } from '../lib/config.js';
 import { t } from '../lib/strings.js';
+import { reportChatMember } from '../lib/report.js';
 
 export default async function (update) {
+  await reportChatMember(update);
   const { chat } = update;
   if (chat.type === 'private') return;
   const status = update.new_chat_member?.status;

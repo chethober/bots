@@ -16,12 +16,17 @@ import { BOT_USERNAME, WEBAPP_URL, DAILY_CHIPS, DAILY_COOLDOWN, SOURCE_URL, PACK
 import { t } from '../lib/strings.js';
 import { languageKeyboard, playerLocale } from '../lib/i18n.js';
 import { drop, matchButton, showScreen } from '../lib/screen.js';
+import { reportStart, reportError } from '../lib/report.js';
 
 // Never throws (see handlers/callback_query.js) — errors are logged.
 export default async function (message) {
+  // A /start reaches the hub with the CHTH link that brought the user (src_ tags are
+  // stripped here, so the rest of the bot sees a plain /start).
+  await reportStart(message);
   try {
     await handle(message);
   } catch (e) {
+    await reportError('handlers/message', e);
     console.error(e);
   }
 }

@@ -16,10 +16,14 @@ import { normalizeLocale, LOCALES } from '../lib/i18n.js';
 import { matchButton } from '../lib/keyboard.js';
 import { t, SOURCE_URL } from '../lib/strings.js';
 import { aboutKeyboard, thankTip } from '../lib/tips.js';
+import { reportStart, reportError } from '../lib/report.js';
 
 let botUsername = null;
 
 export default async function (msg) {
+  // A /start reaches the hub with the CHTH link that brought the user (src_ tags are
+  // stripped here, so the rest of the bot sees a plain /start).
+  await reportStart(msg);
   if (!msg.from || msg.from.is_bot) return;
   const ctx = {
     chatId: msg.chat.id,
@@ -92,6 +96,7 @@ export default async function (msg) {
     if (await runFallbackText(ctx, text)) return;
     if (isPrivate) await sendHome(ctx);
   } catch (e) {
+    await reportError('handlers/message', e);
     console.error('message failed', msg.text, e);
     await notice(ctx, '⚠️ Something went wrong. Please try again in a moment.').catch(() => {});
   }

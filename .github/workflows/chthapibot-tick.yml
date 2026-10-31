@@ -27,6 +27,17 @@ jobs:
           cache: npm
           cache-dependency-path: chthapibot/package-lock.json
       - run: npm ci
+      # hub.secrets.js is git-ignored: write it from the optional repository secrets
+      # CHTH_HUB_URL and CHTHAPIBOT_HUB_SECRET (empty switches hub reporting off).
+      - name: Write tgcloud/lib/hub.secrets.js
+        run: |
+          node -e 'const s = (k) => JSON.stringify(process.env[k] ?? "");
+            require("fs").writeFileSync("tgcloud/lib/hub.secrets.js",
+              `export const HUB_URL = ${s("HUB_URL")};\nexport const HUB_SECRET = ${s("HUB_SECRET")};\nexport const HUB_SOURCE = ${s("HUB_SOURCE")};\n`)'
+        env:
+          HUB_URL: ${{ secrets.CHTH_HUB_URL }}
+          HUB_SECRET: ${{ secrets.CHTHAPIBOT_HUB_SECRET }}
+          HUB_SOURCE: chthapibot
       - run: npx tgcloud run endpoints/tick '{}'
         env:
           TGCLOUD_TOKEN: ${{ secrets.CHTHAPIBOT_TGCLOUD_TOKEN }}
