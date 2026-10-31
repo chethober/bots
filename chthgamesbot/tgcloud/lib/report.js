@@ -3,13 +3,14 @@
 // brought them), tips, chats the bot joins or leaves, and errors. Only counts and
 // pseudonymous ids leave the bot; never message contents.
 //
-// HUB_URL and HUB_SECRET live in the git-ignored hub.secrets.js (CI writes it; copy
-// hub.secrets.example.js for a local deploy). Empty values switch reporting off, and a hub
+// HUB_URL and HUB_SECRET live in the git-ignored hub_secrets.js (an underscore, not a dot or dash: tgcloud
+// module names are identifiers) (CI writes it; copy
+// hub_secrets.example.js for a local deploy). Empty values switch reporting off, and a hub
 // that is down never breaks the bot: report() only logs a warning.
 
 import { fetch } from 'sdk';
-import { createReporter, startSource } from './chth-hub.js';
-import { HUB_URL, HUB_SECRET, HUB_SOURCE } from './hub.secrets.js';
+import { createReporter, startSource } from './chth_hub.js';
+import { HUB_URL, HUB_SECRET, HUB_SOURCE } from './hub_secrets.js';
 
 const reporter = createReporter({ url: HUB_URL, secret: HUB_SECRET, source: HUB_SOURCE, fetch });
 

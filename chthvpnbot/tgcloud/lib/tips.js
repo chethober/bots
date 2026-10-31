@@ -7,7 +7,7 @@
 // swaps them for links to the other CHTH websites and bots, the same way.
 
 import { api } from 'sdk';
-import { otherProducts, productLink } from './chth-products.js';
+import { otherProducts, productLink } from './chth_products.js';
 import { report } from './report.js';
 
 // The invoice payload carries the treat and its price, so a price edited after the link
