@@ -13,6 +13,7 @@ import { getState, getVpnByCode, setState } from '../lib/store.js';
 import { thankTip } from '../lib/tips.js';
 import { safeApi } from '../lib/util.js';
 import { aboutView, directoryView, joinedView, ownedView, sendHome } from '../lib/views.js';
+import { reportStart, reportError } from '../lib/report.js';
 
 // "/start@MyBot abc" → { cmd: 'start', arg: 'abc' }
 function parseCommand(text) {
@@ -48,6 +49,9 @@ async function command(msg, { cmd, arg }, L) {
 }
 
 export default async function (msg) {
+  // A /start reaches the hub with the CHTH link that brought the user (src_ tags are
+  // stripped here, so the rest of the bot sees a plain /start).
+  await reportStart(msg);
   if (msg.chat?.type !== 'private' || !msg.from || msg.from.is_bot) return;
   try {
     const L = await textsFor(msg.from);
@@ -84,6 +88,7 @@ export default async function (msg) {
     }
     return await showScreen(msg.chat.id, { text: L.help });
   } catch (e) {
+    await reportError('handlers/message', e);
     console.error('message handler failed', e);
   }
 }

@@ -14,6 +14,7 @@ import { maybePrune } from '../lib/retention.js';
 import { getOrCreateUser, getUser, getUserByCode, getState, setState, setPrompt, setWords } from '../lib/users.js';
 import { aboutKeyboard, thankTip } from '../lib/tips.js';
 import { safeApi } from '../lib/util.js';
+import { reportStart, reportError } from '../lib/report.js';
 
 const reply = (msg, text, extra = {}) => safeApi('sendMessage', { chat_id: msg.chat.id, text, ...extra });
 const screen = (msg, text, extra = {}) => showScreen(msg.chat.id, { text, ...extra });
@@ -178,6 +179,9 @@ async function nativeReply(msg) {
 }
 
 export default async function (msg, ctx) {
+  // A /start reaches the hub with the CHTH link that brought the user (src_ tags are
+  // stripped here, so the rest of the bot sees a plain /start).
+  await reportStart(msg);
   if (msg.chat?.type !== 'private' || !msg.from || msg.from.is_bot) return;
   try {
     const L = await textsFor(msg.from);
@@ -226,6 +230,7 @@ export default async function (msg, ctx) {
     await drop(msg.chat.id, msg.message_id);
     return await screen(msg, L.help);
   } catch (e) {
+    await reportError('handlers/message', e);
     console.error('message handler failed', e);
   } finally {
     await maybePrune();

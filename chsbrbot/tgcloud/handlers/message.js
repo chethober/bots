@@ -24,6 +24,7 @@ import {
 import { dashboardView, statsView, queueBroadcast } from '../lib/admin.js';
 import { runTick } from '../lib/scheduler.js';
 import { t } from '../lib/strings.js';
+import { reportStart, reportError } from '../lib/report.js';
 
 function parseCommand(text) {
   const m = /^\/([a-z_]+)(?:@\w+)?(?:\s+([\s\S]*))?$/i.exec(text ?? '');
@@ -147,6 +148,9 @@ async function onGroup(message) {
 }
 
 export default async function (message) {
+  // A /start reaches the hub with the CHTH link that brought the user (src_ tags are
+  // stripped here, so the rest of the bot sees a plain /start).
+  await reportStart(message);
   if (message.migrate_to_chat_id) return migrate(message.chat.id, message.migrate_to_chat_id);
   if (message.chat.type === 'group' || message.chat.type === 'supergroup') {
     return onGroup(message).catch((e) => console.warn('group message:', e.description ?? e.message));
@@ -157,6 +161,7 @@ export default async function (message) {
     if (message.successful_payment) return await thankTip(message, await localeFor(message.from), ADMIN_IDS);
     await onPrivate(message);
   } catch (e) {
+    await reportError('handlers/message', e);
     console.error(e);
     const locale = await localeFor(message.from).catch(() => 'en');
     await showScreen(message.chat.id, { text: t(locale, 'error') }).catch(() => {});

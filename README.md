@@ -58,8 +58,10 @@ The bots share one interface style:
   keeps only real content (messages, games, alerts).
 - **ℹ️ About.** What the bot does, with 🔗 Source code and ⭐ Tip the developer: a ☕ coffee,
   🍟 fries, 🍔 burger or 🍕 pizza (50, 100, 250 or 500 Telegram Stars). A tip unlocks nothing; the
-  bot thanks the tipper and tells its admins. 🤖 More bots links to the other public bots here.
-  Each bot carries the same `tgcloud/lib/tips.js`.
+  bot thanks the tipper and tells its admins. ✨ More from CHTH links to the CHTH websites
+  ([café](https://chth.cafe), [gym](https://chth.gym), [shop](https://chth.shop)) and the other bots here.
+  Each bot carries the same `tgcloud/lib/tips.js`, generated with `chth-products.js` and `report.js`
+  from the shared CHTH kit; edit the kit, not these copies.
 
 Every bot follows it. The multi-utility bot also keeps its slash commands as typed shortcuts (and
 a command menu in groups), and its hub screens are in English; some admin screens are English too.
@@ -75,6 +77,7 @@ The workflow is the same for every bot:
 ```sh
 git clone https://github.com/chethober/bots && cd bots/<bot>
 npm install
+cp hub.secrets.example.js tgcloud/lib/hub.secrets.js   # hub reporting, off by default
 npx tgcloud login     # link the project to your bot
 npx tgcloud push      # deploy the code
 npx tgcloud migrate   # apply schema changes to the database
@@ -82,6 +85,16 @@ npx tgcloud migrate   # apply schema changes to the database
 
 Most bots also have a one-off setup endpoint or script that applies the bot profile (descriptions,
 command menus); see each README.
+
+### Hub reporting (optional)
+
+Each bot can report a few events to a private CHTH hub: a `/start` (with the CHTH link that
+brought the user, from `?start=src_<product>`), tips, the bot joining or leaving a group or
+channel, and handler errors. Only counts and pseudonymous ids are sent, never message contents.
+`tgcloud/lib/report.js` reads `HUB_URL`, `HUB_SECRET` and `HUB_SOURCE` from the git-ignored
+`tgcloud/lib/hub.secrets.js`: copy `hub.secrets.example.js` there before a local deploy or
+test run. Empty values (the example's default) switch reporting off, and a hub that is down
+never affects the bot.
 
 ### CI/CD
 
@@ -96,6 +109,7 @@ The workflows read these repository secrets:
 | Bot | Secrets |
 |---|---|
 | every bot | `<BOT>_TGCLOUD_TOKEN`, the bot's tgcloud project token (e.g. `CHTHVPNBOT_TGCLOUD_TOKEN`) |
+| every bot | `CHTH_HUB_URL` and `<BOT>_HUB_SECRET` for hub reporting (both optional) |
 | `chsbrbot` | `CHSBRBOT_NVD_API_KEY`, `CHSBRBOT_GITHUB_TOKEN` (both optional) |
 | `chthgamesbot` | `CHTHGAMESBOT_BUTTON_SECRET`, `CHTHGAMESBOT_ADMIN_IDS` (a JSON array such as `[12345]`) |
 | `chthmusicbot` | `CHTHMUSICBOT_SPOTIFY_CLIENT_ID`, `CHTHMUSICBOT_GOOGLE_CLIENT_ID`, `CHTHMUSICBOT_GOOGLE_CLIENT_SECRET`, `CHTHMUSICBOT_APPLE_MUSIC_DEVELOPER_TOKEN`, `CHTHMUSICBOT_SONGLINK_API_KEY` (all optional) |

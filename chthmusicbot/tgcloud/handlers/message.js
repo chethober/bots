@@ -24,6 +24,7 @@ import { errorText } from '../lib/errors.js';
 import { PROVIDERS } from '../lib/providers/index.js';
 import { t } from '../lib/strings.js';
 import { esc } from '../lib/util.js';
+import { reportStart, reportError } from '../lib/report.js';
 
 async function onButton(message, button) {
   const { from } = message;
@@ -107,6 +108,9 @@ async function onGroup(message) {
 }
 
 export default async function (message) {
+  // A /start reaches the hub with the CHTH link that brought the user (src_ tags are
+  // stripped here, so the rest of the bot sees a plain /start).
+  await reportStart(message);
   if (message.chat.type === 'private' && isRelayBot(message.from)) return onRelayMessage(message, relayMarkup);
   if (message.chat.type === 'private') return onPrivate(message);
   if (message.chat.type === 'group' || message.chat.type === 'supergroup') return onGroup(message);

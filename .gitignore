@@ -6,6 +6,7 @@ node_modules/
 .env.local
 .tgcloud/
 **/tgcloud/lib/secrets.js
+**/tgcloud/lib/hub.secrets.js
 secrets.js
 
 # Local databases & build output
