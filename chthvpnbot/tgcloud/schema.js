@@ -116,3 +116,10 @@ export const servers = table('servers', {
 }, (t) => ({
   ownerIdx: index('idx_servers_owner').on(t.ownerId),
 }));
+
+// Commands from the CHTH hub that already ran (lib/hub_admin.js), so a redelivered update can't
+// run one twice. Rows are pruned once a command is too old to be accepted anyway.
+export const hubCommands = table('hub_commands', {
+  id: text('id').primaryKey(),
+  at: integer('at').notNull(),
+});

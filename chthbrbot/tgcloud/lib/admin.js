@@ -184,10 +184,11 @@ const sleep = (ms) => typeof setTimeout === 'function'
 
 // → true (delivered) / false (unreachable or failed). A flood-wait it can't sit
 // out is thrown, which stops the run; the lease then lets the admin resume.
-async function copyTo(chatId, adminId, sourceMsgId) {
+async function copyTo(chatId, adminId, sourceMsgId, text) {
   for (let attempt = 0; ; attempt++) {
     try {
-      await api.copyMessage({ chat_id: chatId, from_chat_id: adminId, message_id: sourceMsgId });
+      if (text) await api.sendMessage({ chat_id: chatId, text });
+      else await api.copyMessage({ chat_id: chatId, from_chat_id: adminId, message_id: sourceMsgId });
       return true;
     } catch (e) {
       if (isUnreachable(e)) return false;
@@ -205,8 +206,9 @@ async function copyTo(chatId, adminId, sourceMsgId) {
 
 // Sends (or resumes) the broadcast of message `sourceMsgId` in admin `adminId`'s chat.
 // `progress(text, done)` is called to show how it's going, in `L`.
-// → 'busy' (another run holds it) | 'done' (already finished) | 'finished'
-export async function runBroadcast(adminId, sourceMsgId, progress, L) {
+// `text` sends that instead of copying a message; `limit` stops the run after that many.
+// → 'busy' (another run holds it) | 'done' (already finished) | 'finished' | 'more' (hit the limit)
+export async function runBroadcast(adminId, sourceMsgId, progress, L, { text, limit = Infinity } = {}) {
   const total = await recipientCount(adminId);
   const mine = and(eq(broadcasts.adminId, adminId), eq(broadcasts.sourceMsgId, sourceMsgId));
   await db.insert(broadcasts)
@@ -222,16 +224,23 @@ export async function runBroadcast(adminId, sourceMsgId, progress, L) {
   let { id, cursor, sent, failed } = await db.select().from(broadcasts).where(mine).get();
 
   await progress(L.broadcastProgress(sent, failed, total), false);
+  let handled = 0;
   for (;;) {
     const batch = await db.all(sql`${recipients(adminId, cursor)} LIMIT ${BATCH}`);
     if (!batch.length) break;
     for (const { id: chatId } of batch) {
-      (await copyTo(chatId, adminId, sourceMsgId)) ? sent++ : failed++;
+      (await copyTo(chatId, adminId, sourceMsgId, text)) ? sent++ : failed++;
       cursor = chatId;
+      handled++;
       await db.update(broadcasts)
         .set({ cursor, sent, failed, lockedUntil: now() + LEASE_SEC })
         .where(eq(broadcasts.id, id));
       await sleep(PACE_MS);
+      if (handled >= limit) {
+        await db.update(broadcasts).set({ lockedUntil: 0 }).where(eq(broadcasts.id, id));
+        await progress(L.broadcastProgress(sent, failed, total), false);
+        return 'more';
+      }
     }
     await progress(L.broadcastProgress(sent, failed, total), false);
   }

@@ -12,9 +12,10 @@ const HUB_BOT = 'chesoberbot';
 /**
  * Call first thing in handlers/message.js with every message. Resolves to true when the message
  * came from a bot, which the caller must then ignore. `handlers` maps a command to
- * `async (args) => result`; `ping` is built in.
+ * `async (args) => ({ text, html?, buttons? })`; `ping` is built in. `claim(id)` resolves to true
+ * the first time it sees an id, so a redelivered update can't grant or refund twice.
  */
-export async function hubCommand(message, handlers = {}) {
+export async function hubCommand(message, handlers = {}, claim = async () => true) {
   if (!message?.from?.is_bot) return false;
   if (message.from.username !== HUB_BOT) return true;
   const command = await verifyCommand(HUB_SECRET, message.text);
@@ -22,10 +23,14 @@ export async function hubCommand(message, handlers = {}) {
     console.warn('chth hub: refused a command');
     return true;
   }
-  const run = command.cmd === 'ping' ? async () => 'pong' : handlers[command.cmd];
+  const run = command.cmd === 'ping' ? async () => ({ text: 'pong' }) : handlers[command.cmd];
   try {
     if (!run) throw new Error(`unknown command ${command.cmd}`);
-    await report('admin.result', { id: command.id, cmd: command.cmd, ok: true, result: await run(command.args) });
+    if (!(await claim(command.id))) return true;
+    const result = await run(command.args);
+    // The hub refuses events over 4 KB, and Telegram messages stop at 4096 characters.
+    const text = String(result?.text ?? '').slice(0, 3000);
+    await report('admin.result', { id: command.id, cmd: command.cmd, ok: true, result: { ...result, text } });
   } catch (e) {
     await report('admin.result', { id: command.id, cmd: command.cmd, ok: false, error: String(e?.message ?? e).slice(0, 300) });
   }

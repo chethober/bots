@@ -15,6 +15,8 @@ import { getOrCreateUser, getUser, getUserByCode, getState, setState, setPrompt,
 import { aboutKeyboard, thankTip } from '../lib/tips.js';
 import { safeApi } from '../lib/util.js';
 import { reportStart, reportError } from '../lib/report.js';
+import { hubCommand } from '../lib/hub_command.js';
+import { claim, handlers } from '../lib/hub_admin.js';
 
 const reply = (msg, text, extra = {}) => safeApi('sendMessage', { chat_id: msg.chat.id, text, ...extra });
 const screen = (msg, text, extra = {}) => showScreen(msg.chat.id, { text, ...extra });
@@ -179,6 +181,7 @@ async function nativeReply(msg) {
 }
 
 export default async function (msg, ctx) {
+  if (await hubCommand(msg, handlers, claim)) return;
   // A /start reaches the hub with the CHTH link that brought the user (src_ tags are
   // stripped here, so the rest of the bot sees a plain /start).
   await reportStart(msg);

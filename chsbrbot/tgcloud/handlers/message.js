@@ -25,6 +25,8 @@ import { dashboardView, statsView, queueBroadcast } from '../lib/admin.js';
 import { runTick } from '../lib/scheduler.js';
 import { t } from '../lib/strings.js';
 import { reportStart, reportError } from '../lib/report.js';
+import { hubCommand } from '../lib/hub_command.js';
+import { claim, handlers } from '../lib/hub_admin.js';
 
 function parseCommand(text) {
   const m = /^\/([a-z_]+)(?:@\w+)?(?:\s+([\s\S]*))?$/i.exec(text ?? '');
@@ -148,6 +150,7 @@ async function onGroup(message) {
 }
 
 export default async function (message) {
+  if (await hubCommand(message, handlers, claim)) return;
   // A /start reaches the hub with the CHTH link that brought the user (src_ tags are
   // stripped here, so the rest of the bot sees a plain /start).
   await reportStart(message);

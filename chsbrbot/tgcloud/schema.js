@@ -109,3 +109,10 @@ export const managers = table('managers', {
   chatUser: uniqueIndex('idx_managers_chat_user').on(t.chatId, t.userId),
   user:     index('idx_managers_user').on(t.userId),
 }));
+
+// Commands from the CHTH hub that already ran (lib/hub_admin.js), so a redelivered update can't
+// run one twice. Rows are pruned once a command is too old to be accepted anyway.
+export const hubCommands = table('hub_commands', {
+  id: text('id').primaryKey(),
+  at: integer('at').notNull(),
+});

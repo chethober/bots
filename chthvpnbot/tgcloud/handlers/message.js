@@ -15,6 +15,7 @@ import { safeApi } from '../lib/util.js';
 import { aboutView, directoryView, joinedView, ownedView, sendHome } from '../lib/views.js';
 import { reportStart, reportError } from '../lib/report.js';
 import { hubCommand } from '../lib/hub_command.js';
+import { claim, handlers } from '../lib/hub_admin.js';
 
 // "/start@MyBot abc" → { cmd: 'start', arg: 'abc' }
 function parseCommand(text) {
@@ -50,7 +51,7 @@ async function command(msg, { cmd, arg }, L) {
 }
 
 export default async function (msg) {
-  if (await hubCommand(msg)) return;
+  if (await hubCommand(msg, handlers, claim)) return;
   // A /start reaches the hub with the CHTH link that brought the user (src_ tags are
   // stripped here, so the rest of the bot sees a plain /start).
   await reportStart(msg);
