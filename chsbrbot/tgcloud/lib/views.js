@@ -47,7 +47,6 @@ export function mainKeyboard(locale) {
   return {
     keyboard: KEYS.map((row) => row.map((k) => ({ text: t(locale, k) }))),
     resize_keyboard: true,
-    is_persistent: true,
     input_field_placeholder: t(locale, 'placeholder'),
   };
 }

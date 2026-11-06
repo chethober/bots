@@ -93,7 +93,6 @@ export function mainKeyboard(L) {
   return {
     keyboard: KEYS.map((row) => row.map((k) => ({ text: L.kb[k] }))),
     resize_keyboard: true,
-    is_persistent: true,
   };
 }
 

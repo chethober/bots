@@ -73,7 +73,6 @@ export function mainKeyboard(locale) {
       [{ text: label('about', locale) }, { text: label('language', locale) }],
     ],
     resize_keyboard: true,
-    is_persistent: true,
   };
 }
 
