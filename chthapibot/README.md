@@ -72,7 +72,6 @@ Optional configuration. It's stored in the bot's database, never in the repo:
 # Without it, movies come from Apple's US top-100 chart.
 npx tgcloud run endpoints/setConfig '{ tmdb_key: "…" }'
 # Your Telegram user ID: daily healthcheck failures are sent to you.
-npx tgcloud run endpoints/setConfig '{ admin_chat_id: "123456789" }'
 # Show the current configuration (keys are masked)
 npx tgcloud run endpoints/setConfig '{}'
 ```

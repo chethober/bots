@@ -1,9 +1,8 @@
-// Admins (ADMIN_IDS): reports with Unlist / Delete / Ban owner / Dismiss buttons,
-// /admin (stats) and /reports. Admins see a VPN's details but not who reported it.
+// Admins (ADMIN_IDS): reports with Unlist / Delete / Ban owner / Dismiss buttons, and /reports. Admins see a VPN's details but not who reported it.
 
 import { ADMIN_IDS } from './config.js';
 import { textsOf } from './chats.js';
-import { getVpn, openReports, stats } from './store.js';
+import { getVpn, openReports } from './store.js';
 import { safeApi } from './util.js';
 
 export const isAdmin = (userId) => ADMIN_IDS.includes(userId);
@@ -39,8 +38,4 @@ export async function sendOpenReports(chatId, L) {
     const vpn = await getVpn(r.vpnId);
     if (vpn) await sendReportTo(chatId, r, vpn);
   }
-}
-
-export async function dashboardText(L) {
-  return L.adminStats(await stats());
 }

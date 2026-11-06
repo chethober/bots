@@ -300,7 +300,6 @@ const strings = {
     es: '⚙️ Los ajustes de alertas de este chat (nivel, lista de seguimiento, resumen) se abren en un chat privado conmigo, solo para administradores.',
   },
   btn_open_settings: { en: '⚙️ Open settings', fa: '⚙️ باز کردن تنظیمات', ar: '⚙️ فتح الإعدادات', ru: '⚙️ Открыть настройки', es: '⚙️ Abrir ajustes' },
-  btn_admin: { en: '👑 Admin dashboard', fa: '👑 داشبورد مدیر', ar: '👑 لوحة المشرف', ru: '👑 Панель админа', es: '👑 Panel de administración' },
   alerts_on: { en: '🔔 Alerts on', fa: '🔔 هشدارها روشن شد', ar: '🔔 تم تفعيل التنبيهات', ru: '🔔 Оповещения включены', es: '🔔 Alertas activadas' },
   alerts_off: { en: '🔕 Alerts off', fa: '🔕 هشدارها خاموش شد', ar: '🔕 تم إيقاف التنبيهات', ru: '🔕 Оповещения выключены', es: '🔕 Alertas desactivadas' },
   chat_welcome: {
@@ -310,7 +309,6 @@ const strings = {
     ru: '🛡️ <b>Оповещения о CVE включены для этого чата</b>: новые CVE с CVSS выше {min} и трендовые CVE. Админы могут настроить фильтры или дайджест через /settings@{bot}. Удали меня, чтобы их остановить.',
     es: '🛡️ <b>Alertas de CVE activadas en este chat</b>: CVE nuevas con CVSS mayor que {min} y CVE en tendencia. Los administradores pueden filtrarlas o pasar a un resumen con /settings@{bot}. Elimíname para detenerlas.',
   },
-  admins_only: { en: '⛔ Admins only.', fa: '⛔ فقط برای مدیران.', ar: '⛔ للمشرفين فقط.', ru: '⛔ Только для админов.', es: '⛔ Solo para administradores.' },
   error: {
     en: '⚠️ Something went wrong. Please try again.', fa: '⚠️ مشکلی پیش آمد. دوباره امتحان کن.',
     ar: '⚠️ حدث خطأ. حاول مرة أخرى.', ru: '⚠️ Что-то пошло не так. Попробуй ещё раз.', es: '⚠️ Algo salió mal. Inténtalo de nuevo.',

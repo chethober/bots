@@ -1,8 +1,5 @@
-// The admin dashboard (⚙️ Settings → 👑, or /admin) and /broadcast. Admin
-// screens stay English.
-//
-// Callback data: adm (dashboard) · adm:stats · adm:hist · adm:chats ·
-// adm:test (a sample alert to yourself) · adm:tick (run the scheduler now)
+// What lib/hub_admin.js shows the CHTH hub: the dashboard, stats, history and chats, a test alert,
+// a scheduler run and broadcasts. Admin screens stay English.
 
 import { api, db } from 'sdk';
 import { desc, eq, inArray, sql } from 'sdk/db';
@@ -12,8 +9,6 @@ import { getSetting } from './settings.js';
 import { alertMessage, esc } from './format.js';
 import { runTick } from './scheduler.js';
 
-const back = [{ text: '⬅️ Dashboard', callback_data: 'adm' }];
-const kb = (...rows) => ({ inline_keyboard: rows });
 const time = (sec) => (sec ? new Date(sec * 1000).toISOString().replace('T', ' ').slice(0, 16) : '—');
 
 export async function dashboardView() {
@@ -24,14 +19,7 @@ export async function dashboardView() {
     if (last.skipped) lines.push(`• skipped: ${esc(last.skipped)}`);
     for (const e of last.errors ?? []) lines.push(`• ⚠️ ${esc(e)}`);
   } else lines.push('The scheduler has not run yet.');
-  return {
-    text: lines.join('\n'),
-    reply_markup: kb(
-      [{ text: '📊 Stats', callback_data: 'adm:stats' }, { text: '📋 History', callback_data: 'adm:hist' }],
-      [{ text: '📢 Groups and channels', callback_data: 'adm:chats' }, { text: '🧪 Test alert', callback_data: 'adm:test' }],
-      [{ text: '⚡ Run the scheduler now', callback_data: 'adm:tick' }],
-    ),
-  };
+  return { text: lines.join('\n') };
 }
 
 export async function statsView() {
@@ -58,7 +46,7 @@ export async function statsView() {
     `💾 CVEs stored: <code>${await db.$count(cves)}</code>`,
     `⚙️ Thresholds: CVSS above <code>${MIN_CVSS}</code>, EPSS signal from <code>${MIN_EPSS}</code>`,
   ].join('\n');
-  return { text, reply_markup: kb([{ text: '🔄 Refresh', callback_data: 'adm:stats' }], back) };
+  return { text };
 }
 
 export async function historyView() {
@@ -72,7 +60,7 @@ export async function historyView() {
     const what = a.kind === 'broadcast' ? esc((a.signals?.text ?? '').slice(0, 40)) : `<b>${a.cveId}</b>`;
     lines.push(`${icon[a.kind] ?? '•'} ${what} · ${a.status === 'sent' ? time(a.sentAt) : a.status}`);
   }
-  return { text: lines.join('\n'), reply_markup: kb([{ text: '🔄 Refresh', callback_data: 'adm:hist' }], back) };
+  return { text: lines.join('\n') };
 }
 
 export async function chatsView() {
@@ -83,7 +71,7 @@ export async function chatsView() {
   for (const c of rows) {
     lines.push(`${c.active ? '🟢' : '🔴'} ${c.type === 'channel' ? '📢' : '👥'} <b>${esc(c.title ?? '—')}</b>${c.username ? ` @${esc(c.username)}` : ''} · <code>${c.id}</code>`);
   }
-  return { text: lines.join('\n'), reply_markup: kb(back) };
+  return { text: lines.join('\n') };
 }
 
 // The newest stored CVE above the threshold, sent to `chatId` as a new-CVE
@@ -102,7 +90,7 @@ export async function tickView() {
   const parts = Object.entries(report).filter(([k]) => !['at', 'errors', 'ms'].includes(k))
     .map(([k, v]) => `• ${k}: <code>${esc(typeof v === 'object' ? JSON.stringify(v) : v)}</code>`);
   const text = ['⚡ <b>Scheduler run</b>', '', ...parts, ...report.errors.map((e) => `• ⚠️ ${esc(e)}`), '', `${report.ms ?? 0} ms`].join('\n');
-  return { text, reply_markup: kb([{ text: '⚡ Run again', callback_data: 'adm:tick' }], back) };
+  return { text };
 }
 
 // /broadcast [channel] <text>: queued like an alert, so the scheduler delivers

@@ -8,18 +8,13 @@
 //   unblock ub:<rowid>, new link n:yes|no,
 //   delete d:yes|no, QR code q:me, language lang:<code>, ℹ️ About's ⭐ Tip tip|tip:back|tip:more
 //   admin, under a report:           Ban / Dismiss / Unban  ab:/ad:/au:<reportId>
-//   admin, /admin dashboard am:refresh|reports|bans, /bans unban bu:<createdAt>.<rank>,
-//   /broadcast send bc:<adminMsgId>|no
 
 import { api, db } from 'sdk';
 import { eq } from 'sdk/db';
 import { messages, blocks, reports } from '../schema.js';
 import { KINDS, SOURCE_URL, UNSEND_WINDOW_SEC } from '../lib/config.js';
 import { aboutKeyboard, isTipCallback, onTipCallback } from '../lib/tips.js';
-import {
-  ban, bansView, dashboardView, isAdmin, maybeAutoBan, reportKeyboard, runBroadcast, sendOpenReports, sendReport, unban,
-  unbanAt,
-} from '../lib/admin.js';
+import { ban, isAdmin, maybeAutoBan, reportKeyboard, sendReport, unban } from '../lib/admin.js';
 import { answerQuery } from '../lib/answer.js';
 import { cancelRow, closeScreen, drop, isScreen, setLocale, showScreen, textsFor } from '../lib/chats.js';
 import { toggleKind } from '../lib/content.js';
@@ -307,50 +302,6 @@ async function onAdminButton(q, action, reportId, L) {
   return { text: toast };
 }
 
-// am:refresh|reports|bans — the /admin dashboard's buttons.
-async function onDashboardButton(q, value, L) {
-  if (!isAdmin(q.from.id)) return {};
-  if (value === 'refresh') {
-    const { text, reply_markup } = await dashboardView(L);
-    await editButtonMessage(q, text, reply_markup);
-    return { text: L.adminRefreshedToast };
-  }
-  if (value === 'reports') await sendOpenReports(q.from.id, L);
-  else if (value === 'bans') {
-    const { text, reply_markup } = await bansView(L);
-    await safeApi('sendMessage', { chat_id: q.from.id, text, ...(reply_markup && { reply_markup }) });
-  }
-  return {};
-}
-
-// bu:<createdAt>.<rank> — unban from the /bans list.
-async function onBansUnban(q, ref, L) {
-  if (!isAdmin(q.from.id)) return {};
-  await unbanAt(ref);
-  const { text, reply_markup } = await bansView(L);
-  await editButtonMessage(q, text, reply_markup);
-  return { text: L.unbannedToast };
-}
-
-// bc:<adminMsgId> sends (or resumes) a broadcast, bc:no drops it. A broadcast
-// outlives the callback's answer window, so this answers the button itself
-// (returns null) before it starts sending.
-async function onBroadcastButton(q, value, L) {
-  if (!isAdmin(q.from.id)) return {};
-  if (value === 'no') {
-    await editButtonMessage(q, L.broadcastCancelled);
-    return {};
-  }
-  const sourceMsgId = Number(value);
-  if (!Number.isSafeInteger(sourceMsgId)) return {};
-  await api.answerCallbackQuery({ callback_query_id: q.id, text: L.broadcastStartedToast }).catch(() => {});
-  const resume = { inline_keyboard: [[{ text: L.btnBroadcastResume, callback_data: `bc:${sourceMsgId}` }]] };
-  const result = await runBroadcast(q.from.id, sourceMsgId, (text, done) => editButtonMessage(q, text, done ? undefined : resume), L);
-  if (result === 'busy') await safeApi('sendMessage', { chat_id: q.from.id, text: L.broadcastBusy });
-  if (result === 'done') await editButtonMessage(q, L.broadcastAlreadyDone);
-  return null;
-}
-
 export default async function (q, ctx) {
   let answer = {};
   try {
@@ -367,9 +318,6 @@ export default async function (q, ctx) {
     else if (action === 'n') answer = await onNewlink(q, value, L);
     else if (action === 'd') answer = await onDelete(q, value, L);
     else if (action === 'q') answer = (await sendQr(await getOrCreateUser(q.from), L), {});
-    else if (action === 'am') answer = await onDashboardButton(q, value, L);
-    else if (action === 'bc') answer = await onBroadcastButton(q, value, L);
-    else if (action === 'bu') answer = await onBansUnban(q, value, L);
     else if (action === 'lang') answer = await onLanguage(q, value);
     else if (action === 'st') answer = await onSettings(q, value, L);
     else if (isTipCallback(q.data)) answer = await onTipCallback(q, L.locale, aboutKeyboard(L.locale, SOURCE_URL)); // answers itself

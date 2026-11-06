@@ -11,7 +11,6 @@ test('parseState reads every kind', () => {
   assert.deepEqual(parseState(row('replying_to:7'), 1000, 60), { kind: 'replying_to', id: 7 });
   assert.deepEqual(parseState(row('setting_prompt'), 1000, 60), { kind: 'setting_prompt' });
   assert.deepEqual(parseState(row('setting_words'), 1000, 60), { kind: 'setting_words' });
-  assert.deepEqual(parseState(row('broadcasting'), 1000, 60), { kind: 'broadcasting' });
 });
 
 test('parseState: expiry and garbage', () => {
@@ -24,7 +23,7 @@ test('parseState: expiry and garbage', () => {
 });
 
 test('encodeState round-trips', () => {
-  for (const [kind, id] of [['idle'], ['sending_to', 5], ['replying_to', 9], ['setting_prompt'], ['setting_words'], ['broadcasting']]) {
+  for (const [kind, id] of [['idle'], ['sending_to', 5], ['replying_to', 9], ['setting_prompt'], ['setting_words']]) {
     const parsed = parseState({ mode: encodeState(kind, id), updatedAt: 1000 }, 1000, 60);
     assert.deepEqual(parsed, id === undefined ? { kind } : { kind, id });
   }

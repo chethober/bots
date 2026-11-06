@@ -103,7 +103,7 @@ How a purchase works:
 2. `handlers/pre_checkout_query.js` checks the pack, the amount and the player.
 3. The `successful_payment` message credits the chips once per `telegram_payment_charge_id`,
    which is stored in the `purchases` table.
-4. A refund (`/refund`, or Telegram's `refunded_payment`) takes the chips back, down to zero.
+4. A refund (from the hub, or Telegram's `refunded_payment`) takes the chips back, down to zero.
 
 `/paysupport` is the payment-support command Telegram asks for: it lists the player's recent
 payments and forwards their message to the admins. Run `npm run migrate` after updating, to
@@ -127,18 +127,7 @@ results the server has already decided.
 
 ## Admins
 
-The ids in `ADMIN_IDS` get these commands in their own command menu; `/admin` lists them.
-
-| Command | What it does |
-|---|---|
-| `/stats` | Players, chips in circulation, activity |
-| `/user <id>` | Player details (or reply to their message) |
-| `/grant <id> <±amount>` · `/setchips <id> <amount>` | Change a player's chips |
-| `/resetdaily <id>` | Make the daily bonus claimable now |
-| `/ban <id>` · `/unban <id>` | A banned player is blocked in chat, inline mode and the Mini App |
-| `/broadcast <text>` | Sends to 40 players per run; add `from=<id>` to continue |
-| `/payments [id]` | The latest Stars purchases, for everyone or one player |
-| `/refund <charge id>` | Returns the Stars and takes the chips back |
+Admin lives in the private CHTH hub bot (`lib/hub_admin.js` answers its signed commands): stats, player details, chips, the daily bonus, bans, broadcasts, payments and refunds. The bot only keeps `ADMIN_IDS` for `/paysupport` messages and tips, and so admins can't be banned.
 
 ## Run your own
 
@@ -195,7 +184,7 @@ tgcloud/
     ├── games/*.js         one pure module per game, plus factories (table, solo, duel, pot, board, tricks)
     ├── shop.js            Telegram Stars packs: invoices, crediting, refunds
     ├── poker.js           hand evaluator, video poker pay table
-    └── admin.js           /admin commands
+    └── hub_admin.js       what the CHTH hub can ask of the bot
 public/                    the Mini App: plain ES modules, no build step
 ├── js/app.js              shell: wallet, home, navigation, rooms
 ├── js/kit.js              shared UI: cards, dice, stake picker, lobby buttons

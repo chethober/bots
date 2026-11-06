@@ -3,8 +3,8 @@
 // The only slash commands are /start and the admin ones; everything else is a button.
 
 import { ADMIN_IDS, PROMPT_MAX, SOURCE_URL, WORDS_MAX, WORD_MAX_LEN } from '../lib/config.js';
-import { ban, bansView, dashboardView, isAdmin, recipientCount, sendOpenReports, unban } from '../lib/admin.js';
-import { cancelRow, closeScreen, drop, matchButton, showScreen, textsFor } from '../lib/chats.js';
+import { isAdmin, sendOpenReports } from '../lib/admin.js';
+import { cancelRow, drop, matchButton, showScreen, textsFor } from '../lib/chats.js';
 import { deliverAnonymous, deliverReply, findAlbumStart, findOwnerCopy, findReplyCopy } from '../lib/delivery.js';
 import { isFiltered, ownerWords, parseWords } from '../lib/filter.js';
 import { languageKeyboard } from '../lib/i18n.js';
@@ -13,12 +13,10 @@ import { markSeen } from '../lib/receipts.js';
 import { maybePrune } from '../lib/retention.js';
 import { getOrCreateUser, getUser, getUserByCode, getState, setState, setPrompt, setWords } from '../lib/users.js';
 import { aboutKeyboard, thankTip } from '../lib/tips.js';
-import { safeApi } from '../lib/util.js';
 import { reportStart, reportError } from '../lib/report.js';
 import { hubCommand } from '../lib/hub_command.js';
 import { claim, handlers } from '../lib/hub_admin.js';
 
-const reply = (msg, text, extra = {}) => safeApi('sendMessage', { chat_id: msg.chat.id, text, ...extra });
 const screen = (msg, text, extra = {}) => showScreen(msg.chat.id, { text, ...extra });
 const withCancel = (L, rows = []) => ({ reply_markup: { inline_keyboard: [...rows, cancelRow(L)] } });
 
@@ -103,48 +101,11 @@ async function onWordsMessage(msg, L) {
   return showScreen(msg.chat.id, wordsView({ ...user, words }, L, note));
 }
 
-// --- admin (ADMIN_IDS) commands; to everyone else they don't exist -------------
-
-const ADMIN_COMMANDS = ['admin', 'reports', 'bans', 'ban', 'unban', 'broadcast'];
-
-async function adminCommand(msg, { cmd, arg }, L) {
-  const chatId = msg.chat.id;
-  const sendView = ({ text, reply_markup }) => reply(msg, text, reply_markup ? { reply_markup } : {});
-  switch (cmd) {
-    case 'admin':   return sendView(await dashboardView(L));
-    case 'reports': return sendOpenReports(chatId, L);
-    case 'bans':    return sendView(await bansView(L));
-    case 'ban':
-    case 'unban': {
-      const id = /^\d+$/.test(arg) ? Number(arg) : null;
-      if (!id) return reply(msg, L.adminBanUsage(cmd));
-      if (cmd === 'ban') return reply(msg, (await ban(id)) ? L.adminBanned(id) : L.adminAlreadyBanned(id));
-      return reply(msg, (await unban(id)) ? L.adminUnbanned(id) : L.adminNotBanned(id));
-    }
-    case 'broadcast':
-      await setState(chatId, 'broadcasting');
-      return screen(msg, L.broadcastPrompt(await recipientCount(chatId)), withCancel(L));
-  }
-}
-
-// Next message after /broadcast: confirm before it goes to everyone.
-async function onBroadcastMessage(msg, L) {
-  await setState(msg.from.id, 'idle');
-  if (!isAdmin(msg.from.id)) return;
-  await closeScreen(msg.chat.id);
-  return reply(msg, L.broadcastConfirm(await recipientCount(msg.from.id)), {
-    reply_parameters: { message_id: msg.message_id, allow_sending_without_reply: true },
-    reply_markup: {
-      inline_keyboard: [[
-        { text: L.btnBroadcastSend, callback_data: `bc:${msg.message_id}` },
-        { text: L.btnNo, callback_data: 'bc:no' },
-      ]],
-    },
-  });
-}
+// /reports is the one admin command here: reviewing reports needs message contents, which stay
+// in the bot. Everything else is in the CHTH hub (lib/hub_admin.js).
 
 async function command(msg, parsed, L) {
-  if (ADMIN_COMMANDS.includes(parsed.cmd) && isAdmin(msg.from.id)) return adminCommand(msg, parsed, L);
+  if (parsed.cmd === 'reports' && isAdmin(msg.from.id)) return sendOpenReports(msg.chat.id, L);
   if (parsed.cmd === 'start') return start(msg, parsed.arg, L);
   // Anything else (old commands included): tidy up and point at the buttons.
   await drop(msg.chat.id, msg.message_id);
@@ -210,7 +171,6 @@ export default async function (msg, ctx) {
     if (state.kind === 'replying_to') return await deliverReply(msg, state.id);
     if (state.kind === 'setting_prompt') return await onPromptMessage(msg, L);
     if (state.kind === 'setting_words') return await onWordsMessage(msg, L);
-    if (state.kind === 'broadcasting') return await onBroadcastMessage(msg, L);
 
     // Idle: later items of an album arrive as separate updates, after the first
     // one ended send mode — they follow it to the same owner.
@@ -222,7 +182,7 @@ export default async function (msg, ctx) {
     // A send / reply / invitation-text edit that timed out (see STATE_TTL_SEC).
     const expired = {
       sending_to: L.sendExpired, replying_to: L.replyExpired, setting_prompt: L.textExpired,
-      setting_words: L.wordsExpired, broadcasting: L.broadcastExpired,
+      setting_words: L.wordsExpired,
     }[state.expired];
     if (expired) {
       await setState(msg.from.id, 'idle');

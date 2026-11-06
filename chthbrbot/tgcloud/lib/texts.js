@@ -204,10 +204,6 @@ const fa = (w) => {
         `/ban <شناسه> و /unban <شناسه> – محروم کردن یا لغو با شناسه‌ی تلگرام\n` +
         `/broadcast – پیام همگانی به همه‌ی کاربرها`;
     },
-    btnAdminRefresh: '🔄 به‌روزرسانی',
-    btnAdminReports: (n) => `⚠️ گزارش‌های باز (${num(n)})`,
-    btnAdminBans: (n) => `⛔️ محروم‌ها (${num(n)})`,
-    adminRefreshedToast: 'به‌روز شد',
     adminNoReports: 'گزارش بازی نیست ✅',
     adminReportsHeader: (shown, total) =>
       `⚠️ ${num(total)} گزارش باز${shown < total ? ` — ${num(shown)} تای قدیمی‌تر رو می‌بینی؛ بعد از بررسی دوباره /reports رو بزن` : ''}`,
@@ -217,30 +213,16 @@ const fa = (w) => {
       rows.map((r, i) =>
         `${num(i + 1)}. ${r.reportId ? `گزارش #${num(r.reportId)}` : 'دستی (/ban)'}، ${ago(r.createdAt)}`).join('\n') +
       (limited ? `\n\n(فقط ${num(rows.length)} مورد آخر)` : ''),
-    adminBanUsage: (cmd) => `شناسه‌ی عددی تلگرام رو بعد از دستور بنویس، مثلاً:\n/${cmd} 123456789`,
     adminBanned: (id) => `⛔️ ${id} از کل ربات محروم شد. پیام‌های ناشناسش بی‌صدا دور ریخته می‌شن.`,
     adminAlreadyBanned: (id) => `${id} از قبل محرومه.`,
     adminUnbanned: (id) => `✅ محرومیت ${id} لغو شد.`,
     adminNotBanned: (id) => `${id} محروم نبود.`,
-    broadcastPrompt: (n) =>
-      `📢 پیام همگانی\n\nپیامی که می‌خوای برای ${num(n)} نفر فرستاده بشه رو همین الان بفرست ` +
-      `(هر نوع پیامی؛ آلبوم فقط اولین موردش). قبل از ارسال ازت تأیید می‌گیرم.`,
-    broadcastConfirm: (n) => `📢 این پیام برای ${num(n)} نفر فرستاده بشه؟`,
-    btnBroadcastSend: '✅ آره، بفرست',
-    btnBroadcastResume: '▶️ ادامه (اگه متوقف شد)',
-    broadcastStartedToast: 'ارسال شروع شد',
     broadcastProgress: (sent, failed, total) =>
       `📢 در حال ارسال… ${num(sent + failed)} از ${num(total)}\n` +
       `رسید: ${num(sent)} · نرسید: ${num(failed)}\n\n` +
       `اگه یه دقیقه پیشرفتی نبود، دکمه‌ی ادامه رو بزن؛ از همون جایی که مونده ادامه می‌ده.`,
     broadcastDone: (sent, failed) =>
       `📢 پیام همگانی تموم شد ✅\nرسید: ${num(sent)} · نرسید (ربات رو بستن): ${num(failed)}`,
-    broadcastBusy: 'این پیام همگانی همین الان در حال ارساله. اگه یه دقیقه پیشرفتی نبود دوباره امتحان کن.',
-    broadcastAlreadyDone: 'این پیام همگانی قبلاً کامل فرستاده شده ✅',
-    broadcastCancelled: 'پیام همگانی لغو شد.',
-    broadcastExpired: 'مهلت فرستادن پیام همگانی تموم شد ⌛️ دوباره /broadcast رو بزن.',
-
-    // Message types
     typesMenu: (kinds) =>
       `📥 چه پیام‌هایی دریافت کنی؟\n\nروی هر مورد بزن تا روشن ✅ یا خاموش ⬜️ بشه.\n\nالان: ${kindList(kinds)}`,
     typesLastOne: 'حداقل یه نوع باید روشن بمونه',
@@ -527,10 +509,6 @@ const en = (w) => {
         `/ban <id> and /unban <id> – ban or unban by Telegram id\n` +
         `/broadcast – message everyone`;
     },
-    btnAdminRefresh: '🔄 Refresh',
-    btnAdminReports: (n) => `⚠️ Open reports (${num(n)})`,
-    btnAdminBans: (n) => `⛔️ Bans (${num(n)})`,
-    adminRefreshedToast: 'Refreshed',
     adminNoReports: 'No open reports ✅',
     adminReportsHeader: (shown, total) =>
       `⚠️ ${num(total)} open report(s)${shown < total ? ` — showing the ${num(shown)} oldest; send /reports again after reviewing` : ''}`,
@@ -540,29 +518,16 @@ const en = (w) => {
       rows.map((r, i) =>
         `${num(i + 1)}. ${r.reportId ? `report #${num(r.reportId)}` : 'manual (/ban)'}, ${ago(r.createdAt)}`).join('\n') +
       (limited ? `\n\n(only the latest ${num(rows.length)})` : ''),
-    adminBanUsage: (cmd) => `Put the numeric Telegram id after the command, e.g.:\n/${cmd} 123456789`,
     adminBanned: (id) => `⛔️ ${id} is banned from the whole bot. Their anonymous messages are silently dropped.`,
     adminAlreadyBanned: (id) => `${id} is already banned.`,
     adminUnbanned: (id) => `✅ Ban on ${id} lifted.`,
     adminNotBanned: (id) => `${id} wasn't banned.`,
-    broadcastPrompt: (n) =>
-      `📢 Broadcast\n\nSend the message that should go to ${num(n)} people now ` +
-      `(any kind; for an album only its first item). I'll ask you to confirm before sending.`,
-    broadcastConfirm: (n) => `📢 Send this message to ${num(n)} people?`,
-    btnBroadcastSend: '✅ Yes, send',
-    btnBroadcastResume: '▶️ Resume (if it stopped)',
-    broadcastStartedToast: 'Sending started',
     broadcastProgress: (sent, failed, total) =>
       `📢 Sending… ${num(sent + failed)} of ${num(total)}\n` +
       `Delivered: ${num(sent)} · Failed: ${num(failed)}\n\n` +
       `If there's no progress for a minute, tap Resume; it continues where it stopped.`,
     broadcastDone: (sent, failed) =>
       `📢 Broadcast finished ✅\nDelivered: ${num(sent)} · Failed (blocked the bot): ${num(failed)}`,
-    broadcastBusy: 'This broadcast is being sent right now. If there is no progress for a minute, try again.',
-    broadcastAlreadyDone: 'This broadcast was already sent in full ✅',
-    broadcastCancelled: 'Broadcast cancelled.',
-    broadcastExpired: 'Time to send the broadcast ran out ⌛️ Send /broadcast again.',
-
     typesMenu: (kinds) =>
       `📥 Which messages do you accept?\n\nTap an item to turn it on ✅ or off ⬜️.\n\nNow: ${kindList(kinds)}`,
     typesLastOne: 'At least one kind has to stay on',
@@ -845,10 +810,6 @@ const ar = (w) => {
         `/ban <المعرّف> و /unban <المعرّف> – منع أو إلغاء بمعرّف تيليجرام\n` +
         `/broadcast – رسالة جماعية للجميع`;
     },
-    btnAdminRefresh: '🔄 تحديث',
-    btnAdminReports: (n) => `⚠️ بلاغات مفتوحة (${num(n)})`,
-    btnAdminBans: (n) => `⛔️ الممنوعون (${num(n)})`,
-    adminRefreshedToast: 'تم التحديث',
     adminNoReports: 'لا توجد بلاغات مفتوحة ✅',
     adminReportsHeader: (shown, total) =>
       `⚠️ ${num(total)} بلاغ مفتوح${shown < total ? ` — تعرض أقدم ${num(shown)}؛ أرسل /reports مجددًا بعد المراجعة` : ''}`,
@@ -858,29 +819,16 @@ const ar = (w) => {
       rows.map((r, i) =>
         `${num(i + 1)}. ${r.reportId ? `بلاغ #${num(r.reportId)}` : 'يدوي (/ban)'}، ${ago(r.createdAt)}`).join('\n') +
       (limited ? `\n\n(آخر ${num(rows.length)} فقط)` : ''),
-    adminBanUsage: (cmd) => `اكتب معرّف تيليجرام الرقمي بعد الأمر، مثلًا:\n/${cmd} 123456789`,
     adminBanned: (id) => `⛔️ تم منع ${id} من البوت بالكامل. رسائله المجهولة تُتجاهل بصمت.`,
     adminAlreadyBanned: (id) => `${id} ممنوع مسبقًا.`,
     adminUnbanned: (id) => `✅ تم إلغاء منع ${id}.`,
     adminNotBanned: (id) => `${id} لم يكن ممنوعًا.`,
-    broadcastPrompt: (n) =>
-      `📢 رسالة جماعية\n\nأرسل الآن الرسالة التي تريد إرسالها إلى ${num(n)} شخص ` +
-      `(أي نوع؛ للألبوم أول عنصر فقط). سأطلب تأكيدك قبل الإرسال.`,
-    broadcastConfirm: (n) => `📢 إرسال هذه الرسالة إلى ${num(n)} شخص؟`,
-    btnBroadcastSend: '✅ نعم، أرسل',
-    btnBroadcastResume: '▶️ متابعة (إن توقف)',
-    broadcastStartedToast: 'بدأ الإرسال',
     broadcastProgress: (sent, failed, total) =>
       `📢 جارٍ الإرسال… ${num(sent + failed)} من ${num(total)}\n` +
       `وصلت: ${num(sent)} · لم تصل: ${num(failed)}\n\n` +
       `إن لم يتقدم الإرسال لدقيقة، اضغط «متابعة»؛ سيكمل من حيث توقف.`,
     broadcastDone: (sent, failed) =>
       `📢 انتهت الرسالة الجماعية ✅\nوصلت: ${num(sent)} · لم تصل (حظروا البوت): ${num(failed)}`,
-    broadcastBusy: 'هذه الرسالة الجماعية قيد الإرسال الآن. إن لم يتقدم الإرسال لدقيقة، حاول مجددًا.',
-    broadcastAlreadyDone: 'أُرسلت هذه الرسالة الجماعية بالكامل من قبل ✅',
-    broadcastCancelled: 'أُلغيت الرسالة الجماعية.',
-    broadcastExpired: 'انتهت مهلة إرسال الرسالة الجماعية ⌛️ أرسل /broadcast مجددًا.',
-
     typesMenu: (kinds) =>
       `📥 ما الرسائل التي تستقبلها؟\n\nاضغط على أي عنصر لتفعيله ✅ أو إيقافه ⬜️.\n\nالآن: ${kindList(kinds)}`,
     typesLastOne: 'يجب أن يبقى نوع واحد مفعّلًا على الأقل',
@@ -1163,10 +1111,6 @@ const ru = (w) => {
         `/ban <id> и /unban <id> – бан или разбан по id Telegram\n` +
         `/broadcast – рассылка всем`;
     },
-    btnAdminRefresh: '🔄 Обновить',
-    btnAdminReports: (n) => `⚠️ Открытые жалобы (${num(n)})`,
-    btnAdminBans: (n) => `⛔️ Баны (${num(n)})`,
-    adminRefreshedToast: 'Обновлено',
     adminNoReports: 'Открытых жалоб нет ✅',
     adminReportsHeader: (shown, total) =>
       `⚠️ Открытых жалоб: ${num(total)}${shown < total ? ` — показаны ${num(shown)} самых старых; после проверки отправь /reports снова` : ''}`,
@@ -1176,29 +1120,16 @@ const ru = (w) => {
       rows.map((r, i) =>
         `${num(i + 1)}. ${r.reportId ? `жалоба #${num(r.reportId)}` : 'вручную (/ban)'}, ${ago(r.createdAt)}`).join('\n') +
       (limited ? `\n\n(только последние ${num(rows.length)})` : ''),
-    adminBanUsage: (cmd) => `Укажи числовой id Telegram после команды, например:\n/${cmd} 123456789`,
     adminBanned: (id) => `⛔️ ${id} забанен во всём боте. Его анонимные сообщения молча отбрасываются.`,
     adminAlreadyBanned: (id) => `${id} уже забанен.`,
     adminUnbanned: (id) => `✅ Бан с ${id} снят.`,
     adminNotBanned: (id) => `${id} не был забанен.`,
-    broadcastPrompt: (n) =>
-      `📢 Рассылка\n\nОтправь сейчас сообщение, которое получат ${num(n)} чел. ` +
-      `(любой тип; у альбома только первый элемент). Перед отправкой я попрошу подтверждение.`,
-    broadcastConfirm: (n) => `📢 Отправить это сообщение ${num(n)} чел.?`,
-    btnBroadcastSend: '✅ Да, отправить',
-    btnBroadcastResume: '▶️ Продолжить (если остановилась)',
-    broadcastStartedToast: 'Рассылка началась',
     broadcastProgress: (sent, failed, total) =>
       `📢 Отправка… ${num(sent + failed)} из ${num(total)}\n` +
       `Доставлено: ${num(sent)} · Не доставлено: ${num(failed)}\n\n` +
       `Если минуту нет прогресса, нажми «Продолжить» — рассылка пойдёт с того же места.`,
     broadcastDone: (sent, failed) =>
       `📢 Рассылка завершена ✅\nДоставлено: ${num(sent)} · Не доставлено (заблокировали бота): ${num(failed)}`,
-    broadcastBusy: 'Эта рассылка сейчас отправляется. Если минуту нет прогресса, попробуй снова.',
-    broadcastAlreadyDone: 'Эта рассылка уже отправлена полностью ✅',
-    broadcastCancelled: 'Рассылка отменена.',
-    broadcastExpired: 'Время на рассылку вышло ⌛️ Отправь /broadcast снова.',
-
     typesMenu: (kinds) =>
       `📥 Какие сообщения принимать?\n\nНажми на пункт, чтобы включить ✅ или выключить ⬜️.\n\nСейчас: ${kindList(kinds)}`,
     typesLastOne: 'Хотя бы один тип должен остаться включённым',
@@ -1481,10 +1412,6 @@ const es = (w) => {
         `/ban <id> y /unban <id> – vetar o quitar veto por id de Telegram\n` +
         `/broadcast – mensaje a todos`;
     },
-    btnAdminRefresh: '🔄 Actualizar',
-    btnAdminReports: (n) => `⚠️ Reportes abiertos (${num(n)})`,
-    btnAdminBans: (n) => `⛔️ Vetados (${num(n)})`,
-    adminRefreshedToast: 'Actualizado',
     adminNoReports: 'No hay reportes abiertos ✅',
     adminReportsHeader: (shown, total) =>
       `⚠️ ${num(total)} reporte(s) abierto(s)${shown < total ? ` — ves los ${num(shown)} más antiguos; envía /reports otra vez tras revisarlos` : ''}`,
@@ -1494,29 +1421,16 @@ const es = (w) => {
       rows.map((r, i) =>
         `${num(i + 1)}. ${r.reportId ? `reporte #${num(r.reportId)}` : 'manual (/ban)'}, ${ago(r.createdAt)}`).join('\n') +
       (limited ? `\n\n(solo los ${num(rows.length)} más recientes)` : ''),
-    adminBanUsage: (cmd) => `Escribe el id numérico de Telegram tras el comando, por ejemplo:\n/${cmd} 123456789`,
     adminBanned: (id) => `⛔️ ${id} está vetado en todo el bot. Sus mensajes anónimos se descartan en silencio.`,
     adminAlreadyBanned: (id) => `${id} ya estaba vetado.`,
     adminUnbanned: (id) => `✅ Veto a ${id} retirado.`,
     adminNotBanned: (id) => `${id} no estaba vetado.`,
-    broadcastPrompt: (n) =>
-      `📢 Difusión\n\nEnvía ahora el mensaje que debe llegar a ${num(n)} personas ` +
-      `(cualquier tipo; de un álbum solo el primer elemento). Te pediré confirmación antes de enviarlo.`,
-    broadcastConfirm: (n) => `📢 ¿Enviar este mensaje a ${num(n)} personas?`,
-    btnBroadcastSend: '✅ Sí, enviar',
-    btnBroadcastResume: '▶️ Reanudar (si se detuvo)',
-    broadcastStartedToast: 'Envío iniciado',
     broadcastProgress: (sent, failed, total) =>
       `📢 Enviando… ${num(sent + failed)} de ${num(total)}\n` +
       `Entregados: ${num(sent)} · Fallidos: ${num(failed)}\n\n` +
       `Si no avanza en un minuto, pulsa Reanudar; sigue donde se quedó.`,
     broadcastDone: (sent, failed) =>
       `📢 Difusión terminada ✅\nEntregados: ${num(sent)} · Fallidos (bloquearon el bot): ${num(failed)}`,
-    broadcastBusy: 'Esta difusión se está enviando ahora. Si no avanza en un minuto, inténtalo de nuevo.',
-    broadcastAlreadyDone: 'Esta difusión ya se envió por completo ✅',
-    broadcastCancelled: 'Difusión cancelada.',
-    broadcastExpired: 'Se acabó el tiempo para la difusión ⌛️ Envía /broadcast otra vez.',
-
     typesMenu: (kinds) =>
       `📥 ¿Qué mensajes aceptas?\n\nPulsa un elemento para activarlo ✅ o desactivarlo ⬜️.\n\nAhora: ${kindList(kinds)}`,
     typesLastOne: 'Al menos un tipo debe quedar activado',

@@ -18,10 +18,9 @@ import { localeFor, languageKeyboard } from '../lib/i18n.js';
 import { drop, showHome, showScreen } from '../lib/screen.js';
 import { normalizeId } from '../lib/nvd.js';
 import {
-  isAdmin, matchButton, homeView, listView, categoriesView, cveView, settingsView, watchView, watchPromptView,
+  matchButton, homeView, listView, categoriesView, cveView, settingsView, watchView, watchPromptView,
   linkPromptView,
 } from '../lib/views.js';
-import { dashboardView, statsView, queueBroadcast } from '../lib/admin.js';
 import { runTick } from '../lib/scheduler.js';
 import { t } from '../lib/strings.js';
 import { reportStart, reportError } from '../lib/report.js';
@@ -52,16 +51,6 @@ async function onButton(button, message, locale) {
   }
 }
 
-async function onAdminCommand({ cmd, args }, message) {
-  const chatId = message.chat.id;
-  if (cmd === 'admin') return showScreen(chatId, await dashboardView());
-  if (cmd === 'stats') return showScreen(chatId, await statsView());
-  // broadcast
-  const reply = await queueBroadcast(args);
-  await showScreen(chatId, { text: reply });
-  if (reply.startsWith('📢')) await runTick({ budgetMs: 15_000 });
-}
-
 async function onPrivate(message) {
   const chatId = message.chat.id;
   await upsertChat(message.chat);
@@ -78,9 +67,6 @@ async function onPrivate(message) {
     const id = normalizeId(command.args);
     if (id) await showScreen(chatId, await cveView(id, locale, null, chatId));
     return;
-  }
-  if (command && ['admin', 'stats', 'broadcast'].includes(command.cmd) && isAdmin(message.from.id)) {
-    return onAdminCommand(command, message);
   }
 
   const button = matchButton(message.text);

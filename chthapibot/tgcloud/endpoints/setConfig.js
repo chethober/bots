@@ -1,12 +1,12 @@
 // CLI-only bot configuration (the platform has no environment variables):
-//   npx tgcloud run endpoints/setConfig '{ tmdb_key: "…", admin_chat_id: "123" }'
+//   npx tgcloud run endpoints/setConfig '{ tmdb_key: "…" }'
 //   npx tgcloud run endpoints/setConfig '{ tmdb_key: null }'     (delete)
 //   npx tgcloud run endpoints/setConfig '{}'                      (show, secrets masked)
 import { db, EndpointError } from 'sdk';
 import { config } from '../schema.js';
 import { setConfig } from '../lib/store.js';
 
-const KEYS = ['tmdb_key', 'admin_chat_id'];
+const KEYS = ['tmdb_key'];
 const mask = (k, v) => (k.endsWith('_key') && v ? `${v.slice(0, 4)}…${v.slice(-2)}` : v);
 
 export default async function (input, ctx) {

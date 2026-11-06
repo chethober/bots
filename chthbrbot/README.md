@@ -67,11 +67,9 @@ are only `/start` and the admin commands.
 
 **For admins** (the ids in `ADMIN_IDS`, see [Admins](#admins))
 - Every report arrives with the reported message, the link owner, and how many earlier reports the same sender has, plus **Ban** / **Dismiss** buttons (or **Unban**, after an automatic ban). Admins never see the sender's identity.
-- `/admin`: a bot-wide dashboard (users, new users, messages by status, replies, open reports, bans) with buttons for reports and bans.
 - `/reports` resends the open reports, so a report you missed isn't lost.
-- `/bans` lists bot-wide bans with unban buttons. `/ban <id>` and `/unban <id>` take a Telegram user id directly.
-- `/broadcast` sends one message (any kind) to everyone who has used the bot, after a preview and a confirmation. Progress is stored, so an interrupted run resumes where it stopped and never sends to anyone twice. It is paced under Telegram's flood limits.
-- The admin commands appear in the command menu only in admins' chats. For everyone else they don't exist.
+- Admin lives in the private CHTH hub bot (`lib/hub_admin.js` answers its signed commands): the dashboard, bans and text broadcasts. Bans reach it by reference, so a sender's id stays here.
+- `/reports` appears in the command menu only in admins' chats. For everyone else they don't exist.
 
 ## Buttons
 
@@ -89,15 +87,11 @@ only user command.
 
 ## Admins
 
-The ids in `ADMIN_IDS` get these commands in their own command menu:
+The ids in `ADMIN_IDS` get this command in their own command menu:
 
 | Command      | What it does                                       |
 |--------------|----------------------------------------------------|
-| `/admin`     | Bot-wide dashboard                                 |
 | `/reports`   | Resend open reports with Ban / Dismiss buttons     |
-| `/bans`      | List bot-wide bans and lift them                   |
-| `/ban <id>` · `/unban <id>` | Ban / unban a Telegram user id      |
-| `/broadcast` | Send a message to every user                       |
 
 ## Privacy
 
@@ -167,7 +161,7 @@ tgcloud/
     ├── users.js               owners, link codes, conversation state, data deletion
     ├── chats.js               each chat's language, clean chat (home + screen), the reply keyboard
     ├── manage.js              home, My link, QR code, Stats, Settings and its sub-screens
-    ├── admin.js               reports, bans (and automatic bans), /admin dashboard, broadcasts
+    ├── admin.js               reports, bans (and automatic bans), the dashboard, broadcasts
     ├── receipts.js            seen receipts (👀) and the typing indicator
     ├── answer.js              📣 Answer publicly: the inline query that carries the question
     ├── retention.js           deletes old message records (RETENTION_DAYS)

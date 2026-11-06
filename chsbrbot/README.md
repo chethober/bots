@@ -47,13 +47,7 @@ switching on a new deployment doesn't flood every chat. Alerts start with the ne
 
 ## Admins
 
-Admins (`ADMIN_IDS`) get these commands in their own command menu. The same tools are in ⚙️ Settings → 👑 Admin dashboard.
-
-| Command | What it does |
-|---|---|
-| `/admin` | Dashboard: last scheduler run, stats, alert history, groups and channels, a test alert, run the scheduler now |
-| `/stats` | Subscribers by type, alerts sent and queued, CVEs stored |
-| `/broadcast [channel] <text>` | Message every subscribed chat (or only channels). Queued like an alert, so it reaches everyone across runs |
+Admin lives in the private CHTH hub bot (`lib/hub_admin.js` answers its signed commands): the dashboard, stats, alert history, groups and channels, a test alert, a scheduler run and broadcasts.
 
 Admins are also told when the bot is added to or removed from a group or channel.
 

@@ -1,6 +1,6 @@
 // endpoints/setup.js — one-off: applies the bot profile. Descriptions in every
 // language, no command menu for users (they have the reply keyboard) and the
-// admin commands in each admin's chat (ADMIN_IDS).
+// old admin commands in each admin's chat (ADMIN_IDS).
 //
 //   npx tgcloud run endpoints/setup '{}'
 //
@@ -8,7 +8,6 @@
 
 import { api, EndpointError } from 'sdk';
 import { ADMIN_IDS } from '../lib/config.js';
-import { ADMIN_COMMANDS } from '../lib/views.js';
 
 const PROFILE = {
   en: ['🛡️ Real-time CVE alerts. I post newly published High and Critical vulnerabilities from NVD, and CVEs that CISA lists as exploited in the wild or that have a public exploit on GitHub, with EPSS scores. Search any CVE by product, bug type or ID. Add me to a channel or group to post the alerts there.',
@@ -35,13 +34,9 @@ export default async function (input, ctx) {
   }
   await api.deleteMyCommands({});
   done.push('user commands removed');
+  // Admin moved to the CHTH hub: clear the menu admins used to get.
   for (const chat_id of ADMIN_IDS) {
-    try {
-      await api.setMyCommands({ commands: ADMIN_COMMANDS, scope: { type: 'chat', chat_id } });
-      done.push(`admin commands for ${chat_id}`);
-    } catch (e) {
-      done.push(`admin commands for ${chat_id} failed (has the admin pressed Start?): ${e.description ?? e.message}`);
-    }
+    await api.deleteMyCommands({ scope: { type: 'chat', chat_id } }).catch(() => {});
   }
   return { done };
 }

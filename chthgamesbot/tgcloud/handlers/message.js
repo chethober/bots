@@ -1,7 +1,7 @@
 // handlers/message.js — the private chat's reply keyboard, /start, the group
-// welcome and the admin commands. Games themselves run on inline keyboards
+// welcome. Games themselves run on inline keyboards
 // (handlers/callback_query.js) and in the Mini App (endpoints/). The only slash
-// commands are /start and the admin ones.
+// command is /start. Admin lives in the CHTH hub (lib/hub_admin.js).
 
 import { api, db } from 'sdk';
 import { desc } from 'sdk/db';
@@ -10,13 +10,12 @@ import { ensurePlayer, claimDaily, sendHtml } from '../lib/engine.js';
 import { aboutKeyboard, isTipPayment, thankTip } from '../lib/tips.js';
 import { invoiceLinks, creditPayment, revokePurchase, recentPurchases, validPayment } from '../lib/shop.js';
 import { menuText, menuMarkup, sendHome } from '../lib/menu.js';
-import { adminCommand, ADMIN_COMMANDS, isAdmin } from '../lib/admin.js';
 import { esc, chips } from '../lib/ui.js';
 import { BOT_USERNAME, WEBAPP_URL, DAILY_CHIPS, DAILY_COOLDOWN, SOURCE_URL, PACKS, ADMIN_IDS } from '../lib/config.js';
 import { t } from '../lib/strings.js';
 import { languageKeyboard, playerLocale } from '../lib/i18n.js';
 import { drop, matchButton, showScreen } from '../lib/screen.js';
-import { reportStart, reportError } from '../lib/report.js';
+import { report, reportStart, reportError } from '../lib/report.js';
 import { hubCommand } from '../lib/hub_command.js';
 import { claim, handlers } from '../lib/hub_admin.js';
 
@@ -70,7 +69,6 @@ async function handle(message) {
   const [cmd, at] = head.slice(1).toLowerCase().split('@');
   if (at && at !== BOT_USERNAME.toLowerCase()) return; // addressed to another bot
 
-  if (await adminCommand(message, cmd, rest, text)) return;
   // Telegram asks every bot that takes payments to answer /paysupport.
   if (cmd === 'paysupport' && chatType === 'private') return paySupport(me, locale, message);
   if (cmd !== 'start') {
@@ -95,14 +93,8 @@ async function handle(message) {
       inline_keyboard: [[{ text: t(locale, 'open_room'), web_app: { url: `${WEBAPP_URL}?room=${rest[0].slice(5)}` } }]],
     });
   }
-  // Users have the reply keyboard instead of a command menu; admins get theirs.
+  // Users have the reply keyboard instead of a command menu.
   await api.deleteMyCommands({}).catch(() => {});
-  if (isAdmin(me.id)) {
-    await api.setMyCommands({
-      commands: ADMIN_COMMANDS.map(([command, description]) => ({ command, description })),
-      scope: { type: 'chat', chat_id: me.id },
-    }).catch(() => {});
-  }
   await sendHome(me, locale);
   if (rest[0] === 'hub') return openHub(chatId, locale);
 }
@@ -153,7 +145,8 @@ async function onPayment(message) {
   const after = pack && await creditPayment(me.id, pay).catch((e) => { console.error('credit failed', pay, e); return false; });
   if (after === null) return; // already credited (a redelivered update)
   if (!after) {
-    await notifyAdmins(`⚠️ Payment not credited: <code>${esc(pay.telegram_payment_charge_id)}</code> from ${esc(me.name)} (<code>${me.id}</code>), ⭐ ${pay.total_amount}. Check /stats, then /grant or /refund.`);
+    // The charge id is enough: 🛠 Bot admin → ⭐ Payments in the hub shows who paid.
+    await report('alert', { text: `Payment not credited: ${pay.telegram_payment_charge_id}` });
     return showScreen(me.id, t(locale, 'pay_failed'));
   }
   return showScreen(me.id, t(locale, 'paid', { n: chips(pack.chips), chips: chips(after.chips) }));

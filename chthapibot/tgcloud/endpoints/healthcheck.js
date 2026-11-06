@@ -1,13 +1,11 @@
 // CLI-only: probes every upstream API from the platform (see lib/health.js).
 //   npx tgcloud run endpoints/healthcheck '{}'               → report only
-//   npx tgcloud run endpoints/healthcheck '{ notify: true }' → also message the admin chat on failures
+//   npx tgcloud run endpoints/healthcheck '{ notify: true }' → also alert the CHTH hub on failures
 import { fetch, EndpointError } from 'sdk';
 import { PROBES } from '../lib/health.js';
 import { mealIndex, drinkIndex } from '../lib/apis/food.js';
 import { teamIndex } from '../lib/apis/espn.js';
-import { getConfig } from '../lib/store.js';
-import { sendText } from '../lib/telegram.js';
-import { esc } from '../lib/format.js';
+import { report } from '../lib/report.js';
 
 const dig = (o, path) => path.split('.').reduce((v, k) => (v == null ? v : v[k]), o);
 
@@ -41,11 +39,8 @@ export default async function (input, ctx) {
     { name: 'Team index', ok: !!teams?.length, status: teams?.length ?? 0, ms: 0 });
   const failed = results.filter((r) => !r.ok);
   if (input?.notify && failed.length) {
-    const admin = await getConfig('admin_chat_id');
-    if (admin) {
-      await sendText(Number(admin), [`🩺 <b>API healthcheck: ${failed.length}/${results.length} failing</b>`, '',
-        ...failed.map((r) => `❌ ${esc(r.name)} — ${r.status || esc(r.error ?? 'error')}`)].join('\n'));
-    }
+    await report('alert', { text: [`API healthcheck: ${failed.length}/${results.length} failing`,
+      ...failed.map((r) => `${r.name}: ${r.status || (r.error ?? 'error')}`)].join('\n') });
   }
   return { ok: results.length - failed.length, failed: failed.map((r) => `${r.name} (${r.status || r.error})`), results: results.map((r) => `${r.ok ? '✓' : '✗'} ${r.name} ${r.status} ${r.ms}ms`) };
 }

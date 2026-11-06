@@ -15,12 +15,7 @@ import { LOCALES } from '../lib/i18n.js';
 import { texts } from '../lib/texts.js';
 
 const ADMIN_COMMANDS = [
-  { command: 'admin',     description: '🛠 Admin panel and bot stats' },
-  { command: 'reports',   description: '🛠 Open reports' },
-  { command: 'bans',      description: '🛠 Banned senders' },
-  { command: 'ban',       description: '🛠 Ban by id' },
-  { command: 'unban',     description: '🛠 Unban by id' },
-  { command: 'broadcast', description: '🛠 Broadcast a message' },
+  { command: 'reports', description: '🛠 Open reports' },
 ];
 
 // The runtime has no atob/Buffer.

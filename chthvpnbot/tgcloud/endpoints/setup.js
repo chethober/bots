@@ -15,7 +15,6 @@ import { LOCALES } from '../lib/i18n.js';
 import { texts } from '../lib/texts.js';
 
 const ADMIN_COMMANDS = [
-  { command: 'admin',   description: '🛠 Bot stats' },
   { command: 'reports', description: '🛠 Open reports' },
 ];
 

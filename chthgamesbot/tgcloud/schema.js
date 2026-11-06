@@ -56,7 +56,7 @@ export const sessions = table('sessions', {
 
 // Telegram Stars purchases, keyed by Telegram's charge id so a payment is credited once.
 // `credited` turns true once the chips are on the player's balance; a row left at false
-// (the credit failed) shows up in /stats for an admin to /grant.
+// (the credit failed) shows up in the hub's 🛠 Bot admin for an admin to grant.
 export const purchases = table('purchases', {
   charge:   text('charge_id').primaryKey(),                // telegram_payment_charge_id
   userId:   integer('user_id').notNull(),

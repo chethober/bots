@@ -1,9 +1,9 @@
 // handlers/message.js — every private-chat message: reply-keyboard buttons,
 // /start (plain or with an invite code), what a prompt waits for (add a VPN,
-// edits, a password, an announcement) and the admin commands. The only slash
-// commands are /start and the admin ones; everything else is a button.
+// edits, a password, an announcement) and /reports. The only slash
+// commands are /start and /reports for admins; everything else is a button.
 
-import { dashboardText, isAdmin, sendOpenReports } from '../lib/admin.js';
+import { isAdmin, sendOpenReports } from '../lib/admin.js';
 import { ADMIN_IDS } from '../lib/config.js';
 import { drop, matchButton, showScreen, textsFor } from '../lib/chats.js';
 import { onAddName, onAddPassword, onAddSource, onEdit, onPassword, openVpn, startAdd } from '../lib/flows.js';
@@ -38,7 +38,6 @@ async function onButton(msg, key, L) {
 
 async function command(msg, { cmd, arg }, L) {
   const chatId = msg.chat.id;
-  if (isAdmin(msg.from.id) && cmd === 'admin') return safeApi('sendMessage', { chat_id: chatId, text: await dashboardText(L) });
   if (isAdmin(msg.from.id) && cmd === 'reports') return sendOpenReports(chatId, L);
   await drop(chatId, msg.message_id);
   if (cmd !== 'start') return showScreen(chatId, { text: L.help });

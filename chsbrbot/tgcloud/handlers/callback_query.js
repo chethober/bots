@@ -1,5 +1,5 @@
 // handlers/callback_query.js — inline buttons on the private chat's screens
-// (see lib/views.js and lib/admin.js for the callback data). A screen's buttons
+// (see lib/views.js for the callback data). A screen's buttons
 // edit that screen in place.
 
 import { api } from 'sdk';
@@ -12,31 +12,15 @@ import { askFor, cancelInput } from '../lib/input.js';
 import { setLocale, localeFor, LOCALE_NAMES } from '../lib/i18n.js';
 import { editScreen, showHome, showScreen } from '../lib/screen.js';
 import {
-  isAdmin, homeView, listView, categoriesView, cveView, settingsView, levelView, deliveryView, watchView,
+  homeView, listView, categoriesView, cveView, settingsView, levelView, deliveryView, watchView,
   watchPromptView, managedView, linkPromptView,
 } from '../lib/views.js';
-import { dashboardView, statsView, historyView, chatsView, sendTestAlert, tickView } from '../lib/admin.js';
 import { t } from '../lib/strings.js';
 import { aboutKeyboard, isTipCallback, onTipCallback } from '../lib/tips.js';
 import { SOURCE_URL, deepLink } from '../lib/config.js';
 
 const answer = (q, text, alert = false) =>
   api.answerCallbackQuery({ callback_query_id: q.id, text, show_alert: alert }).catch(() => {});
-
-async function onAdmin(q, action, locale) {
-  if (!isAdmin(q.from.id)) return answer(q, t(locale, 'admins_only'), true);
-  if (action === 'test') {
-    const sent = await sendTestAlert(q.from.id, locale);
-    return answer(q, sent ? '🧪 Sent.' : 'No CVE stored yet — run the scheduler first.', !sent);
-  }
-  if (action === 'tick') {
-    await answer(q, '⚡ Running…');
-    return editScreen(q.message, await tickView());
-  }
-  await answer(q);
-  const view = { stats: statsView, hist: historyView, chats: chatsView }[action] ?? dashboardView;
-  return editScreen(q.message, await view());
-}
 
 // The watchlist screen of `chat`. 🗑 and ❌ edit it in place; ➕ asks for
 // words, which handlers/message.js picks up from the next message.
@@ -152,7 +136,6 @@ async function route(q, locale) {
     await answer(q);
     return editScreen(q.message, linkPromptView(locale));
   }
-  if (op === 'adm') return onAdmin(q, rest[0], locale);
   if (isTipCallback(data)) return onTipCallback(q, locale, aboutKeyboard(locale, SOURCE_URL));
   return answer(q);
 }

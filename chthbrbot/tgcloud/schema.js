@@ -128,7 +128,7 @@ export const chats = table('chats', {
 
 // Conversation state per Telegram user.
 // mode: 'idle' | 'sending_to:<ownerId>' | 'replying_to:<messageId>' | 'setting_prompt'
-//     | 'setting_words' | 'broadcasting'  (parsed by lib/state.js)
+//     | 'setting_words'  (parsed by lib/state.js)
 export const states = table('states', {
   userId:    integer('user_id').primaryKey(),
   mode:      text('mode').notNull().default('idle'),

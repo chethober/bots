@@ -95,7 +95,7 @@ export async function setOption(id, option, on) {
 // --- conversation state ---------------------------------------------------
 
 // Returns { kind: 'idle' } | { kind: 'sending_to', id } | { kind: 'replying_to', id }
-//       | { kind: 'setting_prompt' } | { kind: 'setting_words' } | { kind: 'broadcasting' }
+//       | { kind: 'setting_prompt' } | { kind: 'setting_words' }
 // A state older than STATE_TTL_SEC reads as { kind: 'idle', expired: <old kind> }.
 export async function getState(userId) {
   const row = await db.select().from(states).where(eq(states.userId, userId)).get();

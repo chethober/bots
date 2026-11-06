@@ -4,8 +4,8 @@
 import { db } from 'sdk';
 import { lt } from 'sdk/db';
 import { hubCommands } from '../schema.js';
-import { dashboardText } from './admin.js';
 import { textsOf } from './chats.js';
+import { stats } from './store.js';
 
 const CLAIM_KEEP_SEC = 600; // commands older than 5 minutes are refused before they get here
 
@@ -18,5 +18,5 @@ export async function claim(id) {
 }
 
 export const handlers = {
-  stats: async (args) => ({ text: await dashboardText(await textsOf(Number(args.admin) || 0)) }),
+  stats: async (args) => ({ text: (await textsOf(Number(args.admin) || 0)).adminStats(await stats()) }),
 };

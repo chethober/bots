@@ -1,5 +1,4 @@
-# Daily API healthcheck from the platform; failures are sent to the admin chat
-# (set with: npx tgcloud run endpoints/setConfig '{ admin_chat_id: "<your id>" }').
+# Daily API healthcheck from the platform; failures are sent to the CHTH hub as an alert.
 name: chthapibot healthcheck
 
 on:

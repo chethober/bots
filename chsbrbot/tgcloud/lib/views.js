@@ -20,7 +20,7 @@
 //   mcs · mca · mc:<t>        my groups and channels · add one · its settings
 
 import { api } from 'sdk';
-import { MIN_CVSS, ADMIN_IDS, BOT_USERNAME } from './config.js';
+import { MIN_CVSS, BOT_USERNAME } from './config.js';
 import { getSetting } from './settings.js';
 import { search, latest, trending, getCve, kevEntry, byIds, CATEGORIES } from './cves.js';
 import { normalizeId } from './nvd.js';
@@ -30,14 +30,6 @@ import { getChat } from './chats.js';
 import { followedIds, isFollowing, MAX_FOLLOWS } from './follows.js';
 import { LOCALES } from './i18n.js';
 import { t } from './strings.js';
-
-export const isAdmin = (userId) => ADMIN_IDS.includes(Number(userId));
-
-export const ADMIN_COMMANDS = [
-  { command: 'admin', description: 'Admin dashboard' },
-  { command: 'stats', description: 'Subscribers, CVEs and alerts' },
-  { command: 'broadcast', description: 'Message every subscriber: /broadcast [channel] <text>' },
-];
 
 // --- reply keyboard -----------------------------------------------------------
 
@@ -66,11 +58,7 @@ export function matchButton(text) {
 // --- home -----------------------------------------------------------------------
 
 export async function homeView(from, locale) {
-  let text = t(locale, 'welcome', { name: esc(from.first_name ?? ''), min: MIN_CVSS });
-  if (isAdmin(from.id)) {
-    text += '\n\n👑 Admin: /admin dashboard · /stats · /broadcast [channel] &lt;text&gt;';
-    await api.setMyCommands({ commands: ADMIN_COMMANDS, scope: { type: 'chat', chat_id: from.id } }).catch(() => {});
-  }
+  const text = t(locale, 'welcome', { name: esc(from.first_name ?? ''), min: MIN_CVSS });
   return { text, reply_markup: mainKeyboard(locale) };
 }
 
@@ -182,7 +170,6 @@ export function settingsView(chat, userId, locale) {
   if (own) {
     rows.push([{ text: t(locale, 'btn_follows'), callback_data: 'ls:f:0' }]);
     rows.push([{ text: t(locale, 'btn_managed'), callback_data: 'mcs' }]);
-    if (isAdmin(userId)) rows.push([{ text: t(locale, 'btn_admin'), callback_data: 'adm' }]);
   } else rows.push([{ text: t(locale, 'btn_back'), callback_data: 'mcs' }]);
   let text = on
     ? t(locale, 'settings_on', {

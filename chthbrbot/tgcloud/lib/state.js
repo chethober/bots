@@ -2,10 +2,10 @@
 // without the platform; lib/users.js reads and writes the table.
 //
 // 'idle' | 'sending_to:<ownerId>' | 'replying_to:<messageId>' | 'setting_prompt'
-// | 'setting_words' | 'broadcasting'
+// | 'setting_words'
 
 const WITH_ID = ['sending_to', 'replying_to'];
-const PLAIN = ['setting_prompt', 'setting_words', 'broadcasting'];
+const PLAIN = ['setting_prompt', 'setting_words'];
 
 // A states row (or null) → { kind: 'idle' } | { kind, id } | { kind }.
 // A state last touched more than `ttl` seconds before `now` reads as

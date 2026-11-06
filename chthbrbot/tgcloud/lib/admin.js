@@ -1,6 +1,5 @@
-// Admin (ADMIN_IDS) tools shared by commands and buttons: reports, bans, the
-// bot-wide dashboard and broadcasts. Everything here checks isAdmin() itself or is
-// only reached after the caller did. `L` is the admin's texts table.
+// Reports (reviewed here by ADMIN_IDS), and the bans, dashboard and broadcasts lib/hub_admin.js
+// runs for the CHTH hub. `L` is the admin's texts table.
 
 import { api, db, BotApiError } from 'sdk';
 import { and, desc, eq, ne, sql } from 'sdk/db';
@@ -95,7 +94,7 @@ export async function maybeAutoBan(report) {
   return n;
 }
 
-// bu:<createdAt>.<rank> → lifts that ban; true if there was one.
+// <createdAt>.<rank> → lifts that ban; true if there was one.
 export async function unbanAt(ref) {
   const [createdAt, rank] = ref.split('.').map(Number);
   if (!Number.isSafeInteger(createdAt) || !Number.isSafeInteger(rank)) return false;
@@ -107,9 +106,9 @@ export async function unbanAt(ref) {
 
 const BANS_LIMIT = 30;
 
-// The /bans message → { text, reply_markup? }. Like /blocked, the sender's id never
+// The list of bans → { text, reply_markup? }. Like /blocked, the sender's id never
 // reaches the client: a ban is addressed by when it was made and its rank among
-// bans made that same second (bu:<createdAt>.<rank>, see unbanAt).
+// bans made that same second (see unbanAt).
 export async function bansView(L) {
   const rows = await db.select().from(bans).orderBy(desc(bans.createdAt), bans.senderId).limit(BANS_LIMIT + 1).all();
   if (!rows.length) return { text: L.adminNoBans };
@@ -143,18 +142,7 @@ export async function dashboardView(L) {
     db.get(sql`SELECT COUNT(*) AS n FROM messages WHERE status = 'delivered' AND created_at >= ${dayAgo}`),
   ]);
   const messagesBy = Object.fromEntries(byStatus.map((r) => [r.status, r.n]));
-  return {
-    text: L.adminDashboard({ ...counts, messages: messagesBy, deliveredDay: today.n }),
-    reply_markup: {
-      inline_keyboard: [
-        [{ text: L.btnAdminRefresh, callback_data: 'am:refresh' }],
-        [
-          { text: L.btnAdminReports(counts.openReports), callback_data: 'am:reports' },
-          { text: L.btnAdminBans(counts.bans), callback_data: 'am:bans' },
-        ],
-      ],
-    },
-  };
+  return { text: L.adminDashboard({ ...counts, messages: messagesBy, deliveredDay: today.n }) };
 }
 
 // --- broadcast -------------------------------------------------------------------
@@ -173,7 +161,7 @@ export async function recipientCount(adminId) {
 }
 
 // A run holds the broadcast for this long after its last progress; after that
-// pressing the button again resumes it.
+// the hub's Continue button resumes it.
 const LEASE_SEC = 60;
 const BATCH = 50;
 const PACE_MS = 40; // ≤ 25 messages/second, under Telegram's broadcast limit
@@ -184,11 +172,10 @@ const sleep = (ms) => typeof setTimeout === 'function'
 
 // → true (delivered) / false (unreachable or failed). A flood-wait it can't sit
 // out is thrown, which stops the run; the lease then lets the admin resume.
-async function copyTo(chatId, adminId, sourceMsgId, text) {
+async function deliver(chatId, text) {
   for (let attempt = 0; ; attempt++) {
     try {
-      if (text) await api.sendMessage({ chat_id: chatId, text });
-      else await api.copyMessage({ chat_id: chatId, from_chat_id: adminId, message_id: sourceMsgId });
+      await api.sendMessage({ chat_id: chatId, text });
       return true;
     } catch (e) {
       if (isUnreachable(e)) return false;
@@ -204,11 +191,11 @@ async function copyTo(chatId, adminId, sourceMsgId, text) {
   }
 }
 
-// Sends (or resumes) the broadcast of message `sourceMsgId` in admin `adminId`'s chat.
+// Sends (or resumes) broadcast `sourceMsgId` (the hub's reference for it) as admin `adminId`.
 // `progress(text, done)` is called to show how it's going, in `L`.
-// `text` sends that instead of copying a message; `limit` stops the run after that many.
+// `limit` stops the run after that many.
 // → 'busy' (another run holds it) | 'done' (already finished) | 'finished' | 'more' (hit the limit)
-export async function runBroadcast(adminId, sourceMsgId, progress, L, { text, limit = Infinity } = {}) {
+export async function runBroadcast(adminId, sourceMsgId, progress, L, { text, limit }) {
   const total = await recipientCount(adminId);
   const mine = and(eq(broadcasts.adminId, adminId), eq(broadcasts.sourceMsgId, sourceMsgId));
   await db.insert(broadcasts)
@@ -229,7 +216,7 @@ export async function runBroadcast(adminId, sourceMsgId, progress, L, { text, li
     const batch = await db.all(sql`${recipients(adminId, cursor)} LIMIT ${BATCH}`);
     if (!batch.length) break;
     for (const { id: chatId } of batch) {
-      (await copyTo(chatId, adminId, sourceMsgId, text)) ? sent++ : failed++;
+      (await deliver(chatId, text)) ? sent++ : failed++;
       cursor = chatId;
       handled++;
       await db.update(broadcasts)

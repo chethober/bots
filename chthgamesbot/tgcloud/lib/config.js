@@ -3,7 +3,7 @@ export const WEBAPP_URL = 'https://app8798028785.tgcloud.ai/';
 export const BOT_USERNAME = 'chthgamesbot';
 
 // BUTTON_SECRET signs lobby buttons so a modified client can't forge who created a game or
-// its stake; ADMIN_IDS may use /admin. Both live in the git-ignored secrets.js.
+// its stake; ADMIN_IDS get /paysupport messages and can't be banned. Both live in the git-ignored secrets.js.
 export { BUTTON_SECRET, ADMIN_IDS } from './secrets.js';
 
 // Play-money economy. Chips are earned (start + daily bonus) or bought with Telegram Stars,

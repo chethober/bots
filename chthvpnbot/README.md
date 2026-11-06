@@ -119,7 +119,6 @@ on the command line.
 
 | Command | What it does |
 |---|---|
-| `/admin` | Counts of VPNs, owners, memberships, open reports and bans |
 | `/reports` | Resend the open reports with their buttons |
 
 ## Privacy
