@@ -71,7 +71,6 @@ Optional configuration. It's stored in the bot's database, never in the repo:
 # TMDB v3 API key: full movie catalogue with genre and decade filters.
 # Without it, movies come from Apple's US top-100 chart.
 npx tgcloud run endpoints/setConfig '{ tmdb_key: "…" }'
-# Your Telegram user ID: daily healthcheck failures are sent to you.
 # Show the current configuration (keys are masked)
 npx tgcloud run endpoints/setConfig '{}'
 ```
