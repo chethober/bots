@@ -13,6 +13,9 @@
 const enc = new TextEncoder();
 export const MAX_SKEW_SECONDS = 300;
 
+/** The path of an absolute URL. Telegram Serverless has no URL global, so it's parsed by hand. */
+export const urlPath = (url) => String(url).replace(/^[a-z][a-z0-9+.-]*:\/\/[^/?#]*/i, '').split(/[?#]/)[0] || '/';
+
 const hex = (buf) => [...new Uint8Array(buf)].map((b) => b.toString(16).padStart(2, '0')).join('');
 
 async function hmac(secret, message) {
@@ -35,7 +38,7 @@ export const signature = (secret, timestamp, method, path, body = '') =>
 /** Headers for a signed request from `source`. */
 export async function signedHeaders({ source, secret, method = 'POST', url, body = '', now = Date.now() }) {
   const ts = String(Math.floor(now / 1000));
-  const path = new URL(url).pathname;
+  const path = urlPath(url);
   return {
     'X-Chth-Source': source,
     'X-Chth-Timestamp': ts,
