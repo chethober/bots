@@ -16,7 +16,7 @@ import { db } from 'sdk';
 import { eq } from 'sdk/db';
 import { reports } from '../schema.js';
 import { isAdmin, sendReport } from '../lib/admin.js';
-import { closeScreen, drop, isScreen, setLocale, showScreen, textsFor, textsOf } from '../lib/chats.js';
+import { closeScreen, drop, isScreen, sameWidget, setLocale, showScreen, textsFor, textsOf } from '../lib/chats.js';
 import { checkVpn } from '../lib/check.js';
 import {
   createFromDraft, onAddCountry, onAddName, onAddVisibility, openVpn, requestJoin, startAdd, startEdit,
@@ -32,22 +32,32 @@ import {
 } from '../lib/store.js';
 import { isTipCallback, onTipCallback } from '../lib/tips.js';
 import { safeApi } from '../lib/util.js';
+import { editWidgetCard, widgetsOn } from '../lib/widgets/index.js';
 import {
   aboutView, confirmView, countryView, directoryView, guideView, joinedView, manageView, memberView, membersView, ownedView,
   reportReasonsView, sendHome,
 } from '../lib/views.js';
 
 // A screen opened from a button: edits the button's message in place when that
-// message is the open screen, otherwise opens a new screen.
-async function openScreen(q, { text, reply_markup }) {
+// message is the open screen, otherwise opens a new screen. A widget screen
+// (lib/vpn_widgets.js) and a text screen can't become each other, so switching
+// between them sends the new screen and deletes the old one.
+async function openScreen(q, screen) {
+  const { text, reply_markup, widget } = screen;
   if (q.message && await isScreen(q.from.id, q.message.message_id)) {
-    const edited = await safeApi('editMessageText', {
-      chat_id: q.message.chat.id, message_id: q.message.message_id, text,
-      link_preview_options: { is_disabled: true }, ...(reply_markup && { reply_markup }),
-    });
-    if (edited) return edited;
+    if (q.message.widget && await sameWidget(q.from.id, widget)) {
+      const card = { widget, widgetKeyboard: screen.widgetKeyboard, keyboard: reply_markup?.inline_keyboard };
+      const ok = await editWidgetCard(q.message, card).then(() => true, (e) => console.warn(`edit widget: ${e.description ?? e.message}`));
+      if (ok) return q.message;
+    } else if (!q.message.widget && !(widget && widgetsOn())) {
+      const edited = await safeApi('editMessageText', {
+        chat_id: q.message.chat.id, message_id: q.message.message_id, text,
+        link_preview_options: { is_disabled: true }, ...(reply_markup && { reply_markup }),
+      });
+      if (edited) return edited;
+    }
   }
-  return showScreen(q.from.id, { text, ...(reply_markup && { reply_markup }) });
+  return showScreen(q.from.id, { ...screen, text, ...(reply_markup && { reply_markup }) });
 }
 
 const num = (s) => (/^\d+$/.test(s ?? '') ? Number(s) : null);
@@ -143,7 +153,7 @@ async function onMember(q, op, member, L) {
   if (member.status !== 'active') return { text: L.notMember };
   switch (op) {
     case 'my':
-      await openScreen(q, memberView(vpn, member, L));
+      await openScreen(q, await memberView(vpn, member, L));
       return {};
     case 'sh': {
       // xtune: asks the server again, which renews a member whose time ran out.

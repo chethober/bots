@@ -91,6 +91,7 @@ export const chats = table('chats', {
   lang:      text('lang'),                             // from Telegram's language_code
   homeMsg:   integer('home_msg'),
   screenMsg: integer('screen_msg'),
+  screenWidget: text('screen_widget'),                  // 'kind:height' when the screen is a message widget
 });
 
 // What the bot waits for next from a person, with its data (an add-VPN draft…).

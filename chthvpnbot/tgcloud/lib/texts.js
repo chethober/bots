@@ -31,7 +31,7 @@ function compose(locale, w) {
   const expiry = (ts) => (ts > 0 ? w.expiresIn(num(Math.max(0, Math.ceil((ts - Date.now() / 1000) / 86400)))) : w.noExpiry);
 
   return {
-    ...w, locale, num,
+    ...w, locale, num, ago,
     srv: composeSrv(locale, SRV[locale], num, ago),
     guide: composeGuide(num, GUIDE[locale]),
 
@@ -285,6 +285,14 @@ const en = {
   membersEmpty: (v) => `No one has joined ${v.name} yet.`,
   joinedAgo: (t) => `joined ${t}`,
   memberInactive: 'inactive',
+  // message widgets (lib/vpn_widgets.js)
+  wg: {
+    used: 'used', noLimit: 'no limit', pct: (n) => `${n}%`, daysLeft: 'days left', timeLeft: 'left', until: (d) => `until ${d}`,
+    devices: (n) => (n ? `up to ${n} devices` : 'any number of devices'),
+    running: 'running', down: 'down', users: 'users', active: 'active', online: 'online', traffic: 'traffic',
+    configs: 'Configs', inUse: 'in use', blocked: 'probably blocked', idle: 'no traffic yet', ipBlocked: 'The server\'s IP looks blocked',
+    more: (n) => `+${n} more`,
+  },
   kickHintXtune: 'Tap a label to remove that member: their account is deleted from the server.',
   kickHintShared: 'Tap a label to remove that member. They keep whatever links they already copied.',
   kickConfirm: (label, kind) => `Remove #${label}? They can't join again.` +
@@ -468,6 +476,13 @@ const fa = {
   membersEmpty: (v) => `هنوز کسی عضو ${v.name} نشده.`,
   joinedAgo: (t) => `عضویت: ${t}`,
   memberInactive: 'غیرفعال',
+  wg: {
+    used: 'مصرف‌شده', noLimit: 'بدون محدودیت', pct: (n) => `${n}٪`, daysLeft: 'روز مونده', timeLeft: 'مونده', until: (d) => `تا ${d}`,
+    devices: (n) => (n ? `حداکثر ${n} دستگاه` : 'دستگاه نامحدود'),
+    running: 'روشن', down: 'خاموش', users: 'کاربر', active: 'فعال', online: 'آنلاین', traffic: 'ترافیک',
+    configs: 'کانفیگ‌ها', inUse: 'در حال استفاده', blocked: 'احتمالاً مسدود', idle: 'هنوز ترافیکی نداشته', ipBlocked: 'IP سرور احتمالاً مسدود شده',
+    more: (n) => `+${n} دیگه`,
+  },
   kickHintXtune: 'روی یه برچسب بزن تا اون عضو حذف بشه: حسابش از سرور پاک می‌شه.',
   kickHintShared: 'روی یه برچسب بزن تا اون عضو حذف بشه. لینک‌هایی که قبلاً کپی کرده پیشش می‌مونه.',
   kickConfirm: (label, kind) => `#${label} حذف بشه؟ دیگه نمی‌تونه عضو بشه.` +
@@ -649,6 +664,13 @@ const ar = {
   membersEmpty: (v) => `لم ينضم أحد إلى ${v.name} بعد.`,
   joinedAgo: (t) => `انضم ${t}`,
   memberInactive: 'غير نشط',
+  wg: {
+    used: 'المستهلك', noLimit: 'بلا حد', pct: (n) => `${n}٪`, daysLeft: 'أيام متبقية', timeLeft: 'متبقٍ', until: (d) => `حتى ${d}`,
+    devices: (n) => (n ? `حتى ${n} أجهزة` : 'أجهزة بلا حد'),
+    running: 'يعمل', down: 'متوقف', users: 'مستخدم', active: 'نشط', online: 'متصل', traffic: 'الحركة',
+    configs: 'الإعدادات', inUse: 'قيد الاستخدام', blocked: 'غالباً محجوب', idle: 'لا حركة بعد', ipBlocked: 'يبدو أن عنوان IP للخادم محجوب',
+    more: (n) => `+${n} آخرين`,
+  },
   kickHintXtune: 'اضغط على وسم لإزالة ذلك العضو: يُحذف حسابه من الخادم.',
   kickHintShared: 'اضغط على وسم لإزالة ذلك العضو. يحتفظ بالروابط التي نسخها.',
   kickConfirm: (label, kind) => `إزالة #${label}؟ لن يستطيع الانضمام مجدداً.` +
@@ -832,6 +854,13 @@ const ru = {
   membersEmpty: (v) => `В ${v.name} пока никто не вступил.`,
   joinedAgo: (t) => `вступил ${t}`,
   memberInactive: 'неактивен',
+  wg: {
+    used: 'израсходовано', noLimit: 'без лимита', pct: (n) => `${n}%`, daysLeft: 'дн. осталось', timeLeft: 'осталось', until: (d) => `до ${d}`,
+    devices: (n) => (n ? `до ${n} устройств` : 'устройств без лимита'),
+    running: 'работает', down: 'не работает', users: 'всего', active: 'активных', online: 'онлайн', traffic: 'трафик',
+    configs: 'Конфиги', inUse: 'используется', blocked: 'вероятно, заблокирован', idle: 'трафика ещё не было', ipBlocked: 'IP сервера, похоже, заблокирован',
+    more: (n) => `ещё ${n}`,
+  },
   kickHintXtune: 'Нажмите на метку, чтобы удалить участника: его аккаунт удалится с сервера.',
   kickHintShared: 'Нажмите на метку, чтобы удалить участника. Скопированные ссылки у него останутся.',
   kickConfirm: (label, kind) => `Удалить #${label}? Вступить снова он не сможет.` +
@@ -1015,6 +1044,13 @@ const es = {
   membersEmpty: (v) => `Nadie se ha unido a ${v.name} todavía.`,
   joinedAgo: (t) => `se unió ${t}`,
   memberInactive: 'inactivo',
+  wg: {
+    used: 'usado', noLimit: 'sin límite', pct: (n) => `${n} %`, daysLeft: 'días restantes', timeLeft: 'restante', until: (d) => `hasta el ${d}`,
+    devices: (n) => (n ? `hasta ${n} dispositivos` : 'dispositivos ilimitados'),
+    running: 'en marcha', down: 'caído', users: 'usuarios', active: 'activos', online: 'en línea', traffic: 'tráfico',
+    configs: 'Configuraciones', inUse: 'en uso', blocked: 'probablemente bloqueada', idle: 'sin tráfico aún', ipBlocked: 'La IP del servidor parece bloqueada',
+    more: (n) => `+${n} más`,
+  },
   kickHintXtune: 'Toca una etiqueta para quitar a ese miembro: su cuenta se borra del servidor.',
   kickHintShared: 'Toca una etiqueta para quitar a ese miembro. Conserva los enlaces que ya copió.',
   kickConfirm: (label, kind) => `¿Quitar a #${label}? No podrá volver a unirse.` +
