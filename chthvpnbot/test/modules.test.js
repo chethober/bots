@@ -2,13 +2,15 @@
 // uses exists in all five languages. Run with the sdk stub: see package.json.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { readFileSync, readdirSync } from 'node:fs';
+import { readFileSync, readdirSync, statSync } from 'node:fs';
 import { join } from 'node:path';
 import { texts } from '../tgcloud/lib/texts.js';
 import { LOCALES } from '../tgcloud/lib/i18n.js';
 
 const root = new URL('../tgcloud/', import.meta.url).pathname;
-const files = ['schema.js', ...['lib', 'handlers', 'endpoints'].flatMap((d) => readdirSync(join(root, d)).map((f) => `${d}/${f}`))];
+const walk = (d) => readdirSync(join(root, d)).flatMap((f) =>
+  (statSync(join(root, d, f)).isDirectory() ? walk(`${d}/${f}`) : f.endsWith('.js') ? [`${d}/${f}`] : []));
+const files = ['schema.js', ...['lib', 'handlers', 'endpoints'].flatMap(walk)];
 
 test('every module loads', async () => {
   for (const f of files) await import(join(root, f));
@@ -23,6 +25,7 @@ test('every text key exists in every language', () => {
   }
   for (const loc of LOCALES) {
     const L = texts(loc);
+    assert.deepEqual(Object.keys(L.wg).sort(), Object.keys(texts('en').wg).sort(), `${loc}: wg keys differ`);
     for (const k of used) assert.ok(L[k] !== undefined, `${loc}: missing ${k}`);
     for (const k of usedSrv) assert.ok(L.srv[k] !== undefined, `${loc}: missing srv.${k}`);
     for (const k of Object.keys(L.kb)) assert.ok(L.kb[k], `${loc}: kb.${k}`);
@@ -88,4 +91,33 @@ test('the connection guide has every page in every language', async () => {
   assert.deepEqual(ownApps({ kind: 'xtune', protocols: ['VLESS REALITY', 'AmneziaWG', 'WireGuard', 'DNS tunnel'] }), ['wg', 'awg', 'dns']);
   assert.deepEqual(ownApps({ kind: 'links', protocols: ['WireGuard'] }), []);
   assert.equal(ownApps(null).length, 6);
+});
+
+test('widgets: payloads fit, carry no secrets and every word is translated', async () => {
+  const { usageWidget, serverWidget, membersWidget } = await import('../tgcloud/lib/vpn_widgets.js');
+  const { TEMPLATES } = await import('../tgcloud/lib/widgets/html.js');
+  const t = Math.floor(Date.now() / 1000);
+  const vpn = { id: 1, name: 'Berlin', kind: 'xtune', country: 'DE', source: 'https://h/p/pub/SECRET' };
+  const s = { role: 'admin', addr: '1.2.3.4', xray: 'active (v26)', sub: 'nginx, active', users: 30, active: 22, online: 9,
+    traffic: 2 ** 40, version: 'v0.7.0', ipBlocked: 'why',
+    configs: Array.from({ length: 30 }, (_, i) => ({ id: `config-${i}`, state: ['active', 'quiet', 'idle', 'follower'][i % 4], since: t - 7200, server: 'b.example' })) };
+  const list = Array.from({ length: 40 }, (_, i) => ({ id: i, label: `m${String(i).padStart(7, 'x')}` }));
+  const usage = new Map(list.map((m, i) => [m.label, { label: m.label, status: i % 5 ? 'active' : 'expired', used: i * 2 ** 29, quota: i % 3 ? 2 ** 35 : 0, expires: i % 2 ? t + i * 86400 : 0 }]));
+  for (const loc of LOCALES) {
+    const L = texts(loc);
+    const ws = [
+      usageWidget(vpn, { status: 'active', used: 2 ** 33, quota: 2 ** 35, expires: t + 86400 * 9 }, { devices: 3 }, L),
+      usageWidget(vpn, { status: 'disabled', used: 2 ** 33, quota: 0, expires: 0 }, { devices: 0 }, L),
+      serverWidget({ name: 'x' }, s, L),
+      serverWidget({ name: 'x' }, { role: 'reseller', reseller: 'rex', users: 1, maxUsers: 5, traffic: 0, version: 'v1' }, L),
+      membersWidget(vpn, list, usage, L),
+    ];
+    for (const w of ws) {
+      assert.ok(w && TEMPLATES[w.kind] && w.data, `${loc}: widget built`);
+      const json = JSON.stringify(w.data);
+      assert.ok(Buffer.byteLength(json) <= 1024, `${loc} ${w.kind}: ${Buffer.byteLength(json)} bytes`);
+      assert.ok(!/undefined|SECRET|pub\//.test(json), `${loc} ${w.kind}: ${json}`);
+      assert.ok(w.height >= 50 && w.height <= 600, `${loc} ${w.kind}: height ${w.height}`);
+    }
+  }
 });

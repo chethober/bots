@@ -9,6 +9,7 @@ import { COUNTRIES, flag } from './sources.js';
 import { ownedServers } from './servers.js';
 import { activeMembers, directory, joinedVpns, ownedVpns } from './store.js';
 import { inviteLink } from './util.js';
+import { membersWidget, usageWidget } from './vpn_widgets.js';
 import { poolInfo } from './xtune.js';
 
 const btn = (text, data) => ({ text, callback_data: data });
@@ -68,17 +69,24 @@ export async function joinedView(userId, L) {
   };
 }
 
-export function memberView(vpn, member, L) {
+// A VPN the person joined. On an xtune server, their usage from the pool comes as a
+// widget (lib/vpn_widgets.js) with a 🔄 button; the connection details stay behind 📋.
+export async function memberView(vpn, member, L) {
+  const kb = [
+    [btn(L.btnShow, `sh:${member.id}`)],
+    [btn(L.guide.btn, `g:${vpn.id}`)],
+    [btn(L.btnLeave, `lv:${member.id}`), btn(L.btnReport, `rp:${vpn.id}`)],
+    [btn(L.btnBack, 'joined')],
+  ];
+  const view = { text: L.memberCard(vpn), reply_markup: { inline_keyboard: kb } };
+  if (vpn.kind !== 'xtune') return view;
+  const res = await poolInfo(vpn.source);
+  const me = res.ok && res.data.members?.find((m) => m.label === member.label);
+  if (!me) return view;
   return {
-    text: L.memberCard(vpn),
-    reply_markup: {
-      inline_keyboard: [
-        [btn(L.btnShow, `sh:${member.id}`)],
-        [btn(L.guide.btn, `g:${vpn.id}`)],
-        [btn(L.btnLeave, `lv:${member.id}`), btn(L.btnReport, `rp:${vpn.id}`)],
-        [btn(L.btnBack, 'joined')],
-      ],
-    },
+    ...view,
+    widget: usageWidget(vpn, me, res.data, L),
+    widgetKeyboard: [[btn(L.btnShow, `sh:${member.id}`), btn(L.srv.btnRefresh, `my:${member.id}`)], ...kb.slice(1)],
   };
 }
 
@@ -131,16 +139,18 @@ export async function membersView(vpn, page, L) {
   const pages = Math.ceil(list.length / MEMBERS_PAGE);
   page = Math.min(Math.max(0, page), pages - 1);
   const shown = list.slice(page * MEMBERS_PAGE, (page + 1) * MEMBERS_PAGE);
-  return {
+  const kb = [
+    ...rows(shown.map((m) => btn(`🚫 #${m.label}`, `k:${m.id}`)), 3),
+    ...pager(`mm:${vpn.id}`, page, pages),
+  ];
+  const view = {
     text: L.membersList(vpn, shown.map((m) => ({ ...m, usage: usage.get(m.label) })), list.length, vpn.kind),
-    reply_markup: {
-      inline_keyboard: [
-        ...rows(shown.map((m) => btn(`🚫 #${m.label}`, `k:${m.id}`)), 3),
-        ...pager(`mm:${vpn.id}`, page, pages),
-        back,
-      ],
-    },
+    reply_markup: { inline_keyboard: [...kb, back] },
   };
+  // The widget ranks every member by usage; the buttons below it still page through them.
+  const widget = usage.size ? membersWidget(vpn, list, usage, L) : null;
+  if (!widget) return view;
+  return { ...view, widget, widgetKeyboard: [...kb, [btn(L.srv.btnRefresh, `mm:${vpn.id}:${page}`), ...back]] };
 }
 
 export function confirmView(text, yes, no, L) {

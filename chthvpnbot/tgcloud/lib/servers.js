@@ -12,6 +12,7 @@ import { qrPng } from './qr.js';
 import { blockedPort } from './sources.js';
 import { setState } from './store.js';
 import { now, safeApi } from './util.js';
+import { serverWidget } from './vpn_widgets.js';
 
 export const MANAGE_RE = /^https:\/\/[^\s/]+\/[^\s/]+\/adm\/[0-9a-f]{32}$/;
 const USERS_PAGE = 15;
@@ -90,7 +91,9 @@ export async function serverView(srv, L, status = null) {
   const kb = [[btn(L.srv.btnUsers, `su:${srv.id}:0`), btn(L.srv.btnAddUser, `sa:${srv.id}`)]];
   if (status.role === 'admin') kb.push([btn(L.srv.btnPlans, `sp:${srv.id}`)]);
   kb.push([btn(L.srv.btnRefresh, `s:${srv.id}`), btn(L.srv.btnRemove, `sd:${srv.id}`)], back);
-  return { text: L.srv.status(srv, status), reply_markup: { inline_keyboard: kb } };
+  // A status widget in private chats (lib/vpn_widgets.js), the text otherwise; 🔄 redraws it.
+  const widget = serverWidget(srv, status, L);
+  return { text: L.srv.status(srv, status), reply_markup: { inline_keyboard: kb }, ...(widget && { widget }) };
 }
 
 export async function usersView(srv, page, L) {

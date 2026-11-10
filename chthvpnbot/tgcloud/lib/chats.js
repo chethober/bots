@@ -17,6 +17,7 @@ import { chats } from '../schema.js';
 import { LOCALES, normalizeLocale } from './i18n.js';
 import { DEFAULT_LOCALE, texts } from './texts.js';
 import { safeApi } from './util.js';
+import { sendWidgetCard } from './widgets/index.js';
 
 const getChat = (id) => db.select().from(chats).where(eq(chats.id, id)).get();
 
@@ -55,13 +56,30 @@ export function drop(chatId, messageId) {
 
 // Sends the chat's new `slot` message (api[method](params)), then deletes the one
 // it replaces — sent first, so the reply keyboard never blinks away.
+// A screen with a `widget` (lib/vpn_widgets.js) is sent as a message widget, and as
+// its text when the widget can't be sent.
 async function replace(slot, chatId, params, method) {
   const prev = (await getChat(chatId))?.[slot];
-  const sent = await safeApi(method, { chat_id: chatId, link_preview_options: { is_disabled: true }, ...params });
+  const { widget, widgetKeyboard, ...rest } = params;
+  params = rest;
+  const sent = (widget && await sendWidgetCard(chatId, {
+    widget, widgetKeyboard, keyboard: params.reply_markup?.inline_keyboard,
+  })) || await safeApi(method, { chat_id: chatId, link_preview_options: { is_disabled: true }, ...params });
   if (!sent) return null;
-  await upsert(chatId, { [slot]: sent.message_id });
+  await upsert(chatId, {
+    [slot]: sent.message_id,
+    ...(slot === 'screenMsg' && { screenWidget: sent.widget && widget ? widgetKey(widget) : null }),
+  });
   if (prev !== sent.message_id) await drop(chatId, prev);
   return sent;
+}
+
+// A widget message keeps its template and height: a new screen can only be drawn
+// into it when both match (the 🔄 button, a page of the same list).
+const widgetKey = (w) => `${w.kind}:${w.height}`;
+
+export async function sameWidget(chatId, widget) {
+  return !!widget && (await getChat(chatId))?.screenWidget === widgetKey(widget);
 }
 
 export const showScreen = (chatId, params, method = 'sendMessage') => replace('screenMsg', chatId, params, method);
