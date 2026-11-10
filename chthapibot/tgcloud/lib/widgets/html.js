@@ -8,6 +8,9 @@ import board from './templates/board.js';
 import coin from './templates/coin.js';
 import list from './templates/list.js';
 import weather from './templates/weather.js';
+import brew from './templates/brew.js';
+import shop from './templates/shop.js';
+import food from './templates/food.js';
 
 export const TEMPLATES = {
   game,
@@ -15,6 +18,9 @@ export const TEMPLATES = {
   coin,
   list,
   weather,
+  brew,
+  shop,
+  food,
 };
 
 // Small stable hash of a template: a changed template gets new shared widgets,

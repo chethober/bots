@@ -18,6 +18,10 @@ const METHODS = {
         '3:00–3:30 — Drawdown finished',
       ];
     },
+    // The same steps for the brew timer widget: [start s, what to do, pour to g].
+    plan(c, w) {
+      return { end: 210, steps: [[0, 'Bloom, swirl gently', round(c * 2)], [45, 'Pour', round(w * 0.6)], [75, 'Pour', w], [105, 'Stir once, gentle swirl', null], [180, 'Drawdown finishes', null]] };
+    },
   },
   aeropress: {
     name: 'AeroPress',
@@ -32,6 +36,9 @@ const METHODS = {
         '2:00 — Swirl, remove plunger cap',
         '2:30 — Press gently for ~30 s',
       ];
+    },
+    plan(c, w) {
+      return { end: 180, steps: [[0, `Add ${c} g coffee, stir to wet`, round(c * 2)], [30, 'Insert plunger to stop drips', w], [120, 'Swirl, remove plunger cap', null], [150, 'Press gently', null]] };
     },
   },
   coldbrew: {
@@ -48,6 +55,10 @@ const METHODS = {
         `Dilute about 1:1 with water or milk — makes ~${Math.round(w * 0.85 * 2 / 100) * 100} ml to drink`,
       ];
     },
+    // Hours long: no running timer, the steep window instead.
+    plan(c, w) {
+      return { hours: [12, 18], steps: [[null, `Stir ${c} g coffee in until wet`, w], [null, 'Cover and steep 12–18 h', null], [null, 'Filter (paper or fine mesh)', null], [null, `Dilute ~1:1 · ~${Math.round(w * 0.85 * 2 / 100) * 100} ml`, null]] };
+    },
   },
   inverted: {
     name: 'AeroPress (inverted)',
@@ -62,12 +73,22 @@ const METHODS = {
         '1:45 — Press slowly, stop at the hiss (~30 s)',
       ];
     },
+    plan(c, w) {
+      return { end: 135, steps: [[0, `Add ${c} g coffee, stir 3×`, w], [90, 'Cap, flip onto the cup', null], [105, 'Press slowly, stop at the hiss', null]] };
+    },
   },
 };
 
 const round = (n) => Math.round(n);
 
 export const BREW_METHODS = Object.keys(METHODS);
+
+// Timed steps for a calculated brew (the brew timer widget), or null for an unknown method.
+// → { name, temp, grind, end?: total s, hours?: [min, max] steep, steps: [[start s|null, label, pour to g|null]] }
+export function brewPlan(key, coffee, water) {
+  const m = METHODS[key];
+  return m ? { name: m.name, temp: m.temp, grind: m.grind, ...m.plan(coffee, water) } : null;
+}
 
 /**
  * @returns {{ ok: true, html, method, key, coffee, water, ratio } | { ok: false, error: string }}

@@ -117,10 +117,12 @@ export function drinkById(id) {
 
 // ── products, breweries, coffee ───────────────────────────────────────────
 
+const kj = (x) => (Number.isFinite(x) ? Math.round(x / 4.184) : null);
+
 // Open Food Facts product by barcode (cached 1 day). Returns null when not found.
 export function product(code) {
   return cached(`food:off:${code}`, 86400, () => safely(async () => {
-    const fields = 'product_name,brands,quantity,nutriscore_grade,nova_group,ecoscore_grade,nutriments,image_front_small_url,ingredients_text_en,allergens_tags';
+    const fields = 'product_name,brands,quantity,nutriscore_grade,nova_group,ecoscore_grade,nutriments,nutrient_levels,image_front_small_url,ingredients_text_en,allergens_tags';
     const d = await getJson(`https://world.openfoodfacts.org/api/v2/product/${encodeURIComponent(code)}.json?fields=${fields}`, { headers: { 'User-Agent': 'chthapibot/1.0 (Telegram bot)' } });
     if (d.status !== 1 || !d.product) return null;
     const p = d.product;
@@ -129,7 +131,9 @@ export function product(code) {
       code, name: p.product_name || 'Unnamed product', brand: p.brands ?? '', quantity: p.quantity ?? '',
       nutri: p.nutriscore_grade ?? null, nova: p.nova_group ?? null, eco: p.ecoscore_grade ?? null,
       image: p.image_front_small_url ?? null,
-      per100: { kcal: n['energy-kcal_100g'], fat: n.fat_100g, sat: n['saturated-fat_100g'], carbs: n.carbohydrates_100g, sugar: n.sugars_100g, fiber: n.fiber_100g, protein: n.proteins_100g, salt: n.salt_100g },
+      // Some products only give energy in kJ.
+      per100: { kcal: n['energy-kcal_100g'] ?? kj(n['energy-kj_100g'] ?? n.energy_100g), fat: n.fat_100g, sat: n['saturated-fat_100g'], carbs: n.carbohydrates_100g, sugar: n.sugars_100g, fiber: n.fiber_100g, protein: n.proteins_100g, salt: n.salt_100g },
+      levels: p.nutrient_levels ?? null, // { fat, 'saturated-fat', sugars, salt }: low | moderate | high
       allergens: (p.allergens_tags ?? []).map((a) => a.replace(/^\w+:/, '')).slice(0, 8),
     };
   }));
