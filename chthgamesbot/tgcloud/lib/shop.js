@@ -40,6 +40,14 @@ export async function invoiceLinks(locale) {
   })));
 }
 
+// The 💎 Buy chips screen's keyboard: one url button per pack, each opening its invoice.
+export async function shopMarkup(locale) {
+  const links = await invoiceLinks(locale);
+  return {
+    inline_keyboard: PACKS.map((p, i) => [{ text: t(locale, 'pack_btn', { chips: chips(p.chips), stars: p.stars }), url: links[i] }]),
+  };
+}
+
 // Records a successful payment and credits the chips, once per charge id.
 // Returns the updated player, or null if this charge was already recorded.
 export async function creditPayment(userId, payment) {

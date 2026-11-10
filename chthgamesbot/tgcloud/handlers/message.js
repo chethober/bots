@@ -8,10 +8,11 @@ import { desc } from 'sdk/db';
 import { players } from '../schema.js';
 import { ensurePlayer, claimDaily, sendHtml } from '../lib/engine.js';
 import { aboutKeyboard, isTipPayment, thankTip } from '../lib/tips.js';
-import { invoiceLinks, creditPayment, revokePurchase, recentPurchases, validPayment } from '../lib/shop.js';
+import { shopMarkup, creditPayment, revokePurchase, recentPurchases, validPayment } from '../lib/shop.js';
+import { showWallet } from '../lib/wallet.js';
 import { menuText, menuMarkup, sendHome } from '../lib/menu.js';
 import { esc, chips } from '../lib/ui.js';
-import { BOT_USERNAME, WEBAPP_URL, DAILY_CHIPS, DAILY_COOLDOWN, SOURCE_URL, PACKS, ADMIN_IDS } from '../lib/config.js';
+import { BOT_USERNAME, WEBAPP_URL, DAILY_CHIPS, DAILY_COOLDOWN, SOURCE_URL, ADMIN_IDS } from '../lib/config.js';
 import { t } from '../lib/strings.js';
 import { languageKeyboard, playerLocale } from '../lib/i18n.js';
 import { drop, matchButton, showScreen } from '../lib/screen.js';
@@ -108,10 +109,7 @@ async function onButton(me, button, locale) {
     case 'hub':
       return openHub(chatId, locale);
     case 'balance':
-      return showScreen(chatId, t(locale, 'wallet', {
-        name: esc(me.name), chips: chips(me.chips), played: me.played, wins: me.wins,
-        wagered: chips(me.wagered), best: chips(me.bestWin),
-      }));
+      return showWallet(me, locale);
     case 'daily': {
       const after = await claimDaily(me.id);
       if (after) return showScreen(chatId, t(locale, 'daily_got', { daily: chips(DAILY_CHIPS), chips: chips(after.chips) }));
@@ -127,14 +125,6 @@ async function onButton(me, button, locale) {
     case 'about':
       return showScreen(chatId, t(locale, 'about'), aboutKeyboard(locale, SOURCE_URL));
   }
-}
-
-// One url button per pack, each opening that pack's Stars invoice.
-async function shopMarkup(locale) {
-  const links = await invoiceLinks(locale);
-  return {
-    inline_keyboard: PACKS.map((p, i) => [{ text: t(locale, 'pack_btn', { chips: chips(p.chips), stars: p.stars }), url: links[i] }]),
-  };
 }
 
 async function onPayment(message) {
