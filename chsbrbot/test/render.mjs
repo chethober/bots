@@ -12,6 +12,8 @@ import {
   managedView, linkPromptView,
 } from '../tgcloud/lib/views.js';
 import { ADMIN_IDS } from '../tgcloud/lib/config.js';
+import { cveWidget, cveListWidget, cvssMetrics, band, products, tagLine } from '../tgcloud/lib/cvewidget.js';
+import { bytes } from '../tgcloud/lib/widgets/index.js';
 
 const print = process.argv.includes('--print');
 const fixture = (id) => JSON.parse(readFileSync(new URL(`./fixtures/nvd-${id}.json`, import.meta.url))).vulnerabilities[0];
@@ -83,6 +85,51 @@ for (const locale of LOCALES) {
   }
 }
 
+// Widgets (private chats): CVSS metrics, bands, and payloads within 1 KB in
+// every language, with heights inside sendWidget's 50–600 px.
+{
+  const v3 = cvssMetrics('CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:C/C:H/I:H/A:H', 'en');
+  assert.equal(v3.ver, 'CVSS 3.1');
+  assert.deepEqual(v3.m[0], ['Attack vector', 'Network', 3, 3]);
+  assert.deepEqual(v3.m.map((m) => m[2] / m[3]), [1, 1, 1, 1, 1, 1, 1, 1], 'the worst vector fills every bar');
+  const v4 = cvssMetrics('CVSS:4.0/AV:L/AC:H/AT:P/PR:H/UI:A/VC:N/VI:L/VA:H/SC:N/SI:N/SA:N', 'en');
+  assert.deepEqual(v4.m.map(([n, v, a, of]) => `${n}: ${v} ${a}/${of}`), [
+    'Attack vector: Local 1/3', 'Attack complexity: High 0/1', 'Attack requirements: Present 0/1', 'Privileges: High 0/2',
+    'User interaction: Active 0/2', 'Confidentiality: None 0/2', 'Integrity: Low 1/2', 'Availability: High 2/2',
+  ]);
+  assert.equal(cvssMetrics('AV:N/AC:L/Au:N/C:P/I:P/A:P', 'en'), null, 'v2 vectors have no bars');
+  assert.equal(cvssMetrics('CVSS:3.1/AV:N/AC:L', 'en'), null, 'an incomplete vector has no bars');
+  assert.deepEqual([band({ score: 9.8 }), band({ score: 7 }), band({ score: 4.3 }), band({ score: 0.1 }), band({ score: null })], [4, 3, 2, 1, -1]);
+  assert.equal(band({ score: 9.3, severity: 'HIGH' }), 3, 'NVD\'s own band wins (v2)');
+  assert.deepEqual(products(['apache/log4j v2.0', 'apache/log4j (>=2.1, <2.15.0)', 'cisco/ucs central']), ['apache/log4j', 'cisco/ucs central']);
+
+  const kevSig = { dateAdded: '2021-12-10', dueDate: '2021-12-24' };
+  const longCve = { ...log4j, software: log4j.software.map((s) => `${'very-long-vendor-name/'.repeat(2)}${s}`), description: 'ж'.repeat(3000) };
+  for (const locale of LOCALES) {
+    const tag = tagLine(t(locale, 'alert_trending'));
+    for (const [name, w] of Object.entries({
+      full: cveWidget(log4j, locale, { kev: kevSig, epss: signals.epss, pocAt: 1639180800, tag }),
+      long: cveWidget(longCve, locale, { kev: kevSig, epss: signals.epss, pocAt: 1639180800, tag: 'x'.repeat(300) }),
+      bare: cveWidget(noScore, locale),
+      v4: cveWidget({ ...xz, vector: 'CVSS:4.0/AV:N/AC:L/AT:N/PR:N/UI:N/VC:H/VI:H/VA:H/SC:N/SI:N/SA:N' }, locale),
+      list: cveListWidget(Array.from({ length: 5 }, (_, i) => ({
+        cve: i % 2 ? log4j : longCve, kev: i % 3 ? null : kevSig, epss: i % 2 ? signals.epss : null,
+      })), locale, { title: t(locale, 'trending_title'), page: 3, first: 16 }),
+    })) {
+      assert.ok(w, `${locale}/${name}: no widget`);
+      const size = bytes(JSON.stringify(w.data));
+      assert.ok(size <= 1024, `${locale}/${name}: ${size} bytes`);
+      assert.ok(w.height >= 50 && w.height <= 600, `${locale}/${name}: height ${w.height}`);
+      if (print) console.log(`widget ${locale}/${name}: ${size} B, ${w.height} px`);
+    }
+  }
+  const full = cveWidget(log4j, 'en', { kev: kevSig, epss: signals.epss, pocAt: 1639180800 }).data;
+  assert.equal(full.m.length, 8);
+  assert.deepEqual(full.tl.map((e) => e[0]), [0, 1, 2], 'published → KEV → PoC');
+  assert.ok(!cveWidget(noScore, 'en').data.k, 'no KEV badge without a KEV entry');
+  assert.equal(cveListWidget([], 'en', { title: 'x' }), null);
+}
+
 // Reply keyboard labels map back to their button in every language, and no
 // two buttons share a label; the static screens fit too.
 const labels = new Set();
@@ -122,7 +169,8 @@ for (const l of labels) {
 }
 
 // Every key has all five languages, and the same {placeholders} in each.
-const SAME_IN_EVERY_LANGUAGE = new Set(['btn_nvd', 'btn_kev']);
+// 'Local' and 'd' (days) are also Spanish.
+const SAME_IN_EVERY_LANGUAGE = new Set(['btn_nvd', 'btn_kev', 'v_local', 'w_day']);
 const source = readFileSync(new URL('../tgcloud/lib/strings.js', import.meta.url), 'utf8');
 const keys = [...source.matchAll(/^ {2}(\w+): \{/gm)].map((m) => m[1]);
 assert.ok(keys.length > 50, `found ${keys.length} string keys`);

@@ -1,6 +1,10 @@
 // The private chat's reply keyboard and screens: home, CVE lists, categories,
 // a CVE card and settings. Each view returns { text, reply_markup }.
 //
+// Views are only shown in the private chat, so the CVE card and the 🔥 / 🆕 lists
+// also carry a `widget` (lib/cvewidget.js), which lib/screen.js sends instead of
+// the text when it can.
+//
 // Callback data:
 //   ls:<list>:<page>          a list page — list is new | hot | q (the chat's last
 //                             search, kept in settings as q:<chatId>) | c.<category>
@@ -30,6 +34,8 @@ import { getChat } from './chats.js';
 import { followedIds, isFollowing, MAX_FOLLOWS } from './follows.js';
 import { LOCALES } from './i18n.js';
 import { t } from './strings.js';
+import { signalsFor, signalsOf } from './signals.js';
+import { cveWidget, cveListWidget } from './cvewidget.js';
 
 // --- reply keyboard -----------------------------------------------------------
 
@@ -127,7 +133,15 @@ export async function listView(list, page, chatId, locale) {
       rows.push([{ text: t(locale, 'btn_watch_q', { q: cut(word, 24) }), callback_data: `wl:${chatId}:q:${page}` }]);
     }
   }
-  return { text: lines.join('\n').trimEnd(), reply_markup: { inline_keyboard: rows } };
+  const view = { text: lines.join('\n').trimEnd(), reply_markup: { inline_keyboard: rows } };
+  if (list === 'new' || list === 'hot') {
+    const signals = await signalsFor(shown.map((c) => c.id), { live: true });
+    const widget = cveListWidget(shown.map((cve) => ({ cve, ...signals.get(cve.id) })), locale, {
+      title, page, first: page * PAGE + 1,
+    });
+    if (widget) view.widget = widget;
+  }
+  return view;
 }
 
 export function categoriesView(locale) {
@@ -148,8 +162,14 @@ export async function cveView(input, locale, back = null, chatId = null) {
     const rows = back ? [[{ text: t(locale, 'btn_back'), callback_data: back }]] : [];
     return { text: t(locale, 'cve_not_found', { id: esc(id ?? input) }), reply_markup: { inline_keyboard: rows } };
   }
-  const following = chatId ? await isFollowing(chatId, cve.id) : null;
-  return cveCard(cve, locale, { kev: await kevEntry(cve.id), back, following });
+  const [following, kev, signals] = await Promise.all([
+    chatId ? isFollowing(chatId, cve.id) : null,
+    kevEntry(cve.id),
+    signalsOf(cve.id, { live: true }),
+  ]);
+  const view = cveCard(cve, locale, { kev, back, following });
+  const widget = cveWidget(cve, locale, signals);
+  return widget ? { ...view, widget } : view;
 }
 
 // --- settings -----------------------------------------------------------------------
