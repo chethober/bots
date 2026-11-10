@@ -146,6 +146,11 @@ export const callbacks = {
     await ctx.answer(had ? t(ctx.locale, 'cancelled') : undefined);
     if (ctx.chatType === 'private') return closeScreen(ctx.chatId);
   },
+  // 🔄 on the /weather card.
+  async wx(ctx) {
+    await ctx.answer('Refreshing…');
+    return show(ctx, await weatherCard(ctx.chatId));
+  },
   async dl(ctx) {
     await ctx.answer('Refreshing…');
     return show(ctx, await buildDaily(ctx.chatId));

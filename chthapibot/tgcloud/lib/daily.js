@@ -94,7 +94,7 @@ export async function weatherCard(chatId) {
     return { text: '📍 Share a location in /settings → 📍 Location to see your weather.', keyboard: [[btn('⚙️ Settings', 'st:home')]] };
   }
   const [w, widget] = await Promise.all([BUILDERS.weather(p), isPrivateChat(chatId) ? weatherWidget(p) : null]);
-  return { text: (w ?? ['⚠️ Weather is unavailable right now.']).join('\n'), widget, widgetKeyboard: [] };
+  return { text: (w ?? ['⚠️ Weather is unavailable right now.']).join('\n'), widget, widgetKeyboard: [[btn('🔄 Refresh', 'wx')]] };
 }
 
 async function weatherWidget(p) {
@@ -134,7 +134,7 @@ export async function buildDaily(chatId, memo = createMemo()) {
   if (!on.length) out.push('', '<i>Every section is off — pick some in 🧩 Sections.</i>');
   const book = p.daily.book ? await memo('book', getTrendingBook) : null;
   return {
-    before: wx ? [{ text: (await BUILDERS.weather(p).catch(() => null))?.join('\n') ?? '🌤', widget: wx }] : undefined,
+    before: wx ? [{ text: (await BUILDERS.weather(p).catch(() => null))?.join('\n') ?? '🌤', widget: wx, widgetKeyboard: [[btn('🔄 Refresh', 'wx')]] }] : undefined,
     text: out.join('\n').slice(0, 4000),
     image: book?.cover ?? null,
     keyboard: [[btn('🔄 Refresh', 'dl:r'), btn('🧩 Sections', 'st:dsec'), btn('⏰ Time', 'st:daily')]],

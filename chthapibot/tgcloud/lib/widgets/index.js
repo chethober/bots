@@ -10,9 +10,12 @@
 // lib/telegram.js sends the widget in private chats (widgets are private-only in
 // production) and falls back to the card's text when sending fails.
 //
-// Widgets refresh themselves with queries (`q` in their payload). Hubs register
-// a source per query prefix with registerSource(); handlers/widget_query.js and
-// handlers/shared_widget_query.js route queries here through onWidgetQuery().
+// Widgets are sent without queries for now: tgcloud doesn't accept widget_query /
+// shared_widget_query handlers, so they show the data the bot last sent or edited.
+// The query side below is kept ready: hubs register a source per query prefix (`q`
+// in each payload) with registerSource(), and once tgcloud delivers the updates,
+// handlers that call onWidgetQuery() plus `allow_queries: true` on sendWidget turn
+// it back on (the templates' range picker and tap-to-open rows are in git history).
 import { api, db, BotApiError } from 'sdk';
 import { eq, lt } from 'sdk/db';
 import { sharedWidgets } from '../../schema.js';
@@ -90,7 +93,7 @@ export async function sendWidgetCard(chatId, card, extra = {}) {
   const common = { chat_id: chatId, reply_markup: markupOf(card.widgetKeyboard ?? card.keyboard), ...extra };
   try {
     if (w.shared) return await sendShared(w, json, common);
-    return await api.sendWidget({ ...common, html: TEMPLATES[w.kind], height: w.height, chat_data: json, allow_queries: true });
+    return await api.sendWidget({ ...common, html: TEMPLATES[w.kind], height: w.height, chat_data: json });
   } catch (e) {
     if (isUnsupported(e)) disabled = true;
     console.warn(`sendWidget ${w.kind} failed: ${e.description ?? e.message}`);
@@ -110,7 +113,7 @@ async function sendShared(w, json, common) {
       if (!(e instanceof BotApiError && e.code === 400)) throw e;
     }
   }
-  const msg = await api.sendWidget({ ...common, html: TEMPLATES[w.kind], height: w.height, public_data: json, is_shared: true, allow_queries: true });
+  const msg = await api.sendWidget({ ...common, html: TEMPLATES[w.kind], height: w.height, public_data: json, is_shared: true });
   const widgetId = msg.widget?.id;
   if (widgetId) {
     const values = { key: w.shared, widgetId: String(widgetId), ver, data: json, updatedAt: Date.now() };

@@ -179,9 +179,7 @@ async function coinCard(ctx, id, out) {
     image: c.image,
     keyboard: [actions.filter((x) => fits(x.callback_data)),
       [btn('💼 Add', `cr:pa:${id}`), btn('🔄', `cr:c:${id}:r`)].filter((x) => fits(x.callback_data)), BACK],
-    // The widget refreshes itself, so it has no 🔄 button.
     widget,
-    widgetKeyboard: widget && [[...actions, btn('💼 Add', `cr:pa:${id}`)].filter((x) => fits(x.callback_data)), BACK],
   });
 }
 
@@ -206,7 +204,7 @@ async function coinWidget(c, days = 7) {
       mc: c.mcap ? usdCompact(c.mcap).slice(1) : null, u: Math.floor(Date.now() / 1000),
     };
   });
-  return data && { kind: 'coin', data, height: 330 };
+  return data && { kind: 'coin', data, height: 300 };
 }
 
 // Sparkline list widget: `coins` from topCoins/coinsByIds, in display order.
@@ -298,9 +296,7 @@ async function marketsCard(ctx, out) {
   await out(ctx, {
     text: ['📊 <b>Top 10 by market cap</b>', '', ...ten.map((c, i) => `${coinLine(c, i)} · 7d ${chg(c.ch7d)}`)].join('\n'),
     keyboard: [...coinButtons(ten), [btn('🔄 Refresh', 'cr:mk:r')], BACK],
-    // Tapping a row in the widget opens the coin, so it needs no coin buttons.
     widget: ctx.chatType === 'private' ? await topWidget() : null,
-    widgetKeyboard: [BACK],
   });
 }
 
@@ -323,7 +319,6 @@ async function watchlistCard(ctx, refresh) {
     keyboard: [...coinButtons(rows.map((r) => ({ id: r.ref, symbol: data.get(r.ref)?.symbol || r.label }))),
       [btn('➕ Add', 'cr:wa'), btn('✏️ Edit', 'cr:we'), btn('🔄', 'cr:wl:r')], BACK],
     widget: ctx.chatType === 'private' ? await watchlistWidget(ctx.chatId) : null,
-    widgetKeyboard: [[btn('➕ Add', 'cr:wa'), btn('✏️ Edit', 'cr:we')], BACK],
   });
 }
 

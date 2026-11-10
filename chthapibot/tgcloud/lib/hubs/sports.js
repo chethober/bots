@@ -74,7 +74,7 @@ export const callbacks = {
       case 'my': return myTeams(ctx, out);
       case 'ft': return ask(ctx, 'sports.find', '🔎 Which team? e.g. <code>arsenal</code>, <code>lakers</code>, <code>real madrid</code>', { placeholder: 'arsenal' });
       case 'f1': return f1View(ctx, a, out);
-      case 'lv': return openGame(ctx, a, b);
+      case 'lv': return openGame(ctx, a, b, out);
     }
   },
 };
@@ -167,9 +167,8 @@ async function scoresCard(ctx, code, out) {
   await out(ctx, {
     text: [title, '', ...lines].join('\n').slice(0, 4000),
     keyboard: [refresh],
-    // The scoreboard refreshes itself while games are live; tap a game for its live card.
     widget,
-    widgetKeyboard: [[btn('📅 Fixtures', `sp:fx:${lg.code}`), btn('🏆 Table', `sp:st:${lg.code}`)], [btn('⬅️ Back', `sp:l:${lg.code}`)]],
+    widgetKeyboard: [[btn('📅 Fixtures', `sp:fx:${lg.code}`), btn('🏆 Table', `sp:st:${lg.code}`)], refresh],
   });
 }
 
@@ -221,14 +220,16 @@ function gameText(lg, g, tz) {
   return `${emojiOf(lg)} <b>${esc(lg.name)}</b>\n${gameLine(g, tz)}`;
 }
 
-// Sends the live card for a game (from a scoreboard widget tap or 📺 Live).
-export async function openGame(ctx, code, id) {
+// Sends the live card for a game (📺 Live, or a scoreboard widget tap once widget
+// queries work); `out` is show when 🔄 refreshes it in place.
+export async function openGame(ctx, code, id, out = send) {
   const lg = leagueOf(code);
   if (!lg || lg.type !== 'team') return;
   const g = await gameSummary(code, id);
   if (!g) return notice(ctx, '⚠️ ESPN is unavailable right now.');
   const { tz } = await getPrefs(ctx.chatId);
-  await send(ctx, { text: gameText(lg, g, tz), keyboard: [[btn('📺 Scores', `sp:sc:${code}`)]], widget: gameWidget(lg, g) });
+  const kb = [[btn('🔄 Refresh', `sp:lv:${code}:${id}:r`), btn('📺 Scores', `sp:sc:${code}`)].filter((x) => fits(x.callback_data))];
+  await out(ctx, { text: gameText(lg, g, tz), keyboard: kb, widget: gameWidget(lg, g) });
 }
 
 // b:<code> → the league scoreboard (shared).
