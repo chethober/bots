@@ -11,6 +11,9 @@ import weather from './templates/weather.js';
 import folio from './templates/folio.js';
 import gauge from './templates/gauge.js';
 import alert from './templates/alert.js';
+import brew from './templates/brew.js';
+import shop from './templates/shop.js';
+import food from './templates/food.js';
 
 export const TEMPLATES = {
   game,
@@ -21,6 +24,9 @@ export const TEMPLATES = {
   folio,
   gauge,
   alert,
+  brew,
+  shop,
+  food,
 };
 
 // Small stable hash of a template: a changed template gets new shared widgets,

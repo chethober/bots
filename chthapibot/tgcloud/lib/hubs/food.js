@@ -15,13 +15,14 @@ import {
   product, breweriesNear, breweriesInCity, coffeePhoto, km,
 } from '../apis/food.js';
 import { recipeCard, cocktailCard } from '../cards.js';
-import { brew, BREW_METHODS } from '../coffee.js';
+import { brew, brewPlan, BREW_METHODS } from '../coffee.js';
 import { getPrefs, putCache, getCache } from '../store.js';
 import { registerSchedule, createNotification, upsertSchedule, findSchedule, deleteNotification } from '../notify.js';
 import { registerSavedKind, rememberItem } from './saved.js';
 import { parseSchedule, describePattern, whenLocal } from '../time.js';
 import { btn, menu, show, send, notice, ask, requireManage, pagerRow, homeRow, fits, navRow } from '../ui.js';
 import { esc, link } from '../format.js';
+import { fit } from '../widgets/index.js';
 
 const BACK = [btn('⬅️ Food & drinks', 'm:food')];
 const SHOP_PAGE = 12;
@@ -282,7 +283,20 @@ export function brewCard(r) {
   const keyboard = [[btn('♥ Save recipe', `sv:a:brew:${ref}`), btn('📓 Log this brew', `fd:ka:${r.key}:${r.coffee}:${r.water}`)]];
   if (r.key === 'coldbrew') keyboard.push([btn('⏰ Ready in 14 h', 'fd:kT:14'), btn('⏰ 18 h', 'fd:kT:18')]);
   keyboard.push([btn('⬅️ Coffee', 'fd:k')]);
-  return { text: r.html, keyboard: keyboard.map((row) => row.filter((x) => fits(x.callback_data))) };
+  return { text: r.html, keyboard: keyboard.map((row) => row.filter((x) => fits(x.callback_data))), widget: brewWidget(r) };
+}
+
+// The brew timer widget (private chats): the recipe with its timed steps. Also used
+// when a saved recipe is reopened, so it's rebuilt from the saved key/dose/water.
+function brewWidget(r) {
+  const p = brewPlan(r.key, r.coffee, r.water);
+  if (!p) return null;
+  const data = fit((level) => level < 2 && {
+    m: p.name, k: r.key, c: r.coffee, w: r.water, r: r.ratio ?? +(r.water / r.coffee).toFixed(2),
+    tp: p.temp, g: level ? p.grind.replace(/\s*\(.*\)/, '') : p.grind, s: p.steps, ...(p.hours ? { h: p.hours } : { e: p.end }),
+  });
+  // Recipe and ring 241 px, 32 px a step, padding.
+  return data && { kind: 'brew', data, height: 273 + p.steps.length * 32 };
 }
 
 async function brewResult(ctx, method, amount, ratio) {
@@ -435,15 +449,41 @@ async function shoppingCard(ctx, page, out) {
   const text = all.length
     ? `🛒 <b>Shopping list</b>\n\n${all.length - ticked} to buy · ${ticked} ticked${sources.length ? `\nFor: ${sources.map(esc).join(', ')}` : ''}\n<i>Tap an item to tick it.</i>`
     : '🛒 <b>Shopping list</b>\n\n<i>Empty. Add items, or tap 🛒 on a recipe.</i>';
+  const manage = [btn('➕ Add', 'fd:sa'), ...(ticked ? [btn('🧹 Clear ticked', 'fd:sx')] : []), ...(all.length ? [btn('🗑 Clear all', 'fd:sX')] : [])];
   return out(ctx, {
     text,
     keyboard: [
       ...slice.map((i) => [btn(`${i.done ? '✅' : '⬜️'} ${i.item.slice(0, 50)}`, `fd:st:${i.id}:${page}`)]),
       ...pagerRow(page, pages, (p) => `fd:s:${p}`),
-      [btn('➕ Add', 'fd:sa'), ...(ticked ? [btn('🧹 Clear ticked', 'fd:sx')] : []), ...(all.length ? [btn('🗑 Clear all', 'fd:sX')] : [])],
+      manage,
       BACK,
     ],
+    // In a private chat: a checklist ticked inside the widget, so no item buttons.
+    widget: shopWidget(all),
+    widgetKeyboard: [manage, [btn('🔄', 'fd:s:0'), ...BACK]],
   });
+}
+
+// As many rows as fit the 600 px widget height (14 without recipe headers); items still
+// to buy come first (the list is ordered done, source, id), the rest show as "+N more".
+function shopWidget(all) {
+  for (let max = Math.min(all.length, 14); ; max--) {
+    const data = fit((level) => {
+      const rows = all.slice(0, max - level * 2);
+      if (level > 6 || (all.length && !rows.length)) return null;
+      const groups = [...new Set(rows.map((i) => i.source).filter(Boolean))];
+      return {
+        g: groups.map((g) => g.slice(0, 40)),
+        i: rows.map((i) => [i.item.slice(0, level ? 40 : 60), i.source ? groups.indexOf(i.source) : -1, i.done ? 1 : 0]),
+        more: all.length - rows.length || undefined,
+      };
+    });
+    if (!data) return null;
+    // Title 36 px, 38 px a row, 29 px a recipe header (+ "Other" when mixed), 21 px "+N more".
+    const heads = data.g.length ? data.g.length + (data.i.some((x) => x[1] < 0) ? 1 : 0) : 0;
+    const height = data.i.length ? 60 + data.i.length * 38 + heads * 29 + (data.more ? 21 : 0) : 95;
+    if (height <= 600 || max <= 1) return { kind: 'shop', data, height: Math.min(600, height) };
+  }
 }
 
 async function toggleItem(ctx, id, page) {
@@ -513,7 +553,40 @@ async function barcodeCard(ctx, code) {
   ];
   if (p.allergens.length) lines.push('', `⚠️ Allergens: ${esc(p.allergens.join(', '))}`);
   lines.push('', link(`https://world.openfoodfacts.org/product/${code}`, 'Open Food Facts →'));
-  return send(ctx, { text: lines.join('\n'), image: p.image, keyboard: [[btn('🏷 Another', 'fd:o'), btn('⬅️ Food & drinks', 'm:food')]] });
+  const keyboard = [[btn('🏷 Another', 'fd:o'), btn('⬅️ Food & drinks', 'm:food')]];
+  return send(ctx, {
+    text: lines.join('\n'), image: p.image, keyboard,
+    widget: foodWidget(p),
+    widgetKeyboard: [[{ text: '🌐 Open Food Facts', url: `https://world.openfoodfacts.org/product/${code}` }], ...keyboard],
+  });
+}
+
+// UK front-of-pack thresholds per 100 g (halved for drinks): [low ≤, high >] for fat,
+// saturates, sugars, salt. Used when Open Food Facts gives no nutrient levels.
+const LEVELS = [['fat', 'fat', 3, 17.5], ['saturated-fat', 'sat', 1.5, 5], ['sugars', 'sugar', 5, 22.5], ['salt', 'salt', 0.3, 1.5]];
+const num = (x) => (x == null || x === '' || !Number.isFinite(+x) ? null : +x);
+
+function foodWidget(p) {
+  const n = p.per100 ?? {};
+  const ml = /\d\s*(ml|cl|l)\b/i.test(p.quantity ?? '');
+  const l = LEVELS.map(([off, k, lo, hi]) => {
+    const given = p.levels?.[off];
+    if (given) return given[0]; // l | m(oderate) | h
+    const x = num(n[k]);
+    return x == null ? '-' : x <= lo / (ml ? 2 : 1) ? 'l' : x > hi / (ml ? 2 : 1) ? 'h' : 'm';
+  }).join('');
+  const round = (x) => (x == null ? null : x < 10 ? Math.round(x * 100) / 100 : Math.round(x * 10) / 10);
+  const nova = num(p.nova);
+  const data = fit((level) => level < 3 && {
+    n: p.name.slice(0, [80, 50, 30][level]), b: p.brand.split(',')[0].slice(0, 40), q: p.quantity.slice(0, 20),
+    ns: /^[a-e]$/.test(p.nutri ?? '') ? p.nutri : null, nv: nova >= 1 && nova <= 4 ? nova : null, ml: ml ? 1 : undefined,
+    v: [n.kcal, n.fat, n.sat, n.sugar, n.salt, n.protein, n.fiber].map((x) => round(num(x))), l,
+    al: p.allergens.join(', ').slice(0, [200, 100, 0][level]) || undefined,
+  });
+  // Name, badges and the nutrition header 176 px, nutrition 205 px more than the one line shown when none is given, allergens ~42 chars a line.
+  if (!data) return null;
+  const facts = data.v.some((x) => x != null) ? 205 : 0;
+  return { kind: 'food', data, height: 176 + facts + (data.al ? 15 + 19 * Math.ceil((data.al.length + 13) / 42) : 0) };
 }
 
 // ── dinner idea schedule ──────────────────────────────────────────────────
