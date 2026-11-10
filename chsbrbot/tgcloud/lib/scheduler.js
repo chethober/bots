@@ -31,6 +31,9 @@ import { LOCALES } from './i18n.js';
 import { wantsAlert, modeOf } from './filters.js';
 import { refreshFollowed, notifyFollowers } from './follows.js';
 import { sendDigests } from './digest.js';
+import { t } from './strings.js';
+import { cveWidget, tagLine } from './cvewidget.js';
+import { sendWidgetCard, isPrivateChat } from './widgets/index.js';
 
 const KEV_EVERY_MS = 12 * 3600_000;
 const FIRST_LOOKBACK_MS = 2 * 3600_000; // first run, or after the cursor is lost
@@ -270,7 +273,7 @@ async function deliver(deadline, maxSends) {
         const locale = LOCALES.includes(chat.locale) ? chat.locale : 'en';
         rendered[locale] ??= broadcast
           ? { text: `📢 ${esc(alert.signals?.text)}` }
-          : alertMessage(cve, alert.kind, alert.signals, locale);
+          : { ...alertMessage(cve, alert.kind, alert.signals, locale), widget: alertWidget(alert, cve, locale) };
         const outcome = await sendAlert(chat.id, rendered[locale]);
         if (outcome === 'retry') return { sent, failed, skipped, done, more: true, rateLimited: true };
         if (outcome === 'sent') sent++;
@@ -298,8 +301,24 @@ async function alertCve(id) {
   return k ? fromKev(k) : { id, description: '', score: null, severity: null, bugTypes: [], software: [], pocRefs: [] };
 }
 
+// The alert as a CVE card widget, for private chats: its kind on top, the KEV
+// entry and EPSS score it was sent with.
+function alertWidget(alert, cve, locale) {
+  const s = alert.signals ?? {};
+  return cveWidget(cve, locale, {
+    kev: s.kev ?? null,
+    epss: s.epss ?? null,
+    pocAt: s.pocs?.length ? alert.createdAt : null,
+    tag: tagLine(t(locale, alert.kind === 'trending' ? 'alert_trending' : 'alert_new')),
+  });
+}
+
 // 'sent', 'failed' (skip this chat) or 'retry' (rate limited: stop this run).
-async function sendAlert(chatId, { text, reply_markup }) {
+// Private chats get the widget when there is one, else (or when it fails) the text.
+async function sendAlert(chatId, { text, reply_markup, widget }) {
+  if (widget && isPrivateChat(chatId)) {
+    if (await sendWidgetCard(chatId, { widget, keyboard: reply_markup?.inline_keyboard })) return 'sent';
+  }
   for (let attempt = 0; ; attempt++) {
     try {
       await api.sendMessage({

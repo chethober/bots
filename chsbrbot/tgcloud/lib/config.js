@@ -19,6 +19,7 @@ export const KEV_DAYS = 30;
 // Public source code for this bot (ℹ️ About).
 export const SOURCE_URL = 'https://github.com/chethober/bots/tree/main/chsbrbot';
 
-export const nvdUrl = (id) => `https://nvd.nist.gov/vuln/detail/${id}`;
+export const NVD_HOST = 'nvd.nist.gov';
+export const nvdUrl = (id) => `https://${NVD_HOST}/vuln/detail/${id}`;
 export const pocSearchUrl = (id) => `https://github.com/search?q=${encodeURIComponent(id)}+poc&type=repositories`;
 export const deepLink = (id) => `https://t.me/${BOT_USERNAME}?start=${id}`;

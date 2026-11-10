@@ -41,6 +41,10 @@ The interface follows the [shared style](../README.md#how-they-work): buttons on
 - **Search:** in the private chat, type a product, vendor, bug type or CVE id. The 🆕 Latest, 🔥 Trending and
   ⚡ Categories buttons open lists, and a CVE opens as a card with its bug types, affected products, CVSS vector,
   KEV status and exploit links.
+- **Widgets in the private chat:** a CVE card (search results, lists, alerts, follow updates) shows as a message
+  widget: the CVSS score in a ring coloured by its severity band, the eight CVSS metrics as bars, EPSS, the KEV due
+  date counting down, a timeline and the affected products, with the card's buttons under it. 🔥 Trending and
+  🆕 Latest show as a table. Groups and channels, and any widget that can't be sent, get the text card.
 
 **The first run sends nothing.** It records the CVEs and trending entries already out there as `seeded`, so
 switching on a new deployment doesn't flood every chat. Alerts start with the next CVE published after that.
@@ -122,8 +126,12 @@ tgcloud/
     ├── managers.js        who may change a group's or channel's settings
     ├── input.js           questions answered by the next message
     ├── views.js · format.js · strings.js   screens, cards and alerts, translated texts
+    ├── screen.js          the private chat's clean screens (text or widget)
+    ├── cvewidget.js · signals.js   widget payloads for CVE cards and lists, and their KEV/EPSS/PoC data
+    ├── widgets/           message widgets: sending (index.js) and the templates (cve, cvelist)
     └── config.js          thresholds and admin ids
 test/                      npm test
+scripts/check-widgets.js   widget templates within sendWidget's size limits (part of npm test)
 scripts/import-from-d1.mjs one-off: copies the subscribers of the old Cloudflare Worker
 ```
 

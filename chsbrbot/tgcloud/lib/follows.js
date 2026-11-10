@@ -7,10 +7,14 @@ import { api, db } from 'sdk';
 import { and, eq, asc, inArray, sql } from 'sdk/db';
 import { alerts, cves, follows, kev } from '../schema.js';
 import { lookup } from './nvd.js';
-import { saveCves } from './cves.js';
+import { saveCves, byIds } from './cves.js';
 import { followUpdateMessage } from './format.js';
 import { LOCALES } from './i18n.js';
 import { isGone } from './chats.js';
+import { t } from './strings.js';
+import { signalsOf } from './signals.js';
+import { cveWidget, tagLine } from './cvewidget.js';
+import { sendWidgetCard } from './widgets/index.js';
 
 export const MAX_FOLLOWS = 50;
 const REFRESH_AFTER_S = 12 * 3600; // look a followed CVE up on NVD again after this
@@ -94,11 +98,27 @@ export async function refreshFollowed(nvd) {
   return { refreshed };
 }
 
+async function cardData(id) {
+  const [[cve], signals] = await Promise.all([byIds([id]), signalsOf(id)]);
+  return { cve, signals };
+}
+
+// What changed, in one line without the emoji: "Scored CRITICAL 9.8 · Added to CISA KEV…".
+function updateTag(now, what, locale) {
+  const lines = {
+    score: () => t(locale, 'follow_score', { badge: `${now.severity ?? 'CVSS'} ${now.score}` }),
+    kev: () => t(locale, 'follow_kev'),
+    poc: () => t(locale, 'follow_poc'),
+  };
+  return tagLine(...what.map((w) => lines[w]().replace(/^\p{Extended_Pictographic}\uFE0F?\s*/u, '')));
+}
+
 // Scheduler: compare the follows checked longest ago with what is known now,
 // and tell each chat what changed.
 export async function notifyFollowers(deadline, localeOf) {
   const rows = await db.select().from(follows).orderBy(asc(follows.checkedAt)).limit(CHECK_BATCH).all();
   const states = new Map();
+  const cards = new Map();
   const quiet = [];
   let sent = 0;
   for (const f of rows) {
@@ -110,10 +130,17 @@ export async function notifyFollowers(deadline, localeOf) {
       quiet.push(f.id);
       continue;
     }
-    const locale = await localeOf(f.chatId);
-    const { text, reply_markup } = followUpdateMessage(f.cveId, f.state, now, what, LOCALES.includes(locale) ? locale : 'en');
+    const saved = await localeOf(f.chatId);
+    const locale = LOCALES.includes(saved) ? saved : 'en';
+    const { text, reply_markup } = followUpdateMessage(f.cveId, f.state, now, what, locale);
+    // Follows are private chats: the update is the CVE card widget with the news
+    // on top, else (or when that fails) the text.
+    if (!cards.has(f.cveId)) cards.set(f.cveId, await cardData(f.cveId));
+    const { cve, signals } = cards.get(f.cveId);
+    const widget = cveWidget(cve, locale, { ...signals, tag: `🔔 ${updateTag(now, what, locale)}` });
     try {
-      await api.sendMessage({ chat_id: f.chatId, text, parse_mode: 'HTML', reply_markup, link_preview_options: { is_disabled: true } });
+      const card = widget && await sendWidgetCard(f.chatId, { widget, keyboard: reply_markup.inline_keyboard });
+      if (!card) await api.sendMessage({ chat_id: f.chatId, text, parse_mode: 'HTML', reply_markup, link_preview_options: { is_disabled: true } });
       sent++;
     } catch (e) {
       if (e?.parameters?.retry_after) break; // rate limited: the rest wait for the next run
