@@ -30,6 +30,7 @@
     "status": "tgcloud status",
     "run": "NODE_USE_ENV_PROXY=1 tgcloud run",
     "test": "node test/validate.js",
+    "check:widgets": "node scripts/check-widgets.js",
     "test:ui": "node test/ui.js",
     "test:live-ui": "node test/ui.js"
   },

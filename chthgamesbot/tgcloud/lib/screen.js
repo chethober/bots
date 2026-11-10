@@ -4,7 +4,7 @@
 //   home   — the welcome message carrying the reply keyboard (replaced on /start
 //            and on a language change);
 //   screen — whatever a button opened last (games menu, balance, top…), deleted as
-//            soon as the next one opens.
+//            soon as the next one opens. It may be a message widget (showCard).
 // Game messages are content and are never deleted (they may hold stakes). The ids
 // live on the player row (players.home_msg / screen_msg); the chat id is the user id.
 
@@ -12,6 +12,7 @@ import { api, db } from 'sdk';
 import { eq } from 'sdk/db';
 import { players } from '../schema.js';
 import { sendHtml } from './engine.js';
+import { sendWidgetCard } from './widgets/index.js';
 import { LOCALES } from './i18n.js';
 import { t } from './strings.js';
 
@@ -24,21 +25,27 @@ export function drop(chatId, messageId) {
   return api.deleteMessage({ chat_id: chatId, message_id: messageId }).catch(() => {});
 }
 
-// Sends the chat's new `slot` message, then deletes the one it replaces (sent
-// first, so the reply keyboard never blinks away).
-async function replace(slot, userId, text, markup) {
+// Sends the chat's new `slot` message with `send()`, then deletes the one it replaces
+// (sent first, so the reply keyboard never blinks away). Always a new message, so a
+// widget screen and a text screen replace each other freely.
+async function replace(slot, userId, send) {
   const prev = (await ids(userId))?.[slot];
-  const sent = await sendHtml(userId, text, markup);
+  const sent = await send();
   await save(userId, { [slot]: sent.message_id });
   if (prev !== sent.message_id) await drop(userId, prev);
   return sent;
 }
 
-export const showScreen = (userId, text, markup) => replace('screenMsg', userId, text, markup);
+export const showScreen = (userId, text, markup) => replace('screenMsg', userId, () => sendHtml(userId, text, markup));
+
+// A card { text, keyboard: [[button…]…], widget } as the screen: the widget
+// (lib/widgets) when it can be sent, else its text with the same buttons.
+export const showCard = (userId, card) => replace('screenMsg', userId, async () =>
+  (await sendWidgetCard(userId, card)) ?? sendHtml(userId, card.text, card.keyboard && { inline_keyboard: card.keyboard }));
 
 // A new home message also clears the open screen.
 export async function showHome(userId, text, markup) {
-  const sent = await replace('homeMsg', userId, text, markup);
+  const sent = await replace('homeMsg', userId, () => sendHtml(userId, text, markup));
   await closeScreen(userId);
   return sent;
 }

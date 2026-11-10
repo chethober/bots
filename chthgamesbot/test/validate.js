@@ -13,7 +13,13 @@ import { PAYS as CF_PAYS } from '../tgcloud/lib/games/coinflip.js';
 import { multiplier } from '../tgcloud/lib/games/mines.js';
 import { handValue } from '../tgcloud/lib/games/blackjack.js';
 import { TABLES, ROWS } from '../tgcloud/lib/plinko.js';
-import { crashPoint, multAt, evaluate } from '../tgcloud/lib/crash.js';
+import { crashPoint, multAt, evaluate, publicView } from '../tgcloud/lib/crash.js';
+import { drop as plinkoDrop } from '../tgcloud/lib/plinko.js';
+import { deflateSync } from 'node:zlib';
+import { TEMPLATES } from '../tgcloud/lib/widgets/html.js';
+import { walletWidget, crashWidget, plinkoWidget } from '../tgcloud/lib/widgets/payloads.js';
+import { LOCALES } from '../tgcloud/lib/i18n.js';
+import { t as tk } from '../tgcloud/lib/strings.js';
 import QUESTIONS from '../tgcloud/lib/data/trivia.js';
 import { score5, best, compare, handName, videoPokerPays, VP_PAYS } from '../tgcloud/lib/poker.js';
 import * as holdem from '../tgcloud/lib/games/holdem.js';
@@ -635,6 +641,70 @@ await check('hokm/shelem: lobby leave and cancel refund, AFK claim pays the othe
     const end = w.sessions.get(key2).state;
     assert.equal(end.winner, (actor + 1) % 2);
     settled(w, end, 100, 1000);
+  }
+});
+
+// ---- message widgets ----------------------------------------------------------
+await check('widget templates fit sendWidget (32 KB raw, 4 KB zlib)', () => {
+  for (const [kind, html] of Object.entries(TEMPLATES)) {
+    assert.ok(Buffer.byteLength(html) <= 32768, `${kind}: over 32 KB`);
+    assert.ok(deflateSync(html, { level: 9 }).length <= 4096, `${kind}: over 4 KB compressed`);
+  }
+});
+
+const widgetOk = (w, kind) => {
+  assert.equal(w.kind, kind);
+  assert.ok(TEMPLATES[w.kind], `no template ${w.kind}`);
+  assert.ok(w.height >= 50 && w.height <= 600, `${kind}: height ${w.height}`);
+  assert.ok(bytes(JSON.stringify(w.data)) <= 1024, `${kind}: payload ${bytes(JSON.stringify(w.data))} B`);
+  for (const l of w.data.l) assert.ok(l && !/^w_/.test(l) && !/[<>]/.test(l), `${kind}: label ${l}`);
+};
+
+await check('widget labels exist in every language', () => {
+  const keys = ['w_balance', 'w_games', 'w_winrate', 'w_best', 'w_bonus', 'w_ready', 'w_refresh', 'w_crash', 'w_plinko', 'w_bet', 'w_auto',
+    'w_cashed', 'w_crashed', 'w_payout', 'w_won', 'w_lost', 'w_even', 'w_risk_low', 'w_risk_medium', 'w_risk_high'];
+  for (const k of keys) for (const l of LOCALES) assert.ok(tk(l, k) !== k && tk(l, k).length, `${k} missing in ${l}`);
+});
+
+await check('wallet widget: stats from the players row, fits in every language', () => {
+  const long = { name: 'Ж'.repeat(24), chips: 2 ** 40, played: 1e9, wins: 5e8, bestWin: 1e9, lastDaily: 1_700_000_000, wagered: 0 };
+  for (const l of LOCALES) {
+    const w = walletWidget(long, l);
+    widgetOk(w, 'wallet');
+    assert.equal(w.data.c, long.chips);
+    assert.equal(w.data.nx, long.lastDaily + 20 * 3600);
+    assert.deepEqual(Object.keys(w.data).sort(), ['b', 'c', 'cd', 'l', 'n', 'nx', 'p', 'rt', 'w']);
+  }
+});
+
+await check('crash widget: only finished rounds, from the stored state, no hidden fields', () => {
+  for (let i = 0; i < 500; i++) {
+    const st = { owner: 7, bet: 100, auto: i % 2 ? 1.5 + (i % 7) : null, point: crashPoint(), start: 1_700_000_000_000 + i, phase: 'play', payout: 0, cashed: null };
+    assert.throws(() => crashWidget(st, 'en'), /not finished/, 'a running round must not reveal its crash point');
+    evaluate(st, st.start + 10 * 60_000);
+    assert.equal(st.phase, 'done');
+    for (const l of LOCALES) {
+      const w = crashWidget(st, l);
+      widgetOk(w, 'crash');
+      const pv = publicView(st, st.start);
+      assert.equal(w.data.x, pv.point);
+      assert.equal(w.data.co, pv.cashed);
+      assert.equal(w.data.po, pv.payout);
+      assert.deepEqual(Object.keys(w.data).sort(), ['a', 'b', 'co', 'k', 'l', 'po', 'rt', 'x']);
+    }
+  }
+});
+
+await check('plinko widget: the server drop, consistent, fits', () => {
+  for (const risk of ['low', 'medium', 'high']) {
+    for (let i = 0; i < 200; i++) {
+      const res = plinkoDrop(risk);
+      const w = plinkoWidget(res, { bet: 5000, risk, payout: Math.floor(5000 * res.mult) }, LOCALES[i % LOCALES.length], i);
+      widgetOk(w, 'plinko');
+      assert.equal([...w.data.p].filter((c) => c === '1').length, w.data.s);
+      assert.equal(w.data.t[w.data.s], w.data.m);
+    }
+    assert.throws(() => plinkoWidget({ path: Array(12).fill(0), slot: 3, mult: 1 }, { bet: 1, risk, payout: 1 }, 'en'));
   }
 });
 
