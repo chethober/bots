@@ -205,6 +205,25 @@ Las fotos, notas de voz, archivos y stickers de tus contactos se te reenvían aq
   },
   status_style: { en: 'Mood: {mood} · Emoji: {emoji} · Temp: {temp}', fa: 'حال‌وهوا: {mood} · ایموجی: {emoji} · دما: {temp}', ar: 'المزاج: {mood} · الإيموجي: {emoji} · الحرارة: {temp}', ru: 'Настроение: {mood} · Эмодзи: {emoji} · Темп.: {temp}', es: 'Tono: {mood} · Emojis: {emoji} · Temp.: {temp}' },
   status_today: { en: 'Replies today: {n}', fa: 'جواب‌های امروز: {n}', ar: 'ردود اليوم: {n}', ru: 'Ответов сегодня: {n}', es: 'Respuestas hoy: {n}' },
+  btn_refresh: { en: '🔄 Refresh', fa: '🔄 به‌روزرسانی', ar: '🔄 تحديث', ru: '🔄 Обновить', es: '🔄 Actualizar' },
+
+  // The 📊 Status widget (lib/widgets/templates/status.js): short labels.
+  wg_title: { en: 'Auto-replies', fa: 'پاسخ خودکار', ar: 'الردود التلقائية', ru: 'Автоответы', es: 'Respuestas automáticas' },
+  wg_on: { en: 'Active', fa: 'فعال', ar: 'نشطة', ru: 'Работают', es: 'Activas' },
+  wg_off: { en: 'Paused', fa: 'متوقف', ar: 'متوقفة', ru: 'На паузе', es: 'En pausa' },
+  wg_today: { en: 'Today', fa: 'امروز', ar: 'اليوم', ru: 'Сегодня', es: 'Hoy' },
+  wg_week: { en: '7 days', fa: '۷ روز اخیر', ar: 'آخر 7 أيام', ru: '7 дней', es: '7 días' },
+  wg_last: { en: 'Last reply', fa: 'آخرین جواب', ar: 'آخر رد', ru: 'Последний ответ', es: 'Última respuesta' },
+  wg_reset: { en: 'AI quota resets in', fa: 'تازه شدن سهمیهٔ هوش مصنوعی', ar: 'يتجدد رصيد الذكاء الاصطناعي بعد', ru: 'Лимит ИИ обновится через', es: 'La cuota de IA se renueva en' },
+  wg_window: { en: 'Only {range}', fa: 'فقط {range}', ar: 'فقط {range}', ru: 'Только {range}', es: 'Solo {range}' },
+  wg_no_conn: { en: 'Not connected to Telegram Business', fa: 'به تلگرام بیزینس وصل نیست', ar: 'غير متصل بـ Telegram Business', ru: 'Не подключён к Telegram Business', es: 'Sin conexión a Telegram Business' },
+  wg_conn_off: { en: 'Business connection disabled', fa: 'اتصال بیزینس غیرفعاله', ar: 'اتصال Business معطّل', ru: 'Подключение Business отключено', es: 'Conexión Business desactivada' },
+  wg_no_reply: { en: '"Reply to messages" permission is off', fa: 'اجازهٔ «Reply to messages» خاموشه', ar: 'إذن "Reply to messages" متوقف', ru: 'Разрешение «Reply to messages» выключено', es: 'El permiso "Reply to messages" está desactivado' },
+  wg_no_ai: { en: 'AI not connected', fa: 'هوش مصنوعی وصل نیست', ar: 'الذكاء الاصطناعي غير مربوط', ru: 'ИИ не подключён', es: 'IA sin conectar' },
+  wg_days: {
+    en: 'Sun Mon Tue Wed Thu Fri Sat', fa: 'یکشنبه دوشنبه سه‌شنبه چهارشنبه پنجشنبه جمعه شنبه',
+    ar: 'الأحد الإثنين الثلاثاء الأربعاء الخميس الجمعة السبت', ru: 'Вс Пн Вт Ср Чт Пт Сб', es: 'dom lun mar mié jue vie sáb',
+  },
 
   // --- 🪞 Teach my style ----------------------------------------------------------
   learn: {

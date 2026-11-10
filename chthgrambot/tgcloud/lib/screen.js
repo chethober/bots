@@ -9,6 +9,9 @@
 //            on a language change);
 //   screen — whatever a button opened last (status, settings, setup steps…),
 //            deleted as soon as the next one opens.
+// A screen may carry a `widget` (lib/widgets): it is then sent as a message widget,
+// falling back to its text. A widget message can't become text or the other way
+// round, so such a switch replaces the message instead of editing it.
 // Content (relayed contact messages, previews, notices) is never touched.
 
 import { api, db } from 'sdk';
@@ -17,6 +20,7 @@ import { ui } from '../schema.js';
 import { getSettings } from './settings.js';
 import { LOCALES, normalizeLocale } from './i18n.js';
 import { t } from './strings.js';
+import { sendWidgetCard, editWidgetCard, widgetsOn, isPrivateChat } from './widgets/index.js';
 
 const getUi = (userId) => db.select().from(ui).where(eq(ui.userId, userId)).get();
 
@@ -46,9 +50,10 @@ export function drop(chatId, messageId) {
 
 // Sends the chat's new `slot` message, then deletes the one it replaces (sent
 // first, so the reply keyboard never blinks away).
-async function replace(slot, chatId, params) {
+async function replace(slot, chatId, { widget, ...params }) {
   const prev = (await getUi(chatId))?.[slot];
-  const sent = await api.sendMessage({ chat_id: chatId, link_preview_options: { is_disabled: true }, ...params });
+  const sent = (widget && await sendWidgetCard(chatId, { widget }, { reply_markup: params.reply_markup }))
+    || await api.sendMessage({ chat_id: chatId, link_preview_options: { is_disabled: true }, ...params });
   await upsert(chatId, { [slot]: sent.message_id });
   if (prev !== sent.message_id) await drop(chatId, prev);
   return sent;
@@ -70,18 +75,28 @@ export async function closeScreen(chatId) {
   await drop(chatId, prev);
 }
 
-// Edits the open screen in place when `messageId` is it; otherwise opens a new one.
-export async function updateScreen(chatId, messageId, { text, reply_markup }) {
-  if (messageId && (await getUi(chatId))?.screenMsg === messageId) {
+// Edits the open screen in place when `message` (a Message or its id) is it;
+// otherwise, or when switching between widget and text, opens a new one.
+export async function updateScreen(chatId, message, view) {
+  const { text, reply_markup, widget } = view;
+  const messageId = typeof message === 'object' ? message?.message_id : message;
+  const isWidget = !!message?.widget;
+  const wantWidget = !!widget && widgetsOn() && isPrivateChat(chatId);
+  if (messageId && isWidget === wantWidget && (await getUi(chatId))?.screenMsg === messageId) {
     try {
-      return await api.editMessageText({
-        chat_id: chatId, message_id: messageId, text, reply_markup, link_preview_options: { is_disabled: true },
-      });
+      if (!isWidget) {
+        return await api.editMessageText({
+          chat_id: chatId, message_id: messageId, text, reply_markup, link_preview_options: { is_disabled: true },
+        });
+      }
+      await editWidgetCard({ chat: { id: chatId }, message_id: messageId }, { widget, keyboard: reply_markup?.inline_keyboard });
+      return message;
     } catch (e) {
       if (/not modified/i.test(e.description ?? '')) return null;
+      console.warn('screen edit failed', e.description ?? e.message);
     }
   }
-  return showScreen(chatId, { text, reply_markup });
+  return showScreen(chatId, view);
 }
 
 // --- reply keyboard -------------------------------------------------------------------

@@ -1,6 +1,7 @@
 import { PANEL_URL } from './config.js';
-import { MOODS, EMOJI_STYLES, LENGTHS, FORMALITY, VOICES, getSettings, loadSettingsRow, resolveCredentials } from './settings.js';
-import { getUserConnection, countRepliesToday } from './store.js';
+import { MODELS, MOODS, EMOJI_STYLES, LENGTHS, FORMALITY, VOICES, getSettings, loadSettingsRow, resolveCredentials } from './settings.js';
+import { getUserConnection, countRepliesToday, countRepliesSince, lastReplyAt } from './store.js';
+import { RTL } from './i18n.js';
 import { t } from './strings.js';
 
 export function panelKeyboard(locale, extraRows = []) {
@@ -15,9 +16,13 @@ const label = (locale, prefix, key) => t(locale, `${prefix}_${key}`);
 
 // --- 📊 Status ----------------------------------------------------------------------
 
+// The status screen: a widget in the owner's private chat (lib/screen.js), with
+// `text` as its fallback. Both carry the same buttons.
 export async function statusView(userId, locale) {
-  const [s, conn, row, today] = await Promise.all([
+  const nowS = Math.floor(Date.now() / 1000);
+  const [s, conn, row, today, week, last] = await Promise.all([
     getSettings(userId), getUserConnection(userId), loadSettingsRow(userId), countRepliesToday(userId),
+    countRepliesSince(userId, nowS - 7 * 86400), lastReplyAt(userId),
   ]);
   const creds = resolveCredentials(row, userId);
   const text = [
@@ -32,7 +37,27 @@ export async function statusView(userId, locale) {
   const toggle = s.enabled
     ? { text: t(locale, 'btn_pause'), callback_data: 'pause' }
     : { text: t(locale, 'btn_resume'), callback_data: 'resume' };
-  return { text, reply_markup: panelKeyboard(locale, [[toggle], ...(creds ? [] : [[setupButton(locale)]])]) };
+  const refresh = { text: t(locale, 'btn_refresh'), callback_data: 'status' };
+  const reply_markup = panelKeyboard(locale, [[toggle, refresh], ...(creds ? [] : [[setupButton(locale)]])]);
+
+  const warning = !conn ? 'wg_no_conn' : !conn.isEnabled ? 'wg_conn_off' : !conn.canReply ? 'wg_no_reply' : !creds ? 'wg_no_ai' : null;
+  const model = MODELS.find((m) => m.id === s.model)?.name.replace(/\s*\(.*\)$/, '') ?? s.model;
+  const data = {
+    ...(RTL.has(locale) ? { r: 1 } : {}),
+    on: s.enabled ? 1 : 0,
+    m: model,
+    w: warning ? t(locale, warning) : '',
+    // ⁦…⁩ keeps "18:00–09:00" in order inside right-to-left text.
+    s: s.scheduleMode === 'window' ? t(locale, 'wg_window', { range: `⁦${s.scheduleFrom}–${s.scheduleTo}⁩` }) : '',
+    rt: today,
+    rw: week,
+    lr: last,
+    L: ['wg_title', s.enabled ? 'wg_on' : 'wg_off', 'wg_today', 'wg_week', 'wg_last', 'wg_reset'].map((k) => t(locale, k)),
+    dw: t(locale, 'wg_days'),
+    u: nowS,
+  };
+  // Heights measured in Chromium at 376 px (content + 4 px); the warning adds a line.
+  return { text, reply_markup, widget: { kind: 'status', data, height: warning ? 192 : 172 } };
 }
 
 // --- ⚙️ Settings screen: the everyday settings, changed with one tap ---------

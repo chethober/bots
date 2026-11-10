@@ -1,4 +1,4 @@
-// Inline buttons: 📊 Status pause/resume, ⚙️ Settings (st:<key>), language
+// Inline buttons: 📊 Status pause/resume and 🔄 refresh, ⚙️ Settings (st:<key>), language
 // (lang:<code>), the setup wizard, relayed-message actions and the About screen's
 // ⭐ Tip buttons (lib/tips.js).
 import { api } from 'sdk';
@@ -58,12 +58,16 @@ export default async function (q) {
     return;
   }
 
-  if (!['pause', 'resume'].includes(q.data)) return answer();
+  if (!['pause', 'resume', 'status'].includes(q.data)) return answer();
 
-  const enabled = q.data === 'resume';
-  await patchSettings(q.from.id, { enabled });
-  await answer(t(locale, enabled ? 'resumed' : 'paused'));
-  await updateScreen(chatId, q.message?.message_id, await statusView(q.from.id, locale));
+  // ⏸/▶️ and 🔄 on 📊 Status: redraw it in place (the widget's data, or its text).
+  if (q.data === 'status') await answer();
+  else {
+    const enabled = q.data === 'resume';
+    await patchSettings(q.from.id, { enabled });
+    await answer(t(locale, enabled ? 'resumed' : 'paused'));
+  }
+  await updateScreen(chatId, q.message, await statusView(q.from.id, locale));
 }
 
 // ✍️ Reply / 🤖 Let AI answer / 🙈 Ignore under a relayed contact message.

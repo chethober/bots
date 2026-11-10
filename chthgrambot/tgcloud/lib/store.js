@@ -102,9 +102,22 @@ export async function pruneOld() {
   await db.delete(messages).where(lt(messages.createdAt, now() - 7 * 86400)).run();
 }
 
+// AI replies sent since `since` (unix s). Replies live in the messages table, which
+// keeps 7 days (pruneOld) and is emptied per chat when historySize is 0.
+export async function countRepliesSince(ownerId, since) {
+  return db.$count(messages, and(eq(messages.ownerId, ownerId), eq(messages.role, 'bot'), gte(messages.createdAt, since)));
+}
+
 export async function countRepliesToday(ownerId) {
   const midnight = Math.floor(Date.now() / 86400000) * 86400; // 00:00 UTC, when the AI quota resets
-  return db.$count(messages, and(eq(messages.ownerId, ownerId), eq(messages.role, 'bot'), gte(messages.createdAt, midnight)));
+  return countRepliesSince(ownerId, midnight);
+}
+
+// When the last AI reply went out (unix s), or 0.
+export async function lastReplyAt(ownerId) {
+  const row = await db.select({ at: messages.createdAt }).from(messages)
+    .where(eq(messages.ownerId, ownerId), eq(messages.role, 'bot')).orderBy(desc(messages.id)).limit(1).get();
+  return row?.at ?? 0;
 }
 
 // ---- Style samples ("speak as me") ----
