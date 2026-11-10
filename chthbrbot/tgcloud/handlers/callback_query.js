@@ -3,6 +3,7 @@
 //                                    Answer publicly a:<messageId>
 //   sender, under "delivered":       Unsend u:<messageId>, Send another s:<code>
 //   any prompt:                      Cancel c:x
+//   📊 Stats' 🔄 sv:r,
 //   ⚙️ Settings st:<op> (st:home = back to it), message types k:<kind>,
 //   invitation reset x:reset, hidden words w:<index>|all, options o:<option>,
 //   unblock ub:<rowid>, new link n:yes|no,
@@ -16,13 +17,14 @@ import { KINDS, SOURCE_URL, UNSEND_WINDOW_SEC } from '../lib/config.js';
 import { aboutKeyboard, isTipCallback, onTipCallback } from '../lib/tips.js';
 import { ban, isAdmin, maybeAutoBan, reportKeyboard, sendReport, unban } from '../lib/admin.js';
 import { answerQuery } from '../lib/answer.js';
-import { cancelRow, closeScreen, drop, isScreen, setLocale, showScreen, textsFor } from '../lib/chats.js';
+import { cancelRow, closeScreen, drop, isScreen, setLocale, showCard, showScreen, textsFor } from '../lib/chats.js';
+import { editWidgetCard } from '../lib/widgets/index.js';
 import { toggleKind } from '../lib/content.js';
 import { ownerWords } from '../lib/filter.js';
 import { unsend } from '../lib/delivery.js';
 import { LOCALE_NAMES } from '../lib/i18n.js';
 import {
-  blockedView, confirmView, optionsView, sendHome, sendQr, settingsView, textView, typesView, unblock, wordsView,
+  blockedView, confirmView, optionsView, sendHome, sendQr, settingsView, statsView, textView, typesView, unblock, wordsView,
 } from '../lib/manage.js';
 import { markAllSeenQuietly, markSeen, showTyping } from '../lib/receipts.js';
 import {
@@ -45,12 +47,31 @@ async function editButtonMessage(q, text, reply_markup) {
 
 // A screen opened from a button: edits the button's message in place when that
 // message is the open screen, otherwise opens a new screen.
+// A widget message can't become text, so it is replaced instead.
 async function openScreen(q, { text, reply_markup }) {
-  if (q.message && await isScreen(q.from.id, q.message.message_id)) {
+  if (q.message && !q.message.widget && await isScreen(q.from.id, q.message.message_id)) {
     const edited = await editButtonMessage(q, text, reply_markup);
     if (edited) return edited;
   }
   return showScreen(q.from.id, { text, ...(reply_markup && { reply_markup }) });
+}
+
+// sv:r — 📊 Stats' 🔄 under its widget: new numbers in the same message. A text
+// screen (the widget couldn't be sent) or an old message gets a fresh screen.
+async function onStatsRefresh(q, L) {
+  const user = await getUser(q.from.id);
+  if (!user) return openScreen(q, { text: L.needLink }).then(() => ({}));
+  const card = await statsView(user, L);
+  if (q.message?.widget && await isScreen(q.from.id, q.message.message_id)) {
+    try {
+      await editWidgetCard(q.message, card);
+      return {};
+    } catch (e) {
+      console.warn(`stats widget edit failed: ${e.description ?? e.message}`);
+    }
+  }
+  await showCard(q.from.id, card);
+  return {};
 }
 
 // lang:<code> — save it, then re-send home so the reply keyboard is relabelled
@@ -320,6 +341,7 @@ export default async function (q, ctx) {
     else if (action === 'q') answer = (await sendQr(await getOrCreateUser(q.from), L), {});
     else if (action === 'lang') answer = await onLanguage(q, value);
     else if (action === 'st') answer = await onSettings(q, value, L);
+    else if (action === 'sv') answer = await onStatsRefresh(q, L);
     else if (isTipCallback(q.data)) answer = await onTipCallback(q, L.locale, aboutKeyboard(L.locale, SOURCE_URL)); // answers itself
     else if (id === null) answer = {};
     else if (['r', 'b', 'p', 'a'].includes(action)) answer = await onMessageButton(q, action, id, L);
