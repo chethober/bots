@@ -87,6 +87,16 @@ export const cache = table('cache', {
   expiresAt: integer('expires_at').notNull(),
 });
 
+// 🧩 Shared message widgets (lib/widgets): one per scoreboard, match or market list,
+// re-sent with sendSharedWidget so a single edit updates every copy.
+export const sharedWidgets = table('shared_widgets', {
+  key:       text('key').primaryKey(),                 // 'b:epl', 'g:epl:401234', 'l:top'
+  widgetId:  text('widget_id').notNull(),
+  ver:       text('ver'),                              // template hash; a new template gets a new widget
+  data:      text('data'),                             // public_data last sent
+  updatedAt: integer('updated_at'),                    // ms of the last edit
+});
+
 // 💼 One position per coin per chat.
 export const portfolio = table('portfolio', {
   chatId:   integer('chat_id').notNull(),

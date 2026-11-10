@@ -14,6 +14,7 @@ import { registerKind, createNotification, listNotifications, deleteNotification
 import { whenLocal } from '../time.js';
 import { btn, menu, show, send, notice, ask, requireManage, pagerRow, homeRow, fits, navRow } from '../ui.js';
 import { esc, link, countdown } from '../format.js';
+import { registerSource, fit } from '../widgets/index.js';
 
 const LEADS = [15, 30, 60, 1440, 0];
 const leadLabel = (m) => (m === 0 ? 'off' : m === 1440 ? '1 day' : `${m} min`);
@@ -73,6 +74,7 @@ export const callbacks = {
       case 'my': return myTeams(ctx, out);
       case 'ft': return ask(ctx, 'sports.find', '🔎 Which team? e.g. <code>arsenal</code>, <code>lakers</code>, <code>real madrid</code>', { placeholder: 'arsenal' });
       case 'f1': return f1View(ctx, a, out);
+      case 'lv': return openGame(ctx, a, b);
     }
   },
 };
@@ -141,10 +143,13 @@ async function scoresCard(ctx, code, out) {
   const refresh = [btn('🔄 Refresh', `sp:sc:${lg.code}:r`), btn('⬅️ Back', `sp:l:${lg.code}`)];
   const title = `${emojiOf(lg)} <b>${esc(lg.name)}</b>`;
   let lines;
+  let widget = null;
   if (lg.type === 'team') {
     const games = await leagueGames(lg.code, lg.group === 'soccer' || lg.group === 'rugby' ? 2 : 1);
     if (!games) return notice(ctx, '⚠️ ESPN is unavailable right now.');
-    lines = pickGames(games, 5, 6).map((g) => gameLine(g, tz));
+    const picked = pickGames(games, 5, 6);
+    lines = picked.map((g) => gameLine(g, tz));
+    if (ctx.chatType === 'private') widget = boardWidget(lg, picked);
   } else if (lg.type === 'f1') {
     lines = f1Lines(await f1.status(), tz);
   } else if (lg.type === 'cricket') {
@@ -159,8 +164,89 @@ async function scoresCard(ctx, code, out) {
     lines = racingLines(await raceResults(lg.code), tz);
   }
   if (!lines?.length) lines = ['<i>Nothing on right now.</i>'];
-  await out(ctx, { text: [title, '', ...lines].join('\n').slice(0, 4000), keyboard: [refresh] });
+  await out(ctx, {
+    text: [title, '', ...lines].join('\n').slice(0, 4000),
+    keyboard: [refresh],
+    // The scoreboard refreshes itself while games are live; tap a game for its live card.
+    widget,
+    widgetKeyboard: [[btn('📅 Fixtures', `sp:fx:${lg.code}`), btn('🏆 Table', `sp:st:${lg.code}`)], [btn('⬅️ Back', `sp:l:${lg.code}`)]],
+  });
 }
+
+// ── widgets ───────────────────────────────────────────────────────────────
+
+const ST = { pre: 'p', in: 'i', post: 'f' };
+const unix = (d) => Math.floor(new Date(d).getTime() / 1000);
+
+// Shared scoreboard for a team league: one widget per league, every chat sees the same.
+// At most 10 games fit the 600 px widget height; the ones nearest now are kept.
+const BOARD_ROWS = 10;
+function boardWidget(lg, games) {
+  const data = fit((level) => {
+    const keep = Math.min(games.length, BOARD_ROWS) - level * 2;
+    if (keep < 1) return null;
+    // Keep live games and the ones nearest now when trimming.
+    const list = keep < games.length ? [...games].sort((a, b) => Math.abs(new Date(a.date) - Date.now()) - Math.abs(new Date(b.date) - Date.now())).slice(0, keep)
+      .sort((a, b) => new Date(a.date) - new Date(b.date)) : games;
+    const name = (s) => (level > 1 ? s.abbr || s.name : s.name).slice(0, 16);
+    return {
+      q: `b:${lg.code}`, c: lg.code, lg: lg.name,
+      g: list.map((g) => [g.id, name(g.home), name(g.away), g.home.score ?? '', g.away.score ?? '', ST[g.state] ?? 'p', (g.detail || '').slice(0, 14), unix(g.date)]),
+      u: Math.floor(Date.now() / 1000),
+    };
+  });
+  return data && { kind: 'board', data, height: Math.min(600, 40 + data.g.length * 56 + (data.g.length ? 0 : 40)), shared: `b:${lg.code}` };
+}
+
+// Readable text on a team's colour: falls back to the alternate colour or grey.
+function colorsOf(side) {
+  const ok = (h) => /^[0-9a-f]{6}$/i.test(h ?? '');
+  const lum = (h) => { const n = parseInt(h, 16); return (0.299 * (n >> 16) + 0.587 * ((n >> 8) & 255) + 0.114 * (n & 255)) / 255; };
+  let bg = ok(side.color) ? side.color : ok(side.alt) ? side.alt : '6b7280';
+  if (lum(bg) > 0.85 && ok(side.alt) && lum(side.alt) < 0.85) bg = side.alt;
+  return [bg.toLowerCase(), lum(bg) > 0.6 ? '111111' : 'ffffff'];
+}
+
+// Shared live card for one game (key g:<code>:<id>).
+function gameWidget(lg, g) {
+  const side = (s) => [(s.abbr || s.name.slice(0, 3)).slice(0, 4), s.name.slice(0, 18), s.score ?? '0', ...colorsOf(s)];
+  const data = {
+    q: `g:${lg.code}:${g.id}`, lg: lg.name, st: g.state, dt: (g.detail || '').slice(0, 20), t: unix(g.date),
+    h: side(g.home), a: side(g.away), u: Math.floor(Date.now() / 1000),
+  };
+  return { kind: 'game', data, height: 130, shared: `g:${lg.code}:${g.id}` };
+}
+
+function gameText(lg, g, tz) {
+  return `${emojiOf(lg)} <b>${esc(lg.name)}</b>\n${gameLine(g, tz)}`;
+}
+
+// Sends the live card for a game (from a scoreboard widget tap or 📺 Live).
+export async function openGame(ctx, code, id) {
+  const lg = leagueOf(code);
+  if (!lg || lg.type !== 'team') return;
+  const g = await gameSummary(code, id);
+  if (!g) return notice(ctx, '⚠️ ESPN is unavailable right now.');
+  const { tz } = await getPrefs(ctx.chatId);
+  await send(ctx, { text: gameText(lg, g, tz), keyboard: [[btn('📺 Scores', `sp:sc:${code}`)]], widget: gameWidget(lg, g) });
+}
+
+// b:<code> → the league scoreboard (shared).
+registerSource('b', async ([code]) => {
+  const lg = leagueOf(code);
+  if (lg?.type !== 'team') return null;
+  const games = await leagueGames(lg.code, lg.group === 'soccer' || lg.group === 'rugby' ? 2 : 1);
+  const w = games && boardWidget(lg, pickGames(games, 5, 6));
+  return w && { data: w.data, shared: w.shared };
+});
+
+// g:<code>:<id> → one game (shared).
+registerSource('g', async ([code, id]) => {
+  const lg = leagueOf(code);
+  const g = lg?.type === 'team' && id ? await gameSummary(lg.code, id) : null;
+  const w = g && gameWidget(lg, g);
+  return w && { data: w.data, shared: w.shared };
+});
 
 async function fixturesCard(ctx, code, out) {
   const lg = leagueOf(code);
@@ -234,6 +320,7 @@ async function teamCard(ctx, code, id, out) {
     text: lines.join('\n'),
     image: info.logo,
     keyboard: [[btn(following ? '✅ Following' : '⭐ Follow', `sp:f:${code}:${id}`), ...(following ? [btn('🔔 Alerts', `sp:ta:${code}:${id}`)] : [])],
+      ...(live[0] && ctx.chatType === 'private' && fits(`sp:lv:${code}:${live[0].id}`) ? [[btn('📺 Live', `sp:lv:${code}:${live[0].id}`)]] : []),
       [btn('🔄', `sp:t:${code}:${id}:r`), btn('⬅️ League', `sp:l:${code}`)]],
   });
 }
@@ -542,6 +629,7 @@ registerKind('team', {
       const tz = env.prefsOf(n.chatId).tz;
       const sent = { ...(p.sent ?? {}) };
       const msgs = [];
+      let liveGame = null; // a game that just started: its alert carries the live widget
       const leadMs = (p.lead || 0) * 60000;
       const priming = !p.primed;
       for (const g0 of games) {
@@ -569,7 +657,7 @@ registerKind('team', {
               }
               ['start', 'half', 'final', 'kick'].forEach((f) => flags.add(f));
             } else if (g.state === 'in') {
-              if (!flags.has('start')) { flags.add('start'); if (p.start) msgs.push(`🟢 Started: ${vs}`); }
+              if (!flags.has('start')) { flags.add('start'); if (p.start) { msgs.push(`🟢 Started: ${vs}`); liveGame = g; } }
               if (isHalftime(g) && !flags.has('half')) { flags.add('half'); if (p.half) msgs.push(`⏸ Halftime: ${score}`); }
             }
           }
@@ -584,7 +672,12 @@ registerKind('team', {
       if (!priming && JSON.stringify(sent) === JSON.stringify(p.sent ?? {})) continue;
       fires.push({
         n, then: 'touch', patch: { params: { ...p, sent, primed: true } },
-        card: msgs.length ? { text: [`${emojiOf(lg)} <b>${esc(p.label)}</b>`, ...msgs].join('\n'), keyboard: [[btn('📋 Team', `sp:t:${p.code}:${p.team}`)]] } : null,
+        card: msgs.length ? {
+          text: [`${emojiOf(lg)} <b>${esc(p.label)}</b>`, ...msgs].join('\n'),
+          keyboard: [[btn('📋 Team', `sp:t:${p.code}:${p.team}`)]],
+          // In private chats the start alert is the live card itself; it keeps updating while open.
+          widget: liveGame && msgs.length === 1 ? gameWidget(lg, liveGame) : null,
+        } : null,
       });
     }
     return fires;

@@ -4,13 +4,14 @@
 //   A trailing `:r` means "refresh this card in place"; without it a new card is sent.
 import {
   coinsByIds, topCoins, trending, globalStats, getFearAndGreed, btcFees, resolveCoin,
-  getBinanceTicker, fngEmoji, symbolOf, DEFAULT_COINS,
+  getBinanceTicker, fngEmoji, symbolOf, DEFAULT_COINS, priceHistory, sparklines,
 } from '../apis/crypto.js';
 import { listFollows, addFollow, removeFollow, isFollowing, getPrefs, listPositions, addPosition, reducePosition, LIMITS } from '../store.js';
 import { registerKind, registerSchedule, createNotification, upsertSchedule, findSchedule, deleteNotification } from '../notify.js';
 import { localParts, parseSchedule, describePattern } from '../time.js';
 import { btn, menu, show, send, notice, ask, requireManage, fits, homeRow, navRow } from '../ui.js';
 import { esc, usd, usdCompact, chg, num } from '../format.js';
+import { registerSource, pack, fit, sig, r2 } from '../widgets/index.js';
 
 const BACK = [btn('⬅️ Crypto', 'm:crypto')];
 
@@ -172,12 +173,93 @@ async function coinCard(ctx, id, out) {
     c.ath ? `ATH: ${usd(c.ath)} (${chg(c.athChange)})` : null,
   ].filter(Boolean);
   const actions = [btn(following ? '✅ Following' : '⭐ Follow', `cr:f:${id}`), btn('🔔 Alert', `cr:a:${id}`)];
+  const widget = ctx.chatType === 'private' ? await coinWidget(c) : null;
   await out(ctx, {
     text: lines.join('\n'),
     image: c.image,
     keyboard: [actions.filter((x) => fits(x.callback_data)),
       [btn('💼 Add', `cr:pa:${id}`), btn('🔄', `cr:c:${id}:r`)].filter((x) => fits(x.callback_data)), BACK],
+    // The widget refreshes itself, so it has no 🔄 button.
+    widget,
+    widgetKeyboard: widget && [[...actions, btn('💼 Add', `cr:pa:${id}`)].filter((x) => fits(x.callback_data)), BACK],
   });
+}
+
+// ── widgets ───────────────────────────────────────────────────────────────
+
+const RANGES = [1, 7, 30, 90];
+
+// Chart widget payload for a coin (`c` from coinsByIds) over `days`.
+async function coinWidget(c, days = 7) {
+  if (!c?.price) return null;
+  const hist = await priceHistory(c.id, days);
+  const dc = days === 1 ? c.ch24h : days === 7 && c.ch7d != null ? c.ch7d
+    : hist?.length > 1 ? (hist.at(-1) / hist[0] - 1) * 100 : null;
+  const data = fit((level) => {
+    const n = [96, 72, 48, 32][level];
+    if (!n) return null;
+    const s = pack(hist, Math.min(n, hist?.length ?? 0), 2);
+    return {
+      q: `c:${c.id}:${days}`, id: c.id, s: c.symbol, n: c.name.slice(0, 40), rk: c.rank ?? null,
+      p: sig(c.price), ch: [r2(c.ch1h), r2(c.ch24h), r2(c.ch7d)], d: days, dc: r2(dc),
+      lo: s ? sig(s.lo) : null, hi: s ? sig(s.hi) : null, v: s?.v ?? null,
+      mc: c.mcap ? usdCompact(c.mcap).slice(1) : null, u: Math.floor(Date.now() / 1000),
+    };
+  });
+  return data && { kind: 'coin', data, height: 330 };
+}
+
+// Sparkline list widget: `coins` from topCoins/coinsByIds, in display order.
+async function listWidget(title, coins, q, shared = null) {
+  coins = coins.filter((c) => c?.price != null);
+  if (!coins.length) return null;
+  const spark = await sparklines(coins.map((c) => c.id));
+  // Shrink to fit 1 KB: fewer sparkline points first, then fewer rows.
+  const data = fit((level) => {
+    const n = [24, 16, 12][level] ?? 8;
+    // At most 10 rows fit the 600 px widget height; the rest show as "+N more".
+    const rows = coins.slice(0, Math.min(coins.length, 10) - Math.max(0, level - 3) * 3);
+    if (!rows.length) return null;
+    return {
+      q, t: title,
+      // Names shorten before rows drop (level ≥ 2).
+      r: rows.map((c) => [c.id, c.symbol, (c.name ?? '').slice(0, level < 2 ? 18 : 10), sig(c.price), r2(c.ch24h), pack(spark.get(c.id), n, 1)?.v ?? '']),
+      more: coins.length - rows.length || undefined, u: Math.floor(Date.now() / 1000),
+    };
+  });
+  if (!data) return null;
+  return { kind: 'list', data, height: Math.min(600, 50 + data.r.length * 52 + (data.more ? 26 : 0)), shared };
+}
+
+async function topWidget() {
+  const top = await topCoins(100);
+  return top && listWidget('Top 10 by market cap', top.slice(0, 10), 'l:top', 'l:top');
+}
+
+async function watchlistWidget(chatId) {
+  const rows = await listFollows(chatId, 'coin');
+  if (!rows.length) return null;
+  const data = await coinsByIds(rows.map((r) => r.ref), Object.fromEntries(rows.map((r) => [r.ref, r.meta?.symbol])));
+  return listWidget('⭐ Watchlist', rows.map((r) => data.get(r.ref)).filter(Boolean), 'l:wl');
+}
+
+// c:<id>:<days> → a coin chart for another range.
+registerSource('c', async ([id, days]) => {
+  const d = RANGES.includes(+days) ? +days : 7;
+  const c = (await coinsByIds([id])).get(id);
+  return { data: (await coinWidget(c, d))?.data };
+});
+
+// l:top (shared) · l:wl (this chat's watchlist).
+registerSource('l', async ([which], q) => {
+  if (which === 'top') return { data: (await topWidget())?.data, shared: 'l:top' };
+  if (which === 'wl') return { data: (await watchlistWidget(q.chat?.id ?? q.from.id))?.data };
+  return null;
+});
+
+// Opens a coin card from a list widget row.
+export function openCoin(ctx, id) {
+  return coinCard(ctx, id, send);
 }
 
 async function toggleFollow(ctx, id, fromText = false) {
@@ -216,6 +298,9 @@ async function marketsCard(ctx, out) {
   await out(ctx, {
     text: ['📊 <b>Top 10 by market cap</b>', '', ...ten.map((c, i) => `${coinLine(c, i)} · 7d ${chg(c.ch7d)}`)].join('\n'),
     keyboard: [...coinButtons(ten), [btn('🔄 Refresh', 'cr:mk:r')], BACK],
+    // Tapping a row in the widget opens the coin, so it needs no coin buttons.
+    widget: ctx.chatType === 'private' ? await topWidget() : null,
+    widgetKeyboard: [BACK],
   });
 }
 
@@ -237,6 +322,8 @@ async function watchlistCard(ctx, refresh) {
     text: ['⭐ <b>Watchlist</b>', '', ...lines].join('\n'),
     keyboard: [...coinButtons(rows.map((r) => ({ id: r.ref, symbol: data.get(r.ref)?.symbol || r.label }))),
       [btn('➕ Add', 'cr:wa'), btn('✏️ Edit', 'cr:we'), btn('🔄', 'cr:wl:r')], BACK],
+    widget: ctx.chatType === 'private' ? await watchlistWidget(ctx.chatId) : null,
+    widgetKeyboard: [[btn('➕ Add', 'cr:wa'), btn('✏️ Edit', 'cr:we')], BACK],
   });
 }
 

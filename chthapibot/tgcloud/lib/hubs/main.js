@@ -10,7 +10,7 @@ import {
 import { canonicalTz, isValidTz, tzLabel, parseWhen, whenLocal, parseSchedule, describePattern, nextOccurrence } from '../time.js';
 import { btn, menu, show, send, notice, ask, requireManage, pagerRow, homeRow, navRow } from '../ui.js';
 import { esc } from '../format.js';
-import { buildDaily, SECTIONS } from '../daily.js';
+import { buildDaily, weatherCard, SECTIONS } from '../daily.js';
 import { t, SOURCE_URL } from '../strings.js';
 import { languageKeyboard, LOCALE_NAMES, normalizeLocale } from '../i18n.js';
 import { mainKeyboard } from '../keyboard.js';
@@ -47,7 +47,7 @@ const HELP = `<b>Hubs</b> — tap through menus
 /crypto · /sports · /food · /random
 
 <b>Everywhere</b>
-/daily — briefing now
+/daily — briefing now · /weather — forecast
 /notifications — every alert, schedule and reminder
 /remind &lt;30m|2h|18:00&gt; &lt;text&gt; — reminder (your time zone)
 /settings — time zone, location, quiet hours, mute
@@ -81,6 +81,7 @@ export const commands = {
     await api.sendChatAction({ chat_id: ctx.chatId, action: 'typing' }).catch(() => {});
     return send(ctx, await buildDaily(ctx.chatId));
   },
+  weather: async (ctx) => send(ctx, await weatherCard(ctx.chatId)),
   help: (ctx) => menu(ctx, { text: `${t(ctx.locale, 'help_header')}\n\n${HELP}`, keyboard: homeKeyboard(ctx.locale) }),
   settings: (ctx) => settingsCard(ctx),
   notifications: (ctx) => notificationsCard(ctx, null, 0),

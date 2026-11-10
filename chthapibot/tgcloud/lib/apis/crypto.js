@@ -73,6 +73,31 @@ export async function coinsByIds(ids, symbols = {}) {
   return out;
 }
 
+// Price history for a chart: [price…] over `days` (1, 7, 30, 90). Cached longer for longer ranges.
+export function priceHistory(id, days) {
+  const ttl = days <= 1 ? 300 : days <= 7 ? 1800 : 7200;
+  return cached(`cg:chart:${id}:${days}`, ttl, () => safely(async () => {
+    const d = await getJson(`${CG}/coins/${encodeURIComponent(id)}/market_chart?vs_currency=usd&days=${days}`);
+    const prices = (d.prices ?? []).map((p) => p[1]);
+    // Keep at most ~120 points in the cache row; widgets use fewer.
+    const step = Math.max(1, Math.floor(prices.length / 120));
+    return prices.filter((_, i) => i % step === 0 || i === prices.length - 1);
+  }));
+}
+
+// 7-day sparklines for up to 50 coins → Map id → [price…] (CoinGecko, cached 10 min).
+export async function sparklines(ids) {
+  ids = [...new Set(ids.map(normalizeCoin))].filter(Boolean).slice(0, 50);
+  const out = new Map();
+  if (!ids.length) return out;
+  const key = `cg:spark:${[...ids].sort().join(',')}`.slice(0, 500);
+  const rows = await cached(key, 600, () => safely(async () =>
+    (await getJson(`${CG}/coins/markets?vs_currency=usd&sparkline=true&ids=${ids.map(encodeURIComponent).join(',')}&per_page=50`))
+      .map((c) => [c.id, (c.sparkline_in_7d?.price ?? []).filter((_, i, a) => i % 6 === 0 || i === a.length - 1)])));
+  for (const [id, prices] of rows ?? []) out.set(id, prices);
+  return out;
+}
+
 function coinloreTop() {
   return cached('lore:top', 120, () => safely(async () => {
     const d = await getJson('https://api.coinlore.net/api/tickers/?start=0&limit=100');

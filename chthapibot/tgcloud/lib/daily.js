@@ -2,7 +2,7 @@
 // Feeds shared by every chat (book, recipe, scores…) are memoized per scheduler run via `memo`.
 import { getTrendingBook, getRandomRecipe, getDailyFact } from './apis/random.js';
 import { leagueGames } from './apis/espn.js';
-import { getWeather } from './apis/weather.js';
+import { getWeather, getForecast } from './apis/weather.js';
 import * as f1 from './apis/f1.js';
 import * as fun from './apis/fun.js';
 import { myLines, pickGames } from './hubs/sports.js';
@@ -12,6 +12,7 @@ import { getPrefs } from './store.js';
 import { localParts, whenLocal } from './time.js';
 import { btn } from './ui.js';
 import { esc, link, truncate, countdown } from './format.js';
+import { registerSource, isPrivateChat } from './widgets/index.js';
 
 // Order here is the order in the briefing. Defaults live in DEFAULT_DAILY (lib/store.js).
 export const SECTIONS = [
@@ -86,9 +87,46 @@ const BUILDERS = {
   },
 };
 
+// 🌤 Weather card: a forecast widget (private chats) with the one-line text as fallback.
+export async function weatherCard(chatId) {
+  const p = await getPrefs(chatId);
+  if (p.lat == null) {
+    return { text: '📍 Share a location in /settings → 📍 Location to see your weather.', keyboard: [[btn('⚙️ Settings', 'st:home')]] };
+  }
+  const [w, widget] = await Promise.all([BUILDERS.weather(p), isPrivateChat(chatId) ? weatherWidget(p) : null]);
+  return { text: (w ?? ['⚠️ Weather is unavailable right now.']).join('\n'), widget, widgetKeyboard: [] };
+}
+
+async function weatherWidget(p) {
+  const f = await getForecast(p.lat, p.lon);
+  if (!f?.hours?.length) return null;
+  const round = (n) => (n == null ? null : Math.round(n));
+  return {
+    kind: 'weather',
+    height: 316,
+    data: {
+      q: 'w', t: round(f.temp), c: f.code ?? 0, l: f.label, mx: round(f.max), mn: round(f.min),
+      // An hourly strip like Apple Weather's: now, then every 3 hours.
+      hs: f.hours.filter((_, i) => i % 3 === 0).slice(0, 7).map((h) => [h.t, h.code ?? 0, round(h.temp), h.rain ?? 0, h.night ? 1 : 0]),
+      // Hours and weekdays are the location's, not the viewer's: `o` is its UTC offset.
+      o: f.offset ?? 0,
+      d: f.days.map((d, i) => [i ? new Date((d.t + (f.offset ?? 0)) * 1000).toUTCString().slice(0, 3) : 'Today', d.code ?? 0, round(d.min), round(d.max)]),
+      u: Math.floor(Date.now() / 1000),
+    },
+  };
+}
+
+// w → fresh weather for the chat the widget is in.
+registerSource('w', async (args, q) => {
+  const p = await getPrefs(q.chat?.id ?? q.from.id);
+  return p.lat == null ? null : { data: (await weatherWidget(p))?.data };
+});
+
 export async function buildDaily(chatId, memo = createMemo()) {
   const p = await getPrefs(chatId);
-  const on = SECTIONS.filter((s) => p.daily[s.key]);
+  // Private chats get the weather as a widget card ahead of the briefing.
+  const wx = p.daily.weather && p.lat != null && isPrivateChat(chatId) ? await weatherWidget(p).catch(() => null) : null;
+  const on = SECTIONS.filter((s) => p.daily[s.key] && !(wx && s.key === 'weather'));
   const today = new Date().toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long', timeZone: p.tz });
   const parts = await Promise.all(on.map((s) => BUILDERS[s.key](p, memo).catch(() => null)));
   const out = [`☀️ <b>Daily briefing</b> — ${esc(today)}`];
@@ -96,6 +134,7 @@ export async function buildDaily(chatId, memo = createMemo()) {
   if (!on.length) out.push('', '<i>Every section is off — pick some in 🧩 Sections.</i>');
   const book = p.daily.book ? await memo('book', getTrendingBook) : null;
   return {
+    before: wx ? [{ text: (await BUILDERS.weather(p).catch(() => null))?.join('\n') ?? '🌤', widget: wx }] : undefined,
     text: out.join('\n').slice(0, 4000),
     image: book?.cover ?? null,
     keyboard: [[btn('🔄 Refresh', 'dl:r'), btn('🧩 Sections', 'st:dsec'), btn('⏰ Time', 'st:daily')]],

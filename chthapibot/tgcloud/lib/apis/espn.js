@@ -65,7 +65,11 @@ function scoreOf(x) {
 
 function sideOf(x) {
   const t = x?.team ?? {};
-  return { id: t.id ?? null, name: t.shortDisplayName ?? t.displayName ?? t.name ?? '?', full: t.displayName ?? t.name ?? '?', abbr: t.abbreviation ?? '', score: scoreOf(x), winner: x?.winner === true };
+  return {
+    id: t.id ?? null, name: t.shortDisplayName ?? t.displayName ?? t.name ?? '?', full: t.displayName ?? t.name ?? '?',
+    abbr: t.abbreviation ?? '', score: scoreOf(x), winner: x?.winner === true,
+    color: t.color ?? null, alt: t.alternateColor ?? null, // hex without '#', used by widgets
+  };
 }
 
 // Two-sided game → { id, date, state, detail, statusName, home, away }
@@ -120,10 +124,10 @@ export async function leagueFixtures(code, days = 7) {
   return games.filter((g) => g.state === 'pre').sort((a, b) => a.date - b.date);
 }
 
-// One game's live status (cached 2 min) — used by match notifications.
+// One game's live status (cached 1 min) — used by match notifications and live widgets.
 export function gameSummary(code, eventId) {
   const lg = leagueOf(code);
-  return cached(`espn:sum:${eventId}`, 120, () => safely(async () => {
+  return cached(`espn:sum:${eventId}`, 60, () => safely(async () => {
     const d = await getJson(`${SITE}/${lg.path}/summary?event=${encodeURIComponent(eventId)}`);
     return toGame({ id: eventId, ...d.header, competitions: d.header?.competitions });
   }));

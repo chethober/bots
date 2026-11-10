@@ -7,6 +7,9 @@ import * as food from './food.js';
 import * as saved from './saved.js';
 import * as random from './random.js';
 import '../daily.js';
+import { registerSource } from '../widgets/index.js';
+import { getPrefs } from '../store.js';
+import { normalizeLocale } from '../i18n.js';
 
 const HOMES = {
   home: main.home,
@@ -81,6 +84,19 @@ export function runInput(ctx, pending, text) {
 export function runFallbackText(ctx, text) {
   return food.maybeBarcode(ctx, text);
 }
+
+// o:c:<coin> · o:g:<league>:<game> — a tap in a widget opens that item as a new card
+// in the widget's chat. The widget gets an empty answer.
+registerSource('o', async ([what, a, b], q) => {
+  const chatId = q.chat?.id ?? q.from.id;
+  const ctx = {
+    chatId, chatType: q.chat?.type ?? (chatId > 0 ? 'private' : 'group'), userId: q.from.id, userName: q.from.first_name,
+    locale: (await getPrefs(chatId)).locale || normalizeLocale(q.from.language_code), message: null, answer: async () => {},
+  };
+  if (what === 'c' && a) await crypto.openCoin(ctx, a);
+  else if (what === 'g' && a && b) await sports.openGame(ctx, a, b);
+  return null;
+});
 
 export { saveLocation } from './main.js';
 export { recordAnswer } from './random.js';

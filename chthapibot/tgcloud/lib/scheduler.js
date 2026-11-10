@@ -13,6 +13,7 @@ import { DEFAULT_DAILY, sweepCache } from './store.js';
 import { createMemo } from './daily.js';
 import { localParts, inWindow, nextOccurrence } from './time.js';
 import { sendCard, isChatGone } from './telegram.js';
+import { sweepWidgets } from './widgets/index.js';
 import './hubs/index.js'; // registers every kind
 
 // The platform stops a run after ~30 s of wall time (and ~3 s of CPU), so a run stops
@@ -74,6 +75,7 @@ export async function runTick({ now = new Date(), maxSends = 25, budgetMs = 2000
     }
   }
   await sweepCache().catch(() => {});
+  await sweepWidgets().catch(() => {});
   return report;
 }
 

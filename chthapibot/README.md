@@ -40,8 +40,14 @@ make sense, and 🔔 **notifications**: alerts, scheduled pushes and reminders.
 | 🍽 **Food & drinks** `/food` | About 600 recipes (random, search, cuisine, category, 🧊 fridge mode) and about 500 cocktails (by spirit, non-alcoholic, search). Coffee brew calculator (V60, AeroPress, inverted, cold brew), saved brew recipes, and a brew log with ratings. Shopping list filled from recipes. Breweries near you. Barcode lookup for Nutri-Score, NOVA and nutrition. Scheduled dinner ideas. |
 | 🎲 **Random** `/random` | Tools: Telegram dice, dice notation like `3d6+2`, coin flip, number in a range, pick one, shuffle, team splitter, 8-ball, cards. Discover: books, movies (TMDB, by genre and decade), series, anime, games, deals and giveaways, albums, radio, art, Pokémon, pets. Fun: facts, jokes, quotes, advice, Wikipedia, on this day, word of the day, xkcd. 🧠 Trivia quiz polls with a per-chat leaderboard and daily streaks. Scheduled picks, e.g. a movie every Friday at 20:00. |
 
+In private chats, coin cards, Top 10, the watchlist, league scoreboards, live match cards and the
+weather are sent as **message widgets** (Bot API 10.4): charts and scoreboards drawn in the message
+that refresh themselves while open. Groups, where widgets aren't available, get the text cards.
+`node scripts/check-widgets.js` checks the templates against the size limits.
+
 Across the bot:
 
+- **🌤 `/weather`** for your saved location: now, the next 24 hours and five days.
 - **☀️ `/daily` briefing.** Ten sections you can switch on or off (weather, crypto, my teams, F1,
   book, movie, recipe, quote, fact, word), delivered at a time and on days you choose.
 - **🔔 `/notifications`** lists everything scheduled, with pause, resume and delete.
