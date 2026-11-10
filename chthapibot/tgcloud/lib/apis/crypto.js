@@ -159,11 +159,12 @@ export function globalStats() {
   });
 }
 
-// Fear & Greed (cached 30 min): { value, label, yesterday }
+// Fear & Greed (cached 30 min): { value, label, yesterday, week } (week = 7 days ago)
 export function getFearAndGreed() {
-  return cached('fng', 1800, () => safely(async () => {
-    const d = (await getJson('https://api.alternative.me/fng/?limit=2')).data;
-    return { value: Number(d[0].value), label: d[0].value_classification, yesterday: d[1] ? Number(d[1].value) : null };
+  return cached('fng:8', 1800, () => safely(async () => {
+    const d = (await getJson('https://api.alternative.me/fng/?limit=8')).data;
+    const at = (i) => (d[i] ? Number(d[i].value) : null);
+    return { value: Number(d[0].value), label: d[0].value_classification, yesterday: at(1), week: at(7) };
   }));
 }
 

@@ -11,7 +11,7 @@ import { registerKind, registerSchedule, createNotification, upsertSchedule, fin
 import { localParts, parseSchedule, describePattern } from '../time.js';
 import { btn, menu, show, send, notice, ask, requireManage, fits, homeRow, navRow } from '../ui.js';
 import { esc, usd, usdCompact, chg, num } from '../format.js';
-import { registerSource, pack, fit, sig, r2 } from '../widgets/index.js';
+import { registerSource, pack, fit, sig, r2, isPrivateChat } from '../widgets/index.js';
 
 const BACK = [btn('⬅️ Crypto', 'm:crypto')];
 
@@ -375,7 +375,29 @@ async function globalCard(ctx, out) {
   }
   if (fng) lines.push('', `${fngEmoji(fng.value)} Fear &amp; Greed: <b>${fng.value}</b> — ${esc(fng.label)}${fng.yesterday != null ? ` (yesterday ${fng.yesterday})` : ''}`);
   if (fees) lines.push(`⛽ BTC fees: fast ${fees.fastestFee} · 30m ${fees.halfHourFee} · 1h ${fees.hourFee} sat/vB`);
-  await out(ctx, { text: lines.join('\n'), keyboard: [[btn('🔄 Refresh', 'cr:gl:r')], BACK] });
+  await out(ctx, {
+    text: lines.join('\n'), keyboard: [[btn('🔄 Refresh', 'cr:gl:r')], BACK],
+    widget: ctx.chatType === 'private' ? gaugeWidget(fng, g, fees) : null,
+  });
+}
+
+// Fear & Greed dial + global stats (any of the three may be missing; the dial needs fng).
+// `alert` turns it into the Fear & Greed alert card.
+function gaugeWidget(fng, g, fees, alert = null) {
+  if (fng?.value == null) return null;
+  const stats = !!(g?.mcap || g?.btcDom != null);
+  const data = fit((level) => level ? null : {
+    f: fng.value, l: String(fng.label ?? '').slice(0, 20), y: fng.yesterday ?? null, w: fng.week ?? null,
+    ...(alert ? { a: alert.slice(0, 60) } : {}),
+    ...(g?.mcap ? { mc: usdCompact(g.mcap).slice(1), mx: r2(g.mcapChange24h) } : {}),
+    ...(g?.btcDom != null ? { bd: r2(g.btcDom) } : {}),
+    ...(fees ? { fe: [fees.fastestFee ?? null, fees.halfHourFee ?? null, fees.hourFee ?? null] } : {}),
+    u: Math.floor(Date.now() / 1000),
+  });
+  if (!data) return null;
+  const hist = data.y != null || data.w != null;
+  // Measured: dial 202 px, the yesterday/last week badges 40, market stats 70, fees 54.
+  return { kind: 'gauge', data, height: 202 + (hist ? 40 : 0) + (stats ? 70 : 0) + (data.fe ? 54 : 0) };
 }
 
 // ── portfolio ─────────────────────────────────────────────────────────────
@@ -389,25 +411,61 @@ async function portfolioCard(ctx, refresh) {
   }
   const data = await coinsByIds(pos.map((p) => p.coin), Object.fromEntries(pos.map((p) => [p.coin, p.symbol])));
   let total = 0, cost = 0, value24hAgo = 0, pnlKnown = false;
+  const rows = [];
   const lines = pos.map((p) => {
     const c = data.get(p.coin);
-    const sym = esc(c?.symbol || p.symbol || p.coin);
-    if (!c?.price) return `<b>${sym}</b> ${num(p.amount, 8)} — <i>no price</i>`;
+    const sym = c?.symbol || p.symbol || p.coin;
+    if (!c?.price) {
+      rows.push({ sym, amount: p.amount, value: null, pl: null, avg: p.avgPrice });
+      return `<b>${esc(sym)}</b> ${num(p.amount, 8)} — <i>no price</i>`;
+    }
     const value = p.amount * c.price;
     total += value;
     if (c.ch24h != null) value24hAgo += value / (1 + c.ch24h / 100);
     let pnl = '';
+    let plPct = null;
     if (p.avgPrice != null) {
       pnlKnown = true;
       cost += p.amount * p.avgPrice;
       const d = value - p.amount * p.avgPrice;
-      pnl = ` · P/L ${d >= 0 ? '+' : '−'}${usd(Math.abs(d))} (${chg((c.price / p.avgPrice - 1) * 100)})`;
+      plPct = (c.price / p.avgPrice - 1) * 100;
+      pnl = ` · P/L ${d >= 0 ? '+' : '−'}${usd(Math.abs(d))} (${chg(plPct)})`;
     }
-    return `<b>${sym}</b> ${num(p.amount, 8)} = <b>${usd(value)}</b>${pnl}`;
+    rows.push({ sym, amount: p.amount, value, pl: plPct, avg: p.avgPrice });
+    return `<b>${esc(sym)}</b> ${num(p.amount, 8)} = <b>${usd(value)}</b>${pnl}`;
   });
   const summary = [`Total: <b>${usd(total)}</b>${value24hAgo ? ` · 24h ${chg((total / value24hAgo - 1) * 100)}` : ''}`];
-  if (pnlKnown && cost) summary.push(`P/L on priced positions: ${chg(((total - unpricedValue(pos, data)) / cost - 1) * 100)}`);
-  await out(ctx, { text: ['💼 <b>Portfolio</b>', '', ...lines, '', ...summary].join('\n'), keyboard });
+  const plUsd = pnlKnown && cost ? total - unpricedValue(pos, data) - cost : null;
+  if (plUsd != null) summary.push(`P/L on priced positions: ${chg((plUsd / cost) * 100)}`);
+  await out(ctx, {
+    text: ['💼 <b>Portfolio</b>', '', ...lines, '', ...summary].join('\n'), keyboard,
+    widget: ctx.chatType === 'private' ? folioWidget(rows, total, plUsd, cost, value24hAgo) : null,
+  });
+}
+
+// Portfolio widget: holdings largest first; the ones that don't fit fold into `ot`/`more`.
+function folioWidget(rows, total, plUsd, cost, value24hAgo) {
+  rows = [...rows].sort((a, b) => (b.value ?? -1) - (a.value ?? -1));
+  const data = fit((level) => {
+    const n = Math.min(rows.length, 7) - level;
+    if (n < 1) return null;
+    const shown = rows.slice(0, n);
+    const rest = rows.slice(n);
+    return {
+      t: sig(total), pl: plUsd == null ? null : sig(plUsd), pp: plUsd == null ? null : r2((plUsd / cost) * 100),
+      d: value24hAgo ? r2((total / value24hAgo - 1) * 100) : null,
+      ot: sig(rest.reduce((s, r) => s + (r.value ?? 0), 0)) || undefined,
+      r: shown.map((r) => [String(r.sym).slice(0, 10), Number(r.amount.toPrecision(7)), sig(r.value), r2(r.pl), sig(r.avg)]),
+      more: rest.length || undefined, u: Math.floor(Date.now() / 1000),
+    };
+  });
+  if (!data) return null;
+  // Measured: header and one legend line 159 px, 52.5 per row, 19 per extra legend line
+  // (3 per line: up to 4 holdings + Other), 22 for "+N more". 7 rows keep it under 600.
+  const priced = data.r.filter((r) => r[2] != null).length;
+  const segs = Math.min(4, priced) + (priced > 4 || data.ot ? 1 : 0);
+  const legend = Math.max(0, Math.ceil(segs / 3) - 1) * 19 - (segs ? 0 : 24);
+  return { kind: 'folio', data, height: Math.min(600, Math.ceil(159 + data.r.length * 52.5 + legend + (data.more ? 22 : 0))) };
 }
 
 function unpricedValue(pos, data) {
@@ -507,18 +565,44 @@ async function pricesFor(rows) {
   return coinsByIds(rows.map((n) => n.params.coin), Object.fromEntries(rows.map((n) => [n.params.coin, n.params.symbol])));
 }
 
+// The fired-alert widget (private chats only): the coin's last 24h with the alert level.
+// kind 'a' above · 'b' below (level = the alert price) · 'm' moved ±pct (level = the
+// 24h-ago price moved by pct, in the direction it went).
+async function alertWidget(chatId, c, kind, level, pct = null) {
+  if (!isPrivateChat(chatId) || !c?.price) return null;
+  const hist = [...((await priceHistory(c.id, 1)) ?? []), c.price];
+  if (kind === 'm') {
+    const open = hist.length > 1 ? hist[0] : c.ch24h != null ? c.price / (1 + c.ch24h / 100) : null;
+    level = open == null ? null : open * (1 + (Math.sign(c.ch24h ?? 0) || 1) * pct / 100);
+  }
+  const data = fit((level2) => {
+    const n = [72, 56, 40, 28][level2];
+    if (!n) return null;
+    const s = hist.length > 1 ? pack(hist, Math.min(n, hist.length), 2) : null;
+    return {
+      s: c.symbol, n: (c.name ?? '').slice(0, 30), p: sig(c.price), c: r2(c.ch24h), k: kind, lv: sig(level), pc: pct ?? undefined,
+      lo: s ? sig(s.lo) : null, hi: s ? sig(s.hi) : null, v: s?.v ?? null, u: Math.floor(Date.now() / 1000),
+    };
+  });
+  return data && { kind: 'alert', data, height: 258 };
+}
+
 registerKind('price', {
   describe: (n) => `💰 ${esc(n.params.symbol)} ${n.params.cond} ${usd(n.params.price)}`,
   async evaluate(rows) {
     const data = await pricesFor(rows);
-    return rows.flatMap((n) => {
+    const fired = rows.filter((n) => crossed(n.params.cond, data.get(n.params.coin)?.price, n.params.price));
+    return Promise.all(fired.map(async (n) => {
       const c = data.get(n.params.coin);
-      if (!crossed(n.params.cond, c?.price, n.params.price)) return [];
-      return [{
+      return {
         n, then: 'deactivate', reArm: true,
-        card: { text: `🚨 <b>${esc(n.params.symbol)}</b> is ${n.params.cond} ${usd(n.params.price)}\nNow: <b>${usd(c.price)}</b> ${chg(c.ch24h)}`, keyboard: [[btn('🔁 Re-arm', `n:re:${n.id}`), ...(fits(`cr:c:${n.params.coin}`) ? [btn('📈 Open', `cr:c:${n.params.coin}`)] : [])]] },
-      }];
-    });
+        card: {
+          text: `🚨 <b>${esc(n.params.symbol)}</b> is ${n.params.cond} ${usd(n.params.price)}\nNow: <b>${usd(c.price)}</b> ${chg(c.ch24h)}`,
+          keyboard: [[btn('🔁 Re-arm', `n:re:${n.id}`), ...(fits(`cr:c:${n.params.coin}`) ? [btn('📈 Open', `cr:c:${n.params.coin}`)] : [])]],
+          widget: await alertWidget(n.chatId, c, n.params.cond === 'above' ? 'a' : 'b', n.params.price).catch(() => null),
+        },
+      };
+    }));
   },
 });
 
@@ -526,16 +610,23 @@ registerKind('pct', {
   describe: (n) => `↕️ ${esc(n.params.symbol)} moves ±${n.params.pct}% in 24h`,
   async evaluate(rows, env) {
     const data = await pricesFor(rows);
-    return rows.flatMap((n) => {
+    const fired = rows.filter((n) => {
       const c = data.get(n.params.coin);
-      if (c?.ch24h == null || Math.abs(c.ch24h) < n.params.pct) return [];
+      if (c?.ch24h == null || Math.abs(c.ch24h) < n.params.pct) return false;
       const tz = env.prefsOf(n.chatId).tz;
-      if (n.lastFiredAt && localParts(new Date(n.lastFiredAt * 1000), tz).ymd === localParts(env.now, tz).ymd) return [];
-      return [{
-        n, then: 'touch',
-        card: { text: `${c.ch24h >= 0 ? '🚀' : '📉'} <b>${esc(n.params.symbol)}</b> ${chg(c.ch24h)} in 24h\nNow: <b>${usd(c.price)}</b>`, keyboard: fits(`cr:c:${n.params.coin}`) ? [[btn('📈 Open', `cr:c:${n.params.coin}`)]] : undefined },
-      }];
+      return !(n.lastFiredAt && localParts(new Date(n.lastFiredAt * 1000), tz).ymd === localParts(env.now, tz).ymd);
     });
+    return Promise.all(fired.map(async (n) => {
+      const c = data.get(n.params.coin);
+      return {
+        n, then: 'touch',
+        card: {
+          text: `${c.ch24h >= 0 ? '🚀' : '📉'} <b>${esc(n.params.symbol)}</b> ${chg(c.ch24h)} in 24h\nNow: <b>${usd(c.price)}</b>`,
+          keyboard: fits(`cr:c:${n.params.coin}`) ? [[btn('📈 Open', `cr:c:${n.params.coin}`)]] : undefined,
+          widget: await alertWidget(n.chatId, c, 'm', null, n.params.pct).catch(() => null),
+        },
+      };
+    }));
   },
 });
 
@@ -546,7 +637,11 @@ registerKind('fng', {
     if (!f) return [];
     return rows.filter((n) => crossed(n.params.cond, f.value, n.params.value)).map((n) => ({
       n, then: 'deactivate', reArm: true,
-      card: { text: `${fngEmoji(f.value)} Fear &amp; Greed is <b>${f.value}</b> (${esc(f.label)}) — ${n.params.cond} ${n.params.value}`, keyboard: [[btn('🔁 Re-arm', `n:re:${n.id}`)]] },
+      card: {
+        text: `${fngEmoji(f.value)} Fear &amp; Greed is <b>${f.value}</b> (${esc(f.label)}) — ${n.params.cond} ${n.params.value}`,
+        keyboard: [[btn('🔁 Re-arm', `n:re:${n.id}`)]],
+        widget: isPrivateChat(n.chatId) ? gaugeWidget(f, null, null, `Fear & Greed ${n.params.cond} ${n.params.value}`) : null,
+      },
     }));
   },
 });
