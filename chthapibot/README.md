@@ -42,7 +42,7 @@ make sense, and 🔔 **notifications**: alerts, scheduled pushes and reminders.
 
 In private chats, coin cards, Top 10, the watchlist, league scoreboards, live match cards and the
 weather are sent as **message widgets** (Bot API 10.4): charts and scoreboards drawn in the message
-that refresh themselves while open. Groups, where widgets aren't available, get the text cards.
+updated by their 🔄 buttons (tgcloud can't deliver widget queries yet, so they don't refresh on their own). Groups, where widgets aren't available, get the text cards.
 `node scripts/check-widgets.js` checks the templates against the size limits.
 
 Across the bot:
