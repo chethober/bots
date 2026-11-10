@@ -7,6 +7,8 @@ import { sql } from 'sdk/db';
 import { PROMPT_MAX, RETENTION_DAYS, WORDS_MAX, WORD_MAX_LEN } from './config.js';
 import { acceptedKinds, typesKeyboard } from './content.js';
 import { ownerWords } from './filter.js';
+import { RTL } from './i18n.js';
+import { DIGITS } from './texts.js';
 import { qrPng } from './qr.js';
 import { personalLink, supportsInline } from './util.js';
 import { cancelRow, mainKeyboard, showHome, showScreen } from './chats.js';
@@ -38,14 +40,22 @@ export async function sendQr(user, L) {
   }, 'sendPhoto');
 }
 
-// 📊 Stats. A later item of an album isn't counted as a message of its own.
-// Weekdays are in UTC. Records go after RETENTION_DAYS, so totals cover that period.
+// Days of bars in the 📊 Stats widget, today included.
+export const STATS_DAYS = 14;
+
+// 📊 Stats → a screen card: the text, and the same numbers as a widget for private
+// chats (lib/chats.js showCard), with a 🔄 button that edits it in place (sv:).
+// A later item of an album isn't counted as a message of its own. Weekdays and the
+// widget's days are in UTC. Records go after RETENTION_DAYS, so totals cover that period.
+// The widget gets only counts: no sender, id or message text.
 export async function statsView(user, L) {
   const t = Math.floor(Date.now() / 1000);
   const owner = user.id;
   const firstOfAlbum = sql`(media_group_id IS NULL OR id = (SELECT MIN(m2.id) FROM messages m2
     WHERE m2.sender_id = messages.sender_id AND m2.media_group_id = messages.media_group_id))`;
-  const [counts, replied, busiest] = await Promise.all([
+  const firstDay = Math.floor(t / 86400) - (STATS_DAYS - 1);
+  const from = firstDay * 86400;
+  const [counts, replied, busiest, perDay] = await Promise.all([
     db.get(sql`SELECT
         COALESCE(SUM(status = 'delivered'), 0)                              AS received,
         COALESCE(SUM(status = 'delivered' AND created_at >= ${t - 86400}), 0)     AS day,
@@ -60,14 +70,45 @@ export async function statsView(user, L) {
     db.get(sql`SELECT CAST(strftime('%w', created_at, 'unixepoch') AS INTEGER) AS weekday, COUNT(*) AS n
       FROM messages WHERE owner_id = ${owner} AND status = 'delivered' AND ${firstOfAlbum}
       GROUP BY weekday ORDER BY n DESC LIMIT 1`),
+    // A range scan of idx_messages_owner_status_created: only the last STATS_DAYS days.
+    // CAST: a bound number may arrive as REAL, which would make the division fractional.
+    db.all(sql`SELECT CAST((created_at - ${from}) / 86400 AS INTEGER) AS day, COUNT(*) AS n
+      FROM messages WHERE owner_id = ${owner} AND status = 'delivered' AND created_at >= ${from} AND ${firstOfAlbum}
+      GROUP BY day`),
   ]);
+  const s = {
+    ...counts,
+    replied: Math.min(replied.n, counts.received),
+    busiest: busiest?.weekday ?? null,
+    retentionDays: RETENTION_DAYS,
+  };
+  const days = Array(STATS_DAYS).fill(0);
+  for (const r of perDay) if (r.day >= 0 && r.day < STATS_DAYS) days[r.day] = r.n;
   return {
-    text: L.stats(user, {
-      ...counts,
-      replied: Math.min(replied.n, counts.received),
-      busiest: busiest?.weekday ?? null,
-      retentionDays: RETENTION_DAYS,
-    }),
+    text: L.stats(user, s),
+    widget: { kind: 'stats', height: STATS_HEIGHT, data: statsWidgetData(user, L, s, days, firstDay) },
+    widgetKeyboard: [[{ text: L.btnRefresh, callback_data: 'sv:r' }]],
+  };
+}
+
+// Measured in Chromium at 376 px (content + 4 px); the layout has no wrapping lines.
+const STATS_HEIGHT = 303;
+
+// The widget's payload (templates/stats.js). Labels arrive translated; numbers are
+// drawn by the widget in the locale's digits.
+export function statsWidgetData(user, L, s, days, firstDay) {
+  const w = L.statsWidget;
+  return {
+    l: [w.title, w.week, w.total, w.today, w.replies, w.rate, w.avg, user.paused ? w.paused : w.receiving,
+      w.empty(days.length)],
+    p: user.paused ? 1 : 0,
+    r: RTL.has(L.locale) ? 1 : 0,
+    ...(DIGITS[L.locale] && { g: DIGITS[L.locale] }),
+    n: s.received,
+    c: days,
+    s: firstDay,
+    rp: s.replies,
+    rr: s.received ? L.statsPct(Math.round((100 * s.replied) / s.received)) : '',
   };
 }
 

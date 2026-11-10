@@ -46,7 +46,8 @@ are only `/start` and the admin commands.
 - **Block** a sender with one tap. **Unblock** from ⚙️ Settings → 🚫 Blocked senders, which shows each block by time only, never identity.
 - **Report** a message. It is copied (not forwarded) to the bot's admins, who can ban the sender from the whole bot.
 - Pause / resume receiving, and 📊 Stats: received today / this week, different senders, how many you answered,
-  your busiest weekday, and what was filtered or hidden.
+  your busiest weekday, and what was filtered or hidden. In the bot's chat it opens as a widget (Bot API 10.4):
+  received this week and in total, a bar per day for the last 14 days, replies sent and the reply rate, with 🔄 to refresh.
 - 🔄 New link makes the old link stop working, for when it reached the wrong people.
 - 🗑 Delete my data erases your data (see [Privacy](#privacy) for exactly what that covers).
 - Inline mode: type `@<bot>` in any chat to share your link with your invitation, or with custom text.
@@ -170,6 +171,7 @@ tgcloud/
     ├── texts.js               all user-facing strings, one table per language
     ├── i18n.js                supported languages
     ├── config.js · filter.js · content.js · util.js
+    └── widgets/               message widgets (copied from chthapibot): sending, the stats template; scripts/check-widgets.js checks sizes
 test/                          unit tests for the pure modules: npm test
 ```
 

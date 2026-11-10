@@ -48,6 +48,8 @@ export const messages = table('messages', {
   createdIdx: index('idx_messages_created').on(t.createdAt),
   rateIdx:   index('idx_messages_rate').on(t.senderId, t.ownerId, t.createdAt),
   ownerIdx:  index('idx_messages_owner_status').on(t.ownerId, t.status),
+  // 📊 Stats' daily bars: one owner's delivered messages of the last 14 days, as a range.
+  ownerDayIdx: index('idx_messages_owner_status_created').on(t.ownerId, t.status, t.createdAt),
   copyIdx:   index('idx_messages_owner_copy').on(t.ownerId, t.ownerMsgId),
   origIdx:   index('idx_messages_sender_orig').on(t.senderChatId, t.senderMsgId),
   albumIdx:  index('idx_messages_album').on(t.senderId, t.mediaGroupId),

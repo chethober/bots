@@ -4,7 +4,7 @@
 
 import { ADMIN_IDS, PROMPT_MAX, SOURCE_URL, WORDS_MAX, WORD_MAX_LEN } from '../lib/config.js';
 import { isAdmin, sendOpenReports } from '../lib/admin.js';
-import { cancelRow, drop, matchButton, showScreen, textsFor } from '../lib/chats.js';
+import { cancelRow, drop, matchButton, showCard, showScreen, textsFor } from '../lib/chats.js';
 import { deliverAnonymous, deliverReply, findAlbumStart, findOwnerCopy, findReplyCopy } from '../lib/delivery.js';
 import { isFiltered, ownerWords, parseWords } from '../lib/filter.js';
 import { languageKeyboard } from '../lib/i18n.js';
@@ -35,7 +35,7 @@ async function onButton(msg, key, L) {
       return showScreen(chatId, await linkView(await getOrCreateUser(msg.from), L));
     case 'stats': {
       const user = await getUser(msg.from.id);
-      return showScreen(chatId, user ? await statsView(user, L) : { text: L.needLink });
+      return showCard(chatId, user ? await statsView(user, L) : { text: L.needLink });
     }
     case 'settings':
       return showScreen(chatId, settingsView(await getOrCreateUser(msg.from), L));

@@ -8,7 +8,7 @@
 
 import { RETENTION_DAYS } from './config.js';
 
-const DIGITS = { fa: '۰۱۲۳۴۵۶۷۸۹', ar: '٠١٢٣٤٥٦٧٨٩' };
+export const DIGITS = { fa: '۰۱۲۳۴۵۶۷۸۹', ar: '٠١٢٣٤٥٦٧٨٩' };
 
 // Helpers each table is built with: numbers in the locale's digits, "3 days ago",
 // the owner's display name, the invitation senders see and a list of kinds.
@@ -229,6 +229,14 @@ const fa = (w) => {
 
     // Stats, privacy
     needLink: 'هنوز لینک نداری — «🎭 لینک من» رو بزن تا بسازیمش.',
+    // 📊 Stats as a widget (lib/manage.js): its labels, the reply rate, the 🔄 button.
+    statsWidget: {
+      title: '📊 آمار', week: '۷ روز اخیر', total: 'کل دریافتی', today: 'امروز', replies: 'پاسخ‌های ارسالی',
+      rate: 'نرخ پاسخ', avg: 'میانگین', receiving: 'در حال دریافت', paused: 'متوقف',
+      empty: (n) => `در ${num(n)} روز اخیر پیامی نیومده`,
+    },
+    statsPct: (n) => `٪${num(n)}`,
+    btnRefresh: '🔄 به‌روزرسانی',
     stats: (owner, s) =>
       `📊 آمار${owner.name ? ` ${owner.name}` : ''}\n\n` +
       `پیام‌های دریافتی: ${num(s.received)}\n` +
@@ -533,6 +541,13 @@ const en = (w) => {
     typesLastOne: 'At least one kind has to stay on',
 
     needLink: "You don't have a link yet — tap «🎭 My link» to make one.",
+    statsWidget: {
+      title: '📊 Stats', week: 'Last 7 days', total: 'Received', today: 'Today', replies: 'Replies sent',
+      rate: 'Reply rate', avg: 'avg', receiving: 'Receiving', paused: 'Paused',
+      empty: (n) => `No messages in the last ${num(n)} days`,
+    },
+    statsPct: (n) => `${num(n)}%`,
+    btnRefresh: '🔄 Refresh',
     stats: (owner, s) =>
       `📊 Stats${owner.name ? ` for ${owner.name}` : ''}\n\n` +
       `Messages received: ${num(s.received)}\n` +
@@ -834,6 +849,13 @@ const ar = (w) => {
     typesLastOne: 'يجب أن يبقى نوع واحد مفعّلًا على الأقل',
 
     needLink: 'ليس لديك رابط بعد — اضغط «🎭 رابطي» لإنشائه.',
+    statsWidget: {
+      title: '📊 الإحصاءات', week: 'آخر ٧ أيام', total: 'المستلمة', today: 'اليوم', replies: 'الردود المرسلة',
+      rate: 'نسبة الرد', avg: 'المتوسط', receiving: 'يستقبل', paused: 'متوقف',
+      empty: (n) => `لا رسائل في آخر ${num(n)} يومًا`,
+    },
+    statsPct: (n) => `${num(n)}٪`,
+    btnRefresh: '🔄 تحديث',
     stats: (owner, s) =>
       `📊 إحصاءات${owner.name ? ` ${owner.name}` : ''}\n\n` +
       `الرسائل المستلمة: ${num(s.received)}\n` +
@@ -1135,6 +1157,13 @@ const ru = (w) => {
     typesLastOne: 'Хотя бы один тип должен остаться включённым',
 
     needLink: 'У тебя ещё нет ссылки — нажми «🎭 Моя ссылка», чтобы создать её.',
+    statsWidget: {
+      title: '📊 Статистика', week: 'За 7 дней', total: 'Получено', today: 'Сегодня', replies: 'Ответов',
+      rate: 'Доля ответов', avg: 'сред.', receiving: 'Принимаю', paused: 'На паузе',
+      empty: (n) => `Нет сообщений за последние ${num(n)} дн.`,
+    },
+    statsPct: (n) => `${num(n)}%`,
+    btnRefresh: '🔄 Обновить',
     stats: (owner, s) =>
       `📊 Статистика${owner.name ? ` — ${owner.name}` : ''}\n\n` +
       `Получено сообщений: ${num(s.received)}\n` +
@@ -1436,6 +1465,13 @@ const es = (w) => {
     typesLastOne: 'Al menos un tipo debe quedar activado',
 
     needLink: 'Aún no tienes enlace — pulsa «🎭 Mi enlace» para crearlo.',
+    statsWidget: {
+      title: '📊 Estadísticas', week: 'Últimos 7 días', total: 'Recibidos', today: 'Hoy', replies: 'Respuestas',
+      rate: 'Tasa de respuesta', avg: 'media', receiving: 'Recibiendo', paused: 'En pausa',
+      empty: (n) => `Sin mensajes en los últimos ${num(n)} días`,
+    },
+    statsPct: (n) => `${num(n)} %`,
+    btnRefresh: '🔄 Actualizar',
     stats: (owner, s) =>
       `📊 Estadísticas${owner.name ? ` de ${owner.name}` : ''}\n\n` +
       `Mensajes recibidos: ${num(s.received)}\n` +

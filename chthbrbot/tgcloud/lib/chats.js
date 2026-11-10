@@ -18,6 +18,7 @@ import { chats, users } from '../schema.js';
 import { LOCALES, normalizeLocale } from './i18n.js';
 import { DEFAULT_LOCALE, texts } from './texts.js';
 import { safeApi } from './util.js';
+import { sendWidgetCard } from './widgets/index.js';
 
 const getChat = (id) => db.select().from(chats).where(eq(chats.id, id)).get();
 
@@ -58,22 +59,33 @@ export function drop(chatId, messageId) {
   return messageId ? safeApi('deleteMessage', { chat_id: chatId, message_id: messageId }) : null;
 }
 
-// Sends the chat's new `slot` message (api[method](params)), then deletes the one
+// Sends the chat's new `slot` message (send() → the Message), then deletes the one
 // it replaces — sent first, so the reply keyboard never blinks away.
-async function replace(slot, chatId, params, method) {
+async function replace(slot, chatId, send) {
   const prev = (await getChat(chatId))?.[slot];
-  const sent = await safeApi(method, { chat_id: chatId, link_preview_options: { is_disabled: true }, ...params });
+  const sent = await send();
   if (!sent) return null;
   await upsert(chatId, { [slot]: sent.message_id });
   if (prev !== sent.message_id) await drop(chatId, prev);
   return sent;
 }
 
-export const showScreen = (chatId, params, method = 'sendMessage') => replace('screenMsg', chatId, params, method);
+const sendWith = (chatId, params, method) => () =>
+  safeApi(method, { chat_id: chatId, link_preview_options: { is_disabled: true }, ...params });
+
+export const showScreen = (chatId, params, method = 'sendMessage') =>
+  replace('screenMsg', chatId, sendWith(chatId, params, method));
+
+// A screen card { text, reply_markup?, widget?, widgetKeyboard? }: its widget when
+// there is one (private chats; lib/widgets), else — or when the widget can't be
+// sent — its text. Either way it replaces the open screen.
+export const showCard = (chatId, card) => replace('screenMsg', chatId, async () =>
+  (card.widget && await sendWidgetCard(chatId, card))
+    ?? sendWith(chatId, { text: card.text, ...(card.reply_markup && { reply_markup: card.reply_markup }) }, 'sendMessage')());
 
 // A new home message also clears the open screen.
 export async function showHome(chatId, params) {
-  const sent = await replace('homeMsg', chatId, params, 'sendMessage');
+  const sent = await replace('homeMsg', chatId, sendWith(chatId, params, 'sendMessage'));
   await closeScreen(chatId);
   return sent;
 }
