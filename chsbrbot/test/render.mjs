@@ -12,7 +12,8 @@ import {
   managedView, linkPromptView,
 } from '../tgcloud/lib/views.js';
 import { ADMIN_IDS } from '../tgcloud/lib/config.js';
-import { cveWidget, cveListWidget, cvssMetrics, band, products, tagLine } from '../tgcloud/lib/cvewidget.js';
+import { deflateSync } from 'node:zlib';
+import { cveWidget, cveListWidget, cvssMetrics, band, products, tagLine, cveHtml, DESC_MAX } from '../tgcloud/lib/cvewidget.js';
 import { bytes } from '../tgcloud/lib/widgets/index.js';
 
 const print = process.argv.includes('--print');
@@ -120,6 +121,12 @@ for (const locale of LOCALES) {
       const size = bytes(JSON.stringify(w.data));
       assert.ok(size <= 1024, `${locale}/${name}: ${size} bytes`);
       assert.ok(w.height >= 50 && w.height <= 600, `${locale}/${name}: height ${w.height}`);
+      // The CVE card's own pages (the description written in) fit sendWidget too.
+      for (const page of w.pages ?? []) {
+        const packed = deflateSync(page.html, { level: 9 }).length;
+        assert.ok(Buffer.byteLength(page.html) <= 32768 && packed <= 4096, `${locale}/${name}: page ${packed} B compressed`);
+        assert.ok(page.height >= w.height && page.height <= 600, `${locale}/${name}: page height ${page.height}`);
+      }
       if (print) console.log(`widget ${locale}/${name}: ${size} B, ${w.height} px`);
     }
   }
@@ -127,6 +134,18 @@ for (const locale of LOCALES) {
   assert.equal(full.m.length, 8);
   assert.deepEqual(full.tl.map((e) => e[0]), [0, 1, 2], 'published → KEV → PoC');
   assert.ok(!cveWidget(noScore, 'en').data.k, 'no KEV badge without a KEV entry');
+  // The whole description is in the card's page, cut at a word only past DESC_MAX,
+  // and can't break out of the script it is written into.
+  const card = cveWidget(log4j, 'en');
+  assert.ok(card.pages.length && card.pages[0].html.includes(JSON.stringify(log4j.description.replace(/\s+/g, ' ').trim()).slice(1, -1)), 'the page holds the whole description');
+  assert.ok(card.pages[0].height > card.height, 'the card grows with its description');
+  const wordy = cveWidget({ ...log4j, description: 'lorem ipsum dolor '.repeat(400) }, 'en');
+  assert.equal(wordy.pages.length, 2, 'a long description has a shorter page to fall back to');
+  assert.ok(wordy.pages[0].html.includes('dolor…') && wordy.pages[0].html.length < wordy.pages[1].html.length + DESC_MAX);
+  const evil = cveHtml('CVE-1-1', '</script><script>alert(1)//\u2028 $& $1');
+  assert.equal(evil.match(/<\/script>/g).length, 1, 'the description cannot close the script');
+  assert.ok(evil.includes('$& $1') && !evil.includes('\u2028'));
+  assert.deepEqual(cveWidget({ ...noScore, description: '' }, 'en').pages, []);
   assert.equal(cveListWidget([], 'en', { title: 'x' }), null);
 }
 

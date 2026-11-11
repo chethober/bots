@@ -3,13 +3,12 @@
 // (handlers/callback_query.js) and in the Mini App (endpoints/). The only slash
 // command is /start. Admin lives in the CHTH hub (lib/hub_admin.js).
 
-import { api, db } from 'sdk';
-import { desc } from 'sdk/db';
-import { players } from '../schema.js';
+import { api } from 'sdk';
 import { ensurePlayer, claimDaily, sendHtml } from '../lib/engine.js';
 import { aboutKeyboard, isTipPayment, thankTip } from '../lib/tips.js';
 import { shopMarkup, creditPayment, revokePurchase, recentPurchases, validPayment } from '../lib/shop.js';
 import { showWallet } from '../lib/wallet.js';
+import { showTop } from '../lib/top.js';
 import { menuText, menuMarkup, sendHome } from '../lib/menu.js';
 import { esc, chips } from '../lib/ui.js';
 import { BOT_USERNAME, WEBAPP_URL, DAILY_CHIPS, DAILY_COOLDOWN, SOURCE_URL, ADMIN_IDS } from '../lib/config.js';
@@ -119,7 +118,7 @@ async function onButton(me, button, locale) {
     case 'shop':
       return showScreen(chatId, t(locale, 'shop', { chips: chips(me.chips) }), await shopMarkup(locale));
     case 'top':
-      return showScreen(chatId, await leaderboard(locale));
+      return showTop(me, locale);
     case 'language':
       return showScreen(chatId, t(locale, 'choose_language'), languageKeyboard());
     case 'about':
@@ -167,12 +166,6 @@ async function paySupport(me, locale, message) {
 
 async function notifyAdmins(text) {
   for (const id of ADMIN_IDS) await sendHtml(id, text).catch((e) => console.warn('admin notify failed', id, e.description));
-}
-
-async function leaderboard(locale) {
-  const rows = await db.select().from(players).orderBy(desc(players.chips)).limit(10);
-  const medals = ['🥇', '🥈', '🥉'];
-  return [`<b>${t(locale, 'top_title')}</b>`, '', ...rows.map((p, i) => `${medals[i] ?? `${i + 1}.`} ${esc(p.name)} — ${chips(p.chips)}`)].join('\n');
 }
 
 function openHub(chatId, locale) {

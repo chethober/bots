@@ -5,8 +5,8 @@
 //   kind    — a template in ./html.js
 //   data    — the JSON payload (≤1024 bytes once encoded; see fit())
 //   shared  — a key like 'g:epl:401234'. Shared widgets are created once per key
-//             and re-sent with sendSharedWidget, so one editSharedWidgetData
-//             updates every copy in every chat.
+//             and height and re-sent with sendSharedWidget, so one
+//             editSharedWidgetData updates every copy in every chat.
 // lib/telegram.js sends the widget in private chats (widgets are private-only in
 // production) and falls back to the card's text when sending fails.
 //
@@ -20,6 +20,7 @@ import { api, db, BotApiError } from 'sdk';
 import { eq, lt } from 'sdk/db';
 import { sharedWidgets } from '../../schema.js';
 import { TEMPLATES, templateVersion } from './html.js';
+import { putCache, getCache } from '../store.js';
 
 const MAX_DATA = 1024;
 const SHARED_EDIT_MS = 1100; // editSharedWidgetData: at most once per second
@@ -58,13 +59,14 @@ export const sig = (n) => (n == null || !Number.isFinite(n) ? null : Number(n.to
 export const r2 = (n) => (n == null || !Number.isFinite(n) ? null : Math.round(n * 100) / 100);
 
 // Calls build(level) with level 0, 1, 2… until the JSON fits the 1024-byte data
-// limit; build returns null when it can't shrink any further.
-export function fit(build) {
+// limit; build returns null when it can't shrink any further. With `ok`, a level
+// counts only if ok(data) also holds (e.g. the widget isn't too tall).
+export function fit(build, ok = () => true) {
   for (let level = 0; level < 16; level++) {
     const data = build(level);
     if (!data) break;
     const json = JSON.stringify(data);
-    if (bytes(json) <= MAX_DATA) return data;
+    if (bytes(json) <= MAX_DATA && ok(data)) return data;
   }
   return null;
 }
@@ -80,6 +82,14 @@ function isUnsupported(e) {
   return e instanceof BotApiError && (e.code === 404 || /method not found|not supported|WIDGET.*(DISABLED|NOT_ALLOWED)/i.test(e.description ?? ''));
 }
 
+// A widget's height is set when its message is sent and can't change afterwards
+// (a shared widget's when it is created). So each sent message's height is
+// remembered for a few days, and a shared widget is kept per key and height: a
+// scoreboard with more games than before is a new widget, not the old one cut off.
+const HEIGHT_TTL = 3 * 86400;
+const heightKey = (chatId, messageId) => `wh:${chatId}:${messageId}`;
+const sharedKey = (w) => `${w.shared}@${w.height}`;
+
 // Sends `card.widget` to a private chat. → the sent Message, or null when the
 // caller should fall back to the text card.
 export async function sendWidgetCard(chatId, card, extra = {}) {
@@ -91,19 +101,31 @@ export async function sendWidgetCard(chatId, card, extra = {}) {
     return null;
   }
   const common = { chat_id: chatId, reply_markup: markupOf(card.widgetKeyboard ?? card.keyboard), ...extra };
+  let sent = null;
+  if (w.shared) {
+    try {
+      sent = await sendShared(w, json, common);
+    } catch (e) {
+      // A shared widget that can't be made or re-sent: this chat gets its own copy below.
+      console.warn(`shared widget ${w.shared} failed: ${e.description ?? e.message}`);
+      if (isUnsupported(e)) { disabled = true; return null; }
+    }
+  }
   try {
-    if (w.shared) return await sendShared(w, json, common);
-    return await api.sendWidget({ ...common, html: TEMPLATES[w.kind], height: w.height, chat_data: json });
+    sent ??= await api.sendWidget({ ...common, html: TEMPLATES[w.kind], height: w.height, chat_data: json });
   } catch (e) {
     if (isUnsupported(e)) disabled = true;
     console.warn(`sendWidget ${w.kind} failed: ${e.description ?? e.message}`);
     return null;
   }
+  await putCache(heightKey(chatId, sent.message_id), w.height, HEIGHT_TTL).catch(() => {});
+  return sent;
 }
 
 async function sendShared(w, json, common) {
   const ver = templateVersion(w.kind);
-  const row = await db.select().from(sharedWidgets).where(eq(sharedWidgets.key, w.shared)).get();
+  const key = sharedKey(w);
+  const row = await db.select().from(sharedWidgets).where(eq(sharedWidgets.key, key)).get();
   if (row && row.ver === ver) {
     await pushShared(row, json);
     try {
@@ -116,7 +138,7 @@ async function sendShared(w, json, common) {
   const msg = await api.sendWidget({ ...common, html: TEMPLATES[w.kind], height: w.height, public_data: json, is_shared: true });
   const widgetId = msg.widget?.id;
   if (widgetId) {
-    const values = { key: w.shared, widgetId: String(widgetId), ver, data: json, updatedAt: Date.now() };
+    const values = { key, widgetId: String(widgetId), ver, data: json, updatedAt: Date.now() };
     await db.insert(sharedWidgets).values(values)
       .onConflictDoUpdate({ target: sharedWidgets.key, set: values }).run();
   }
@@ -136,20 +158,33 @@ async function pushShared(row, json) {
   return true;
 }
 
-export async function updateShared(key, data) {
-  const row = await db.select().from(sharedWidgets).where(eq(sharedWidgets.key, key)).get();
-  return row ? pushShared(row, JSON.stringify(data)) : false;
+// `w` is { shared, height, data }: the shared widget of that key and height, if any.
+export async function updateShared(w) {
+  const row = await db.select().from(sharedWidgets).where(eq(sharedWidgets.key, sharedKey(w))).get();
+  return row ? pushShared(row, JSON.stringify(w.data)) : false;
 }
 
 // Re-renders a widget message in place: new chat data for a per-message widget,
 // fresh public data for a shared one, and the new keyboard either way.
+// → false when the message can't show the card (it needs another height, or its
+// height is no longer known): the caller then sends the card as a new message.
 export async function editWidgetCard(message, card) {
   const target = { chat_id: message.chat.id, message_id: message.message_id };
   const w = card.widget;
-  if (w?.shared) await updateShared(w.shared, w.data);
-  else if (w) await api.editMessageWidgetData({ ...target, chat_data: JSON.stringify(w.data) }).catch(ignoreNotModified);
+  if (w) {
+    const height = await getCache(heightKey(target.chat_id, target.message_id)).catch(() => null);
+    if (height == null || Number(height) !== w.height) return false;
+    // A message that holds its own copy of a shared kind (sent when sharing failed)
+    // takes the data itself; Telegram refuses that for a shared widget's message,
+    // which updateShared covers.
+    if (w.shared) {
+      await updateShared(w);
+      await api.editMessageWidgetData({ ...target, chat_data: JSON.stringify(w.data) }).catch(() => {});
+    } else await api.editMessageWidgetData({ ...target, chat_data: JSON.stringify(w.data) }).catch(ignoreNotModified);
+  }
   await api.editMessageReplyMarkup({ ...target, reply_markup: markupOf(card.widgetKeyboard ?? card.keyboard) ?? { inline_keyboard: [] } })
     .catch(ignoreNotModified);
+  return true;
 }
 
 function ignoreNotModified(e) {
@@ -163,7 +198,8 @@ export async function sweepWidgets() {
 
 // ── queries from widgets ──────────────────────────────────────────────────
 
-// registerSource('c', async (args, q) => ({ data, shared? }) | null)
+// registerSource('c', async (args, q) => ({ data, shared?, height? }) | null)
+// (a shared widget is found by its key and height).
 // `args` is the query split on ':' after the prefix; `q` the WidgetQuery.
 const sources = new Map();
 
@@ -179,7 +215,7 @@ export async function onWidgetQuery(q) {
     if (res?.data) {
       answer = JSON.stringify(res.data);
       if (bytes(answer) > MAX_DATA) answer = null;
-      else if (res.shared) await updateShared(res.shared, res.data);
+      else if (res.shared) await updateShared(res);
     }
   } catch (e) {
     console.error(`widget query ${q.data} failed`, e);

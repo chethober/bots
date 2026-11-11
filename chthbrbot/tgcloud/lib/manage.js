@@ -47,7 +47,7 @@ export const STATS_DAYS = 14;
 // chats (lib/chats.js showCard), with a 🔄 button that edits it in place (sv:).
 // A later item of an album isn't counted as a message of its own. Weekdays and the
 // widget's days are in UTC. Records go after RETENTION_DAYS, so totals cover that period.
-// The widget gets only counts: no sender, id or message text.
+// The widget gets only counts (and the busiest weekday's name): no sender, id or message text.
 export async function statsView(user, L) {
   const t = Math.floor(Date.now() / 1000);
   const owner = user.id;
@@ -92,15 +92,18 @@ export async function statsView(user, L) {
 }
 
 // Measured in Chromium at 376 px (content + 4 px); the layout has no wrapping lines.
-const STATS_HEIGHT = 303;
+const STATS_HEIGHT = 392;
 
-// The widget's payload (templates/stats.js). Labels arrive translated; numbers are
-// drawn by the widget in the locale's digits.
+// The widget's payload (templates/stats.js): every number of the text stats. Labels
+// arrive translated; numbers are drawn by the widget in the locale's digits.
+// l[0..8] and n, c, s, rp, rr are what the first stats widget read: messages sent
+// with that page are still refreshed with this payload, so those stay as they are.
 export function statsWidgetData(user, L, s, days, firstDay) {
   const w = L.statsWidget;
   return {
     l: [w.title, w.week, w.total, w.today, w.replies, w.rate, w.avg, user.paused ? w.paused : w.receiving,
-      w.empty(days.length)],
+      w.empty(days.length), w.senders, w.answered, w.busiest, w.blocked, w.filtered, w.hidden,
+      s.retentionDays ? w.covers(s.retentionDays) : ''],
     p: user.paused ? 1 : 0,
     r: RTL.has(L.locale) ? 1 : 0,
     ...(DIGITS[L.locale] && { g: DIGITS[L.locale] }),
@@ -109,6 +112,12 @@ export function statsWidgetData(user, L, s, days, firstDay) {
     s: firstDay,
     rp: s.replies,
     rr: s.received ? L.statsPct(Math.round((100 * s.replied) / s.received)) : '',
+    sn: s.senders,
+    rd: s.replied,
+    bd: s.busiest == null ? '' : L.weekdays[s.busiest],
+    bl: s.blocked,
+    fl: s.filtered,
+    mu: s.muted,
   };
 }
 

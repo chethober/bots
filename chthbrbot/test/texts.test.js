@@ -23,10 +23,11 @@ test('every locale renders the new screens', () => {
       filtered: 0, muted: 0, replies: 0, blocked: 0, retentionDays: 0 }), /undefined|NaN/, l);
     assert.equal(L.weekdays.length, 7, l);
     const sw = L.statsWidget;
-    for (const k of ['title', 'week', 'total', 'today', 'replies', 'rate', 'avg', 'receiving', 'paused']) {
+    for (const k of ['title', 'week', 'total', 'today', 'replies', 'rate', 'avg', 'receiving', 'paused',
+      'senders', 'answered', 'busiest', 'blocked', 'filtered', 'hidden']) {
       assert.equal(typeof sw[k], 'string', `${l} statsWidget.${k}`);
     }
-    assert.doesNotMatch(sw.empty(14) + L.statsPct(41) + L.btnRefresh, /undefined|NaN/, l);
+    assert.doesNotMatch(sw.empty(14) + sw.covers(365) + L.statsPct(41) + L.btnRefresh, /undefined|NaN/, l);
     for (const s of [
       L.wordsMenu(['a', 'b c'], 50, 40), L.wordsMenu([], 50, 40), L.optionsMenu(owner), L.privacy,
       L.delivered(owner), L.delivered({ ...owner, seenReceipts: false }), L.adminReport({ id: 1, ownerId: 1 }, owner, 2, 3),

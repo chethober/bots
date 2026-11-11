@@ -6,11 +6,13 @@
 import wallet from './templates/wallet.js';
 import crash from './templates/crash.js';
 import plinko from './templates/plinko.js';
+import top from './templates/top.js';
 
 export const TEMPLATES = {
   wallet,
   crash,
   plinko,
+  top,
 };
 
 // Small stable hash of a template: a changed template gets new shared widgets,

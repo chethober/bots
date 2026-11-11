@@ -18,9 +18,9 @@ const rtl = (locale) => (RTL.has(locale) ? 1 : 0);
 // Measured in Chromium at 376 px (body content + ~4 px), the same in every language.
 export const HEIGHTS = { wallet: 217, crash: 245, plinko: 306 };
 
-function card(kind, data) {
+function card(kind, data, height = HEIGHTS[kind]) {
   if (bytes(JSON.stringify(data)) > MAX_DATA) throw new Error(`${kind} widget payload over ${MAX_DATA} bytes`);
-  return { kind, height: HEIGHTS[kind], data };
+  return { kind, height, data };
 }
 
 // 💰 The player card. `player` is a players row.
@@ -74,4 +74,31 @@ export function plinkoWidget(res, { bet, risk, payout }, locale, id = Date.now()
     rt: rtl(locale),
     l: [t(locale, 'w_plinko'), t(locale, `w_risk_${risk}`), ...labels(locale, ['w_bet', 'w_payout', 'w_won', 'w_lost', 'w_even'])],
   });
+}
+
+// 🏆 The leaderboard. `rows` are players rows, richest first (at most TOP_ROWS are
+// shown); `me` is the viewer's row and `rank` their place among all players. The
+// viewer's row is tinted, and added under a divider when they are outside the list.
+// Only names and chip counts go in, as in the text leaderboard.
+export const TOP_ROWS = 10;
+
+// 24 px of padding, the title (30), 38 per row, 13 for the divider (checked in Chromium).
+export const topHeight = (d) => 54 + Math.max(1, d.r.length) * 38 + (d.my ? 51 : 0);
+
+export function topWidget(rows, me, rank, locale) {
+  const list = rows.slice(0, TOP_ROWS);
+  const at = me ? list.findIndex((p) => p.id === me.id) : -1;
+  let max = 32;
+  const cut = (s) => { const a = [...String(s ?? '')]; return a.length > max ? `${a.slice(0, max - 1).join('')}…` : a.join(''); };
+  const data = () => ({
+    t: t(locale, 'top_title'),
+    r: list.map((p) => [cut(p.name), p.chips]),
+    me: at,
+    ...(me && at < 0 && rank > 0 ? { my: [rank, cut(me.name), me.chips] } : {}),
+    rt: rtl(locale),
+    l: labels(locale, ['w_you', 'w_top_empty']),
+  });
+  while (max > 4 && bytes(JSON.stringify(data())) > MAX_DATA) max -= 2;
+  const d = data();
+  return card('top', d, topHeight(d));
 }

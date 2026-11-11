@@ -42,7 +42,8 @@ The interface follows the [shared style](../README.md#how-they-work): buttons on
   ⚡ Categories buttons open lists, and a CVE opens as a card with its bug types, affected products, CVSS vector,
   KEV status and exploit links.
 - **Widgets in the private chat:** a CVE card (search results, lists, alerts, follow updates) shows as a message
-  widget: the CVSS score in a ring coloured by its severity band, the eight CVSS metrics as bars, EPSS, the KEV due
+  widget: the CVSS score in a ring coloured by its severity band, the whole description (a very long one opens with
+  Show more), the eight CVSS metrics as bars, EPSS, the KEV due
   date counting down, a timeline and the affected products, with the card's buttons under it. 🔥 Trending and
   🆕 Latest show as a table. Groups and channels, and any widget that can't be sent, get the text card.
 

@@ -90,7 +90,7 @@ export const cache = table('cache', {
 // 🧩 Shared message widgets (lib/widgets): one per scoreboard, match or market list,
 // re-sent with sendSharedWidget so a single edit updates every copy.
 export const sharedWidgets = table('shared_widgets', {
-  key:       text('key').primaryKey(),                 // 'b:epl', 'g:epl:401234', 'l:top'
+  key:       text('key').primaryKey(),                 // key@height: 'b:epl@423', 'g:epl:401234@130'
   widgetId:  text('widget_id').notNull(),
   ver:       text('ver'),                              // template hash; a new template gets a new widget
   data:      text('data'),                             // public_data last sent

@@ -5,6 +5,7 @@
 // zlib-compressed at the maximum level, per template.
 import game from './templates/game.js';
 import board from './templates/board.js';
+import rank from './templates/rank.js';
 import coin from './templates/coin.js';
 import list from './templates/list.js';
 import weather from './templates/weather.js';
@@ -18,6 +19,7 @@ import food from './templates/food.js';
 export const TEMPLATES = {
   game,
   board,
+  rank,
   coin,
   list,
   weather,

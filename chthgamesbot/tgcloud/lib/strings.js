@@ -78,6 +78,8 @@ const strings = {
   w_bonus:   { en: '🎁 Daily bonus', fa: '🎁 جایزهٔ روزانه', ar: '🎁 المكافأة اليومية', ru: '🎁 Ежедневный бонус', es: '🎁 Bono diario' },
   w_ready:   { en: 'Ready', fa: 'آماده', ar: 'جاهزة', ru: 'Готово', es: 'Listo' },
   w_refresh: { en: '🔄 Refresh', fa: '🔄 به‌روزرسانی', ar: '🔄 تحديث', ru: '🔄 Обновить', es: '🔄 Actualizar' },
+  w_you:     { en: 'You', fa: 'شما', ar: 'أنت', ru: 'Вы', es: 'Tú' },
+  w_top_empty: { en: 'No players yet.', fa: 'هنوز بازیکنی نیست.', ar: 'لا يوجد لاعبون بعد.', ru: 'Пока нет игроков.', es: 'Aún no hay jugadores.' },
   w_crash:   { en: '🚀 Crash', fa: '🚀 کرش', ar: '🚀 كراش', ru: '🚀 Краш', es: '🚀 Crash' },
   w_plinko:  { en: '🔴 Plinko', fa: '🔴 پلینکو', ar: '🔴 بلينكو', ru: '🔴 Плинко', es: '🔴 Plinko' },
   w_bet:     { en: 'Bet', fa: 'شرط', ar: 'الرهان', ru: 'Ставка', es: 'Apuesta' },

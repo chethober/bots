@@ -50,6 +50,15 @@ export function shownKind(message) {
   return null;
 }
 
+// A CVE card's page holds its description and its height fits that CVE, so the
+// card of another CVE is a new message; the same CVE (🔔 Follow, a refresh) is
+// edited in place. The CVE a card shows is in its NVD link.
+function sameCard(message, widget) {
+  if (widget.kind !== 'cve') return true;
+  const buttons = (message.reply_markup?.inline_keyboard ?? []).flat();
+  return buttons.some((b) => b.url?.startsWith(`https://${NVD_HOST}/`) && b.url.toUpperCase().endsWith(`/${String(widget.data.i).toUpperCase()}`));
+}
+
 // Send the chat's new `slot` message, then delete the one it replaces (sent
 // first, so the reply keyboard never blinks away).
 async function replace(slot, chatId, params) {
@@ -81,7 +90,7 @@ export async function closeScreen(chatId) {
 export async function editScreen(message, params) {
   const kind = params.widget && widgetsOn() ? params.widget.kind : null;
   if (message.widget || kind) {
-    if (kind && kind === shownKind(message)) {
+    if (kind && kind === shownKind(message) && sameCard(message, params.widget)) {
       try {
         return await editWidgetCard(message, widgetCard(params));
       } catch (e) {

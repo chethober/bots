@@ -64,7 +64,8 @@
 🎁 Daily chips (a free bonus every 20 hours) · 💎 Buy chips · 🏆 Top players · 🌐 Language · ℹ️ About (🔗 Source code, ⭐ Tip the developer).
 💰 Balance opens a player card (a Telegram message widget: chips, games, win rate, biggest win and a
 live countdown to the next bonus, with 🎁 claim, 💎 shop and 🔄 buttons; the text card where widgets
-can't be sent). Button taps are deleted and each menu replaces the previous one; game messages stay. In groups,
+can't be sent). 🏆 Top players is a widget too: the ten richest players with medals and a bar each, your own row
+marked, your rank under the list when you are outside it, and 🔄 to refresh. Button taps are deleted and each menu replaces the previous one; game messages stay. In groups,
 send `/start@yourbot` (or add the bot) for the games menu, or use inline mode. `/start`,
 `/paysupport` and the admin commands are the only slash commands. Game messages are written in the language of whoever
 started them; the Mini App is English.
