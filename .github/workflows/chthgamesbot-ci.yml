@@ -15,7 +15,9 @@ on:
 
 jobs:
   test:
-    runs-on: ubuntu-latest
+    # Pinned: the pinned playwright-core (1.56) can't install its browser on the
+    # image ubuntu-latest now points to (26.04). Move back when Playwright is bumped.
+    runs-on: ubuntu-24.04
     timeout-minutes: 15
     defaults:
       run:
