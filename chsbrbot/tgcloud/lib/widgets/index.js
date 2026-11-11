@@ -77,6 +77,9 @@ function isUnsupported(e) {
 
 // Sends `card.widget` to a private chat. → the sent Message, or null when the
 // caller should fall back to the text card.
+// A widget may carry `pages`: [{ html, height }], its own pages to try in order
+// before the kind's template (the CVE card's, with the description written in). A
+// page Telegram refuses (too big once compressed) gives way to the next one.
 export async function sendWidgetCard(chatId, card, extra = {}) {
   const w = card.widget;
   if (disabled || !w || !isPrivateChat(chatId) || !TEMPLATES[w.kind]) return null;
@@ -86,14 +89,21 @@ export async function sendWidgetCard(chatId, card, extra = {}) {
     return null;
   }
   const common = { chat_id: chatId, reply_markup: markupOf(card.widgetKeyboard ?? card.keyboard), ...extra };
-  try {
-    return await api.sendWidget({ ...common, html: TEMPLATES[w.kind], height: w.height, chat_data: json });
-  } catch (e) {
-    if (isUnsupported(e)) disabled = true;
-    console.warn(`sendWidget ${w.kind} failed: ${e.description ?? e.message}`);
-    return null;
+  const pages = [...(w.pages ?? []), { html: TEMPLATES[w.kind], height: w.height }];
+  for (const [i, page] of pages.entries()) {
+    try {
+      return await api.sendWidget({ ...common, html: page.html, height: page.height, chat_data: json });
+    } catch (e) {
+      if (isUnsupported(e)) disabled = true;
+      console.warn(`sendWidget ${w.kind} failed: ${e.description ?? e.message}`);
+      // Only a refused request is worth another page: not a blocked chat, a flood wait…
+      if (disabled || i === pages.length - 1 || !(e instanceof BotApiError && e.code === 400) || isChatError(e)) return null;
+    }
   }
+  return null;
 }
+
+const isChatError = (e) => /chat not found|user is deactivated|PEER_ID_INVALID|bot was blocked/i.test(e.description ?? '');
 
 // Re-renders a widget message in place: new chat data and the new keyboard.
 export async function editWidgetCard(message, card) {

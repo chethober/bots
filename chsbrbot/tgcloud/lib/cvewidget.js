@@ -1,7 +1,9 @@
 // Widget payloads (lib/widgets) for private chats: the CVE card (kind `cve`) and
 // the 🔥 Trending / 🆕 Latest lists (kind `cvelist`). Each builder returns
 // { kind, data, height } or null; the text card stays the fallback and keeps the
-// description, links and CISA's required action. Every label comes from
+// links and CISA's required action. The CVE card also returns `pages`: its page with
+// the whole description written in (see cveHtml), which lib/widgets sends instead
+// of the plain template. Every label comes from
 // lib/strings.js, already translated, and `r` marks right-to-left languages.
 //
 // Signals are { kev: { dateAdded, dueDate } | null, epss: { score, percentile }
@@ -10,6 +12,7 @@
 
 import { t } from './strings.js';
 import { fit } from './widgets/index.js';
+import { TEMPLATES } from './widgets/html.js';
 
 const RTL = ['fa', 'ar'];
 
@@ -99,19 +102,24 @@ const dayOf = (sec) => new Date(sec * 1000).toISOString().slice(0, 10);
 // ── the CVE card ────────────────────────────────────────────────────────────
 
 // Payload: { r, g: tag line, i: id, t: title, s: score, b: band, bl: band label,
-//   v: 'CVSS 3.1', d: one line of the description, m: [[name, value, filled, of]],
+//   v: 'CVSS 3.1', d: one line of the description (shown when the page carries none),
+//   ml: [Show more, Show less], m: [[name, value, filled, of]],
 //   e: [probability, percentile] and el: [hint, percentile line],
 //   k: [due (unix s, end of the due day UTC) or 0] and kl: [what, due line, '{t} left',
 //   past due, day unit], tl: [[0 published | 1 KEV | 2 PoC, label, date]], p: products, pn: how many more, pl: label }
 // Heights in px, matching the template's CSS (checked against Chromium).
 const H = {
-  pad: 24, tag: 24, head: 64, desc: 24, sec: 17, cell: 28, gap: 6, epss: 47, kev: 24, tl: 44, prod: 22,
+  pad: 24, tag: 24, head: 64, descGap: 6, line: 18, more: 24, sec: 17, cell: 28, gap: 6, epss: 47, kev: 24, tl: 44, prod: 22,
 };
+const MAX_HEIGHT = 600;
+// Characters of the description per line, on the narrow side (a 320 px phone fits
+// about 46): a wider chat leaves a little room under the card rather than cutting.
+const LINE_CHARS = 42;
 
-export function cardHeight(d) {
+// The card without its description.
+function frameHeight(d) {
   let h = H.pad + H.head;
   if (d.g) h += H.tag;
-  if (d.d) h += H.desc;
   if (d.m) {
     const rows = Math.ceil(d.m.length / 2);
     h += H.sec + rows * H.cell + (rows - 1) * H.gap;
@@ -120,7 +128,38 @@ export function cardHeight(d) {
   if (d.k) h += H.sec + H.kev;
   if (d.tl) h += H.sec + H.tl;
   if (d.p) h += H.sec + H.prod;
-  return Math.min(600, h);
+  return h;
+}
+
+// `text` is the description the card shows: every line of it when the card stays
+// within sendWidget's 600 px, else as many as fit above a "Show more" row.
+export function cardHeight(d, text = d.d ?? '') {
+  const frame = frameHeight(d);
+  if (!text) return Math.min(MAX_HEIGHT, frame);
+  const lines = Math.ceil(text.length / LINE_CHARS);
+  const full = frame + H.descGap + lines * H.line;
+  if (full <= MAX_HEIGHT) return full;
+  const room = Math.max(1, Math.floor((MAX_HEIGHT - frame - H.descGap - H.more) / H.line));
+  return Math.min(MAX_HEIGHT, frame + H.descGap + room * H.line + H.more);
+}
+
+// ── the description, written into the page ──────────────────────────────────
+
+// sendWidget takes a page of at most 4 KB once compressed, and the template leaves
+// about 1 KB of that: enough for DESC_MAX characters of an NVD description
+// (test/render.mjs checks real ones against zlib). A longer one is cut at a word.
+// lib/widgets falls back to DESC_SHORT, then to the payload's one line, if Telegram
+// still finds a page too big.
+export const DESC_MAX = 1500;
+export const DESC_SHORT = 700;
+
+const cutWords = (s, n) => (s.length > n ? `${s.slice(0, n - 1).replace(/\s+\S*$/, '')}…` : s);
+
+// The template with `var DS=0` replaced by [id, description]. "<" is escaped so the
+// text can't close the script, and so are the line separators JS strings can't hold.
+export function cveHtml(id, text) {
+  const json = JSON.stringify([id, text]).replace(/</g, '\\u003c').replace(/\u2028/g, '\\u2028').replace(/\u2029/g, '\\u2029');
+  return TEMPLATES.cve.replace('var DS=0;', () => `var DS=${json};`);
 }
 
 // `tag`: a line above the id (an alert's kind, a follow update's news).
@@ -154,6 +193,7 @@ export function cveWidget(cve, locale, { kev = null, epss = null, pocAt = null, 
     };
     // (Not when the title already is the start of the description.)
     if (desc && level < 2 && !desc.startsWith(d.t.replace(/…$/, ''))) d.d = cut(desc, level ? 50 : 90);
+    if (desc) d.ml = [t(locale, 'w_more'), t(locale, 'w_less')];
     if (cvss) d.m = cvss.m;
     if (epss?.score != null) {
       d.e = [Math.round(epss.score * 1e4) / 1e4, epss.percentile ?? null];
@@ -172,7 +212,12 @@ export function cveWidget(cve, locale, { kev = null, epss = null, pocAt = null, 
     }
     return d;
   });
-  return data ? { kind: 'cve', data, height: cardHeight(data) } : null;
+  if (!data) return null;
+  // The whole description goes in the page, unless the title already says all of it.
+  const desc = (cve.description ?? '').replace(/\s+/g, ' ').trim();
+  const pages = !desc || desc === data.t ? [] : [...new Set([DESC_MAX, DESC_SHORT].map((n) => cutWords(desc, n)))]
+    .map((text) => ({ html: cveHtml(cve.id, text), height: cardHeight(data, text) }));
+  return { kind: 'cve', data, height: cardHeight(data), pages };
 }
 
 // ── the 🔥 / 🆕 lists ───────────────────────────────────────────────────────

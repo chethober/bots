@@ -347,6 +347,8 @@ const strings = {
   w_left: { en: '{t} left', fa: '{t} مانده', ar: 'متبقٍ {t}', ru: 'осталось {t}', es: 'quedan {t}' },
   w_overdue: { en: 'past due', fa: 'مهلت گذشته', ar: 'انتهت المهلة', ru: 'срок истёк', es: 'plazo vencido' },
   w_day: { en: 'd', fa: 'روز', ar: 'ي', ru: 'д', es: 'd' },
+  w_more: { en: 'Show more ▾', fa: 'ادامه ▾', ar: 'عرض المزيد ▾', ru: 'Показать ещё ▾', es: 'Ver más ▾' },
+  w_less: { en: 'Show less ▴', fa: 'بستن ▴', ar: 'عرض أقل ▴', ru: 'Свернуть ▴', es: 'Ver menos ▴' },
   w_tl_kev: { en: 'Added to KEV', fa: 'ورود به KEV', ar: 'أضيفت إلى KEV', ru: 'Добавлена в KEV', es: 'Entra en KEV' },
   w_tl_poc: { en: 'First PoC', fa: 'اولین PoC', ar: 'أول PoC', ru: 'Первый PoC', es: 'Primer PoC' },
   error: {
