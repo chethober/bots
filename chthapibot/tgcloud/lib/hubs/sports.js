@@ -143,32 +143,33 @@ async function scoresCard(ctx, code, out) {
   const refresh = [btn('🔄 Refresh', `sp:sc:${lg.code}:r`), btn('⬅️ Back', `sp:l:${lg.code}`)];
   const title = `${emojiOf(lg)} <b>${esc(lg.name)}</b>`;
   let lines;
-  let widget = null;
+  let data; // what the card shows, for its widget (scoresWidget)
   if (lg.type === 'team') {
     const games = await leagueGames(lg.code, lg.group === 'soccer' || lg.group === 'rugby' ? 2 : 1);
     if (!games) return notice(ctx, '⚠️ ESPN is unavailable right now.');
-    const picked = pickGames(games, 5, 6);
-    lines = picked.map((g) => gameLine(g, tz));
-    if (ctx.chatType === 'private') widget = boardWidget(lg, picked);
+    data = pickGames(games, 5, 6);
+    lines = data.map((g) => gameLine(g, tz));
   } else if (lg.type === 'f1') {
-    lines = f1Lines(await f1.status(), tz);
+    lines = f1Lines(data = await f1.status(), tz);
   } else if (lg.type === 'cricket') {
-    lines = cricketLines(await cricket());
+    lines = cricketLines(data = await cricket());
   } else if (lg.type === 'tennis') {
-    lines = tennisLines(await tennisMatches(lg.code), tz);
+    lines = tennisLines(data = await tennisMatches(lg.code), tz);
   } else if (lg.type === 'golf') {
-    lines = golfLines(await golfBoard(lg.code), tz);
+    lines = golfLines(data = await golfBoard(lg.code), tz);
   } else if (lg.type === 'mma') {
-    lines = mmaLines(await mmaCards(lg.code), tz);
+    lines = mmaLines(data = await mmaCards(lg.code), tz);
   } else {
-    lines = racingLines(await raceResults(lg.code), tz);
+    lines = racingLines(data = await raceResults(lg.code), tz);
   }
+  // Every sport has a widget in private chats: a scoreboard or a leaderboard.
+  const widget = ctx.chatType === 'private' && data ? scoresWidget(lg, data) : null;
   if (!lines?.length) lines = ['<i>Nothing on right now.</i>'];
   await out(ctx, {
     text: [title, '', ...lines].join('\n').slice(0, 4000),
     keyboard: [refresh],
     widget,
-    widgetKeyboard: [[btn('📅 Fixtures', `sp:fx:${lg.code}`), btn('🏆 Table', `sp:st:${lg.code}`)], refresh],
+    widgetKeyboard: lg.type === 'team' ? [[btn('📅 Fixtures', `sp:fx:${lg.code}`), btn('🏆 Table', `sp:st:${lg.code}`)], refresh] : [refresh],
   });
 }
 
@@ -177,24 +178,180 @@ async function scoresCard(ctx, code, out) {
 const ST = { pre: 'p', in: 'i', post: 'f' };
 const unix = (d) => Math.floor(new Date(d).getTime() / 1000);
 
-// Shared scoreboard for a team league: one widget per league, every chat sees the same.
-// At most 10 games fit the 600 px widget height; the ones nearest now are kept.
+// The scores widget of any league, from the data its 📺 card shows: a scoreboard
+// (kind `board`) for sports with two sides, a leaderboard (kind `rank`) for the
+// rest. Shared: one widget per league, every chat sees the same.
+export function scoresWidget(lg, data) {
+  switch (lg.type) {
+    case 'team': return boardWidget(lg, data);
+    case 'tennis': return sectionBoard(lg, tennisSections(data));
+    case 'mma': return sectionBoard(lg, mmaSections(data));
+    case 'cricket': return sectionBoard(lg, cricketSections(data));
+    case 'golf': return golfWidget(lg, data);
+    case 'f1': return f1Widget(lg, data);
+    default: return raceWidget(lg, data);
+  }
+}
+
+// The same data, fetched: what a widget query or a refresh without a card needs.
+async function scoresData(lg) {
+  switch (lg.type) {
+    case 'team': {
+      const games = await leagueGames(lg.code, lg.group === 'soccer' || lg.group === 'rugby' ? 2 : 1);
+      return games && pickGames(games, 5, 6);
+    }
+    case 'tennis': return tennisMatches(lg.code);
+    case 'mma': return mmaCards(lg.code);
+    case 'cricket': return cricket();
+    case 'golf': return golfBoard(lg.code);
+    case 'f1': return f1.status();
+    default: return raceResults(lg.code);
+  }
+}
+
+// Heights in px, matching templates/board.js and rank.js (checked against Chromium).
+const MAX_HEIGHT = 600;
+const isGame = (row) => Array.isArray(row);
+export function boardHeight(d) {
+  const games = d.g.filter(isGame);
+  return 52 + games.length * 53 + games.filter((g) => g[9]).length * 12 + (d.g.length - games.length) * 26 + (games.length ? 0 : 40);
+}
+export function rankHeight(d) {
+  return 52 + (d.e ? 44 : 0) + d.r.reduce((h, r) => h + (r[3] ? 45 : 37), 0) + (d.nx ? 68 : 0) + (d.r.length || d.nx ? 0 : 40);
+}
+
+const cutTo = (s, n) => { const a = [...String(s ?? '')]; return a.length > n ? `${a.slice(0, n - 1).join('').trimEnd()}…` : a.join(''); };
+const nowSec = () => Math.floor(Date.now() / 1000);
+
+// Scoreboard for a team league. At most 10 games fit the 600 px widget height; the
+// ones nearest now are kept.
 const BOARD_ROWS = 10;
 function boardWidget(lg, games) {
   const data = fit((level) => {
     const keep = Math.min(games.length, BOARD_ROWS) - level * 2;
-    if (keep < 1) return null;
+    if (keep < 1 && games.length) return null;
+    if (level && !games.length) return null;
     // Keep live games and the ones nearest now when trimming.
     const list = keep < games.length ? [...games].sort((a, b) => Math.abs(new Date(a.date) - Date.now()) - Math.abs(new Date(b.date) - Date.now())).slice(0, keep)
       .sort((a, b) => new Date(a.date) - new Date(b.date)) : games;
-    const name = (s) => (level > 1 ? s.abbr || s.name : s.name).slice(0, 16);
+    const name = (s) => cutTo(level > 1 ? s.abbr || s.name : s.name, 16);
     return {
       q: `b:${lg.code}`, c: lg.code, lg: lg.name,
-      g: list.map((g) => [g.id, name(g.home), name(g.away), g.home.score ?? '', g.away.score ?? '', ST[g.state] ?? 'p', (g.detail || '').slice(0, 14), unix(g.date)]),
-      u: Math.floor(Date.now() / 1000),
+      g: list.map((g) => [g.id, name(g.home), name(g.away), g.home.score ?? '', g.away.score ?? '', ST[g.state] ?? 'p', cutTo(g.detail || '', 14), unix(g.date)]),
+      u: nowSec(),
     };
   });
-  return data && { kind: 'board', data, height: Math.min(600, 40 + data.g.length * 56 + (data.g.length ? 0 : 40)), shared: `b:${lg.code}` };
+  return data && { kind: 'board', data, height: Math.min(MAX_HEIGHT, boardHeight(data)), shared: `b:${lg.code}` };
+}
+
+// Scoreboard in sections ([{ title, rows }]): tournaments, a fight card, cricket
+// competitions. Rows are dropped from the end until the board fits the height
+// and the payload; a section left without rows goes too.
+function sectionBoard(lg, sections) {
+  if (!sections) return null;
+  const total = sections.reduce((n, s) => n + s.rows.length, 0);
+  const title = lg.type === 'cricket' ? groupLabel(lg.group).replace(/^\S+ /, '') : lg.name;
+  const data = fit((level) => {
+    let left = Math.min(total, BOARD_ROWS) - level;
+    if (left < 1 && total) return null;
+    if (level && !total) return null;
+    const d = { q: `b:${lg.code}`, c: lg.code, lg: title, g: [], u: nowSec() };
+    for (const s of sections) {
+      const rows = s.rows.slice(0, Math.max(0, left));
+      if (!rows.length) continue;
+      d.g.push(cutTo(s.title, 40), ...rows);
+      left -= rows.length;
+    }
+    return d;
+  }, (d) => boardHeight(d) <= MAX_HEIGHT);
+  return data && { kind: 'board', data, height: boardHeight(data), shared: `b:${lg.code}` };
+}
+
+const ROUNDS = [[/round robin/i, 'RR'], [/quarter/i, 'QF'], [/semi/i, 'SF'], [/^final/i, 'Final'], [/round of (\d+)/i, 'R$1'], [/(\d)(st|nd|rd|th) round/i, 'R$1'], [/round (\d+)/i, 'R$1'], [/qualif/i, 'Qual']];
+function roundAbbr(round) {
+  for (const [re, to] of ROUNDS) { const m = re.exec(round ?? ''); if (m) return to.replace('$1', m[1] ?? ''); }
+  return cutTo(round ?? '', 10);
+}
+
+// 🎾 Matches of the current tournaments: live, the latest results, what's next.
+function tennisSections(events) {
+  if (!events) return null;
+  return events.slice(0, 2).map((e) => {
+    const live = e.matches.filter((m) => m.state === 'in');
+    const done = e.matches.filter((m) => m.state === 'post').sort((a, b) => b.date - a.date);
+    const next = e.matches.filter((m) => m.state === 'pre').sort((a, b) => a.date - b.date);
+    const rows = [...live, ...done.slice(0, 6 - Math.min(live.length, 6)), ...next.slice(0, 3)].slice(0, 10).map((m) => {
+      const [a, b] = m.players;
+      const detail = m.state === 'in' ? m.detail || 'Live' : roundAbbr(m.round) || m.detail || 'Final';
+      return [m.id, cutTo(a.name, 22), cutTo(b.name, 22), a.sets.join(' '), b.sets.join(' '), ST[m.state] ?? 'p', cutTo(detail, 14),
+        Number.isFinite(+m.date) ? unix(m.date) : 0, a.winner ? 1 : b.winner ? 2 : 0];
+    });
+    return { title: e.name, rows };
+  });
+}
+
+// 🥊 The fight card, main event first. A fight has no start time of its own: the
+// main event carries the card's, the others show their weight class.
+function mmaSections(events) {
+  if (!events) return null;
+  return events.slice(0, 1).map((e) => ({
+    title: e.name,
+    rows: e.fights.slice(0, 8).map((f, i) => [`${e.id}-${i}`, cutTo(f.a, 22), cutTo(f.b, 22), '', '', ST[f.state] ?? 'p', cutTo(f.weight || f.detail || '', 14),
+      i === 0 && f.state === 'pre' && Number.isFinite(+e.date) ? unix(e.date) : 0, f.winner ? (f.winner === f.a ? 1 : 2) : 0]),
+  }));
+}
+
+// 🏏 Live and recent matches by competition, each with its summary line.
+function cricketSections(leagues) {
+  if (!leagues) return null;
+  return leagues.slice(0, 6).map((l) => ({
+    title: l.league,
+    rows: l.games.slice(0, 4).filter((g) => g.sides.length >= 2).map((g) => {
+      const row = [g.id, cutTo(g.sides[0].name, 16), cutTo(g.sides[1].name, 16), cutTo(g.sides[0].score, 18), cutTo(g.sides[1].score, 18), ST[g.state] ?? 'p',
+        cutTo(g.detail || '', 14), g.state === 'pre' && Date.parse(g.date) ? unix(g.date) : 0];
+      const note = g.note && g.note !== g.detail ? cutTo(g.note, 60) : '';
+      return note ? [...row, 0, note] : row;
+    }),
+  }));
+}
+
+// A leaderboard payload that fits: rows are dropped from the end.
+function rankWidget(lg, head, rows) {
+  const data = fit((level) => {
+    const keep = Math.min(rows.length, 10) - level;
+    if (keep < 0 || (level && !rows.length)) return null;
+    return { q: `r:${lg.code}`, c: lg.code, lg: lg.name, ...head, r: rows.slice(0, keep), u: nowSec() };
+  }, (d) => rankHeight(d) <= MAX_HEIGHT);
+  return data && { kind: 'rank', data, height: rankHeight(data), shared: `r:${lg.code}` };
+}
+
+// ⛳️ The current or latest tournament's leaderboard.
+function golfWidget(lg, events) {
+  const e = events?.[0];
+  if (!events) return null;
+  if (!e) return rankWidget(lg, {}, []);
+  const pre = e.state === 'pre';
+  return rankWidget(lg, { e: cutTo(e.name, 44), s: cutTo(e.detail || '', 44), st: ST[e.state] ?? 'p', t: pre && Number.isFinite(+e.start) ? unix(e.start) : 0 },
+    pre ? [] : e.players.map((p) => [cutTo(String(p.pos), 4), cutTo(p.name, 26), cutTo(String(p.score), 6)]));
+}
+
+// 🏎 A race's running order (NASCAR, IndyCar).
+function raceWidget(lg, events) {
+  const e = events?.[0];
+  if (!events) return null;
+  if (!e) return rankWidget(lg, {}, []);
+  const pre = e.state === 'pre';
+  return rankWidget(lg, { e: cutTo(e.name, 44), s: cutTo(e.detail || '', 44), st: ST[e.state] ?? 'p', t: pre && Number.isFinite(+e.date) ? unix(e.date) : 0 },
+    pre ? [] : e.order.map((n, i) => [String(i + 1), cutTo(n, 28), '']));
+}
+
+// 🏁 F1: the last race's podium, and the next race counting down.
+function f1Widget(lg, s) {
+  if (!s) return null;
+  const head = {};
+  if (s.last) Object.assign(head, { e: cutTo(s.last.name, 44), s: cutTo(s.last.podium?.length ? s.last.place : 'Results not published yet', 44), st: 'f' });
+  if (s.next) head.nx = ['Next race', cutTo(s.next.name, 40), cutTo(s.next.place, 30), unix(s.next.start)];
+  return rankWidget(lg, head, (s.last?.podium ?? []).map((p) => [String(p.pos), cutTo(p.driver, 26), p.pos > 1 && p.gap != null ? `+${p.gap.toFixed(3)}s` : '', cutTo(p.team ?? '', 30)]));
 }
 
 // Readable text on a team's colour: falls back to the alternate colour or grey.
@@ -232,21 +389,22 @@ export async function openGame(ctx, code, id, out = send) {
   await out(ctx, { text: gameText(lg, g, tz), keyboard: kb, widget: gameWidget(lg, g) });
 }
 
-// b:<code> → the league scoreboard (shared).
-registerSource('b', async ([code]) => {
+// b:<code> → a league's scoreboard · r:<code> → its leaderboard (both shared).
+const scoresSource = async ([code]) => {
   const lg = leagueOf(code);
-  if (lg?.type !== 'team') return null;
-  const games = await leagueGames(lg.code, lg.group === 'soccer' || lg.group === 'rugby' ? 2 : 1);
-  const w = games && boardWidget(lg, pickGames(games, 5, 6));
-  return w && { data: w.data, shared: w.shared };
-});
+  const data = lg && await scoresData(lg);
+  const w = data && scoresWidget(lg, data);
+  return w && { data: w.data, shared: w.shared, height: w.height };
+};
+registerSource('b', scoresSource);
+registerSource('r', scoresSource);
 
 // g:<code>:<id> → one game (shared).
 registerSource('g', async ([code, id]) => {
   const lg = leagueOf(code);
   const g = lg?.type === 'team' && id ? await gameSummary(lg.code, id) : null;
   const w = g && gameWidget(lg, g);
-  return w && { data: w.data, shared: w.shared };
+  return w && { data: w.data, shared: w.shared, height: w.height };
 });
 
 async function fixturesCard(ctx, code, out) {

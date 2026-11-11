@@ -40,8 +40,8 @@ export async function sendCard(chatId, card, extra = {}) {
 
 export async function editCard(message, card) {
   if (message.widget) {
-    if (card.widget) return editWidgetCard(message, card);
-    // A widget can't turn into text: replace the message.
+    if (card.widget && await editWidgetCard(message, card)) return;
+    // A widget can't turn into text, nor change its height: replace the message.
     await api.deleteMessage({ chat_id: message.chat.id, message_id: message.message_id }).catch(() => {});
     return sendCard(message.chat.id, card);
   }

@@ -250,7 +250,7 @@ registerSource('c', async ([id, days]) => {
 
 // l:top (shared) · l:wl (this chat's watchlist).
 registerSource('l', async ([which], q) => {
-  if (which === 'top') return { data: (await topWidget())?.data, shared: 'l:top' };
+  if (which === 'top') { const w = await topWidget(); return w && { data: w.data, shared: w.shared, height: w.height }; }
   if (which === 'wl') return { data: (await watchlistWidget(q.chat?.id ?? q.from.id))?.data };
   return null;
 });
