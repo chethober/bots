@@ -6,6 +6,7 @@ import { GameError } from '../lib/ui.js';
 import { BY_KEY } from '../lib/games/index.js';
 import { menuPress, languagePress } from '../lib/menu.js';
 import { walletPress } from '../lib/wallet.js';
+import { topPress } from '../lib/top.js';
 import { playerLocale, tr } from '../lib/i18n.js';
 import { aboutKeyboard, isTipCallback, onTipCallback } from '../lib/tips.js';
 import { SOURCE_URL } from '../lib/config.js';
@@ -23,6 +24,7 @@ export default async function (cb) {
     if (key === 'menu') await menuPress(ctx, cb, args);
     else if (key === 'lang') await languagePress(ctx, cb, args);
     else if (key === 'wal') await walletPress(ctx, cb, args);
+    else if (key === 'top') await topPress(ctx, cb, args);
     else if (isTipCallback(cb.data)) return await onTipCallback(cb, ctx.locale, aboutKeyboard(ctx.locale, SOURCE_URL));
     else if (BY_KEY[key]) await BY_KEY[key].handle(ctx, args);
     else throw new GameError('This button no longer works.');

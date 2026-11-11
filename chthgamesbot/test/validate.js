@@ -17,7 +17,7 @@ import { crashPoint, multAt, evaluate, publicView } from '../tgcloud/lib/crash.j
 import { drop as plinkoDrop } from '../tgcloud/lib/plinko.js';
 import { deflateSync } from 'node:zlib';
 import { TEMPLATES } from '../tgcloud/lib/widgets/html.js';
-import { walletWidget, crashWidget, plinkoWidget } from '../tgcloud/lib/widgets/payloads.js';
+import { walletWidget, crashWidget, plinkoWidget, topWidget, topHeight } from '../tgcloud/lib/widgets/payloads.js';
 import { LOCALES } from '../tgcloud/lib/i18n.js';
 import { t as tk } from '../tgcloud/lib/strings.js';
 import QUESTIONS from '../tgcloud/lib/data/trivia.js';
@@ -662,7 +662,7 @@ const widgetOk = (w, kind) => {
 
 await check('widget labels exist in every language', () => {
   const keys = ['w_balance', 'w_games', 'w_winrate', 'w_best', 'w_bonus', 'w_ready', 'w_refresh', 'w_crash', 'w_plinko', 'w_bet', 'w_auto',
-    'w_cashed', 'w_crashed', 'w_payout', 'w_won', 'w_lost', 'w_even', 'w_risk_low', 'w_risk_medium', 'w_risk_high'];
+    'w_cashed', 'w_crashed', 'w_payout', 'w_won', 'w_lost', 'w_even', 'w_risk_low', 'w_risk_medium', 'w_risk_high', 'w_you', 'w_top_empty'];
   for (const k of keys) for (const l of LOCALES) assert.ok(tk(l, k) !== k && tk(l, k).length, `${k} missing in ${l}`);
 });
 
@@ -705,6 +705,25 @@ await check('plinko widget: the server drop, consistent, fits', () => {
       assert.equal(w.data.t[w.data.s], w.data.m);
     }
     assert.throws(() => plinkoWidget({ path: Array(12).fill(0), slot: 3, mult: 1 }, { bet: 1, risk, payout: 1 }, 'en'));
+  }
+});
+
+await check('top widget: names and chips only, the viewer marked, fits in every language', () => {
+  const rows = Array.from({ length: 12 }, (_, i) => ({ id: i + 1, name: `${'Ж'.repeat(40)}${i}`, chips: 2 ** 40 - i, banned: 0, lastDaily: 5 }));
+  for (const l of LOCALES) {
+    const inside = topWidget(rows, rows[3], 4, l);
+    widgetOk(inside, 'top');
+    assert.equal(inside.data.r.length, 10);
+    assert.equal(inside.data.me, 3);
+    assert.equal(inside.data.my, undefined);
+    assert.equal(inside.height, topHeight(inside.data));
+    const outside = topWidget(rows, { id: 99, name: 'me', chips: 5 }, 40, l);
+    widgetOk(outside, 'top');
+    assert.equal(outside.data.me, -1);
+    assert.deepEqual(outside.data.my, [40, 'me', 5]);
+    assert.deepEqual(Object.keys(outside.data).sort(), ['l', 'me', 'my', 'r', 'rt', 't']);
+    for (const r of outside.data.r) assert.equal(r.length, 2);
+    widgetOk(topWidget([], null, 0, l), 'top');
   }
 });
 
