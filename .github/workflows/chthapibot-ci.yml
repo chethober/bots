@@ -53,6 +53,8 @@ jobs:
         working-directory: .
         run: echo "::error::Set the CHTHAPIBOT_TGCLOUD_TOKEN repository secret" && exit 1
       - uses: actions/checkout@v5
+        with:
+          fetch-depth: 0 # the release post lists the commits since the last push
       - uses: actions/setup-node@v5
         with:
           node-version: 22
@@ -75,3 +77,13 @@ jobs:
       - run: mkdir -p .tgcloud && npx tgcloud fetch
       - run: npx tgcloud push
       - run: npx tgcloud migrate --safe
+      # Posts the notes to the CHTH updates channel through the hub, as <version>-<date>.<commit>.
+      # Only commits that touch this bot count.
+      - name: Announce release
+        env:
+          CHTH_HUB_URL: ${{ secrets.CHTH_HUB_URL }}
+          CHTH_RELEASE_SECRET: ${{ secrets.CHTH_RELEASE_SECRET }}
+          RELEASE_PRODUCT: chthapibot
+          RELEASE_BASE: ${{ github.event.before }}
+          RELEASE_URL: ${{ github.server_url }}/${{ github.repository }}/commits/${{ github.sha }}
+        run: node ../.github/scripts/announce-release.mjs
