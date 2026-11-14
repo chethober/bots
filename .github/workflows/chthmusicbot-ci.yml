@@ -39,6 +39,8 @@ jobs:
     needs: test
     if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
+    permissions:
+      contents: write # the release
     timeout-minutes: 10
     # One deploy at a time: each push is conditional on the cloud's revision.
     concurrency:
@@ -55,6 +57,8 @@ jobs:
         working-directory: .
         run: echo "::notice::Set the CHTHMUSICBOT_TGCLOUD_TOKEN repository secret to deploy chthmusicbot"
       - uses: actions/checkout@v5
+        with:
+          fetch-depth: 0 # the version comes from the tags, the notes from the commits since
         if: env.TGCLOUD_TOKEN != ''
       - uses: actions/setup-node@v5
         if: env.TGCLOUD_TOKEN != ''
@@ -96,3 +100,12 @@ jobs:
         run: npx tgcloud push
       - if: env.TGCLOUD_TOKEN != ''
         run: npx tgcloud migrate --safe
+      # Every deploy that changes this bot is a release: chthmusicbot-vX.Y.Z, the patch number raised
+      # by each. The CHTH hub posts it to the updates channel.
+      - name: Publish GitHub release
+        if: env.TGCLOUD_TOKEN != ''
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RELEASE_PREFIX: chthmusicbot-
+          RELEASE_TITLE: chthmusicbot
+        run: node ../.github/scripts/release.mjs publish
