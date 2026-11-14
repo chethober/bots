@@ -36,6 +36,8 @@ jobs:
     needs: test
     if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
+    permissions:
+      contents: write # the release
     timeout-minutes: 10
     # One deploy at a time: each push is conditional on the cloud's revision.
     concurrency:
@@ -53,7 +55,7 @@ jobs:
         run: echo "::error::Set the CHTHVPNBOT_TGCLOUD_TOKEN repository secret" && exit 1
       - uses: actions/checkout@v5
         with:
-          fetch-depth: 0 # the release post lists the commits since the last push
+          fetch-depth: 0 # the version comes from the tags, the notes from the commits since
       - uses: actions/setup-node@v5
         with:
           node-version: 22
@@ -76,13 +78,11 @@ jobs:
       - run: mkdir -p .tgcloud && npx tgcloud fetch
       - run: npx tgcloud push
       - run: npx tgcloud migrate --safe
-      # Posts the notes to the CHTH updates channel through the hub, as <version>-<date>.<commit>.
-      # Only commits that touch this bot count.
-      - name: Announce release
+      # Every deploy that changes this bot is a release: chthvpnbot-vX.Y.Z, the patch number raised
+      # by each. The CHTH hub posts it to the updates channel.
+      - name: Publish GitHub release
         env:
-          CHTH_HUB_URL: ${{ secrets.CHTH_HUB_URL }}
-          CHTH_RELEASE_SECRET: ${{ secrets.CHTH_RELEASE_SECRET }}
-          RELEASE_PRODUCT: chthvpnbot
-          RELEASE_BASE: ${{ github.event.before }}
-          RELEASE_URL: ${{ github.server_url }}/${{ github.repository }}/commits/${{ github.sha }}
-        run: node ../.github/scripts/announce-release.mjs
+          GH_TOKEN: ${{ github.token }}
+          RELEASE_PREFIX: chthvpnbot-
+          RELEASE_TITLE: chthvpnbot
+        run: node ../.github/scripts/release.mjs publish
