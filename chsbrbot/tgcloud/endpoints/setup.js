@@ -11,15 +11,15 @@ import { ADMIN_IDS } from '../lib/config.js';
 
 const PROFILE = {
   en: ['🛡️ Real-time CVE alerts. I post newly published High and Critical vulnerabilities from NVD, and CVEs that CISA lists as exploited in the wild or that have a public exploit on GitHub, with EPSS scores. Search any CVE by product, bug type or ID. Add me to a channel or group to post the alerts there.',
-    'Real-time CVE alerts: new High/Critical CVEs, exploited and trending vulnerabilities, CVE search.'],
+    'Real-time CVE alerts: new High/Critical CVEs, exploited and trending vulnerabilities, CVE search | @chthober'],
   fa: ['🛡️ هشدار لحظه‌ای CVE. آسیب‌پذیری‌های تازهٔ High و Critical را از NVD می‌فرستم، به‌علاوهٔ CVEهایی که CISA آن‌ها را اکسپلویت‌شده در عمل می‌داند یا در گیت‌هاب اکسپلویت عمومی دارند، همراه با امتیاز EPSS. هر CVE را با نام محصول، نوع باگ یا شناسه جستجو کن. من را به کانال یا گروه اضافه کن تا هشدارها آن‌جا هم بیایند.',
-    'هشدار لحظه‌ای CVE: آسیب‌پذیری‌های تازهٔ High/Critical، CVEهای اکسپلویت‌شده و داغ، جستجوی CVE.'],
+    'هشدار لحظه‌ای CVE: آسیب‌پذیری‌های تازهٔ High/Critical، CVEهای اکسپلویت‌شده و داغ، جستجوی CVE | @chthober'],
   ar: ['🛡️ تنبيهات CVE فورية. أنشر الثغرات الجديدة من فئتي High وCritical من NVD، والثغرات التي تصنّفها CISA مستغلة فعليًا أو التي لها استغلال منشور على GitHub، مع درجات EPSS. ابحث عن أي ثغرة باسم المنتج أو نوعها أو معرّفها. أضفني إلى قناة أو مجموعة لنشر التنبيهات فيها.',
-    'تنبيهات CVE فورية: ثغرات High/Critical الجديدة، والثغرات المستغلة والرائجة، والبحث عن CVE.'],
+    'تنبيهات CVE فورية: ثغرات High/Critical الجديدة، والثغرات المستغلة والرائجة، والبحث عن CVE | @chthober'],
   ru: ['🛡️ Оповещения о CVE в реальном времени. Присылаю новые уязвимости High и Critical из NVD, а также CVE, которые CISA отмечает как эксплуатируемые или для которых есть публичный эксплойт на GitHub, с оценкой EPSS. Ищи любую CVE по продукту, типу уязвимости или ID. Добавь меня в канал или группу, чтобы оповещения приходили туда.',
-    'Оповещения о CVE: новые High/Critical, эксплуатируемые и трендовые уязвимости, поиск CVE.'],
+    'Оповещения о CVE: новые High/Critical, эксплуатируемые и трендовые уязвимости, поиск CVE | @chthober'],
   es: ['🛡️ Alertas de CVE en tiempo real. Publico vulnerabilidades nuevas de nivel High y Critical de NVD, y CVE que CISA marca como explotadas o que tienen un exploit público en GitHub, con su puntuación EPSS. Busca cualquier CVE por producto, tipo de fallo o ID. Añádeme a un canal o grupo para publicar allí las alertas.',
-    'Alertas de CVE en tiempo real: CVE High/Critical nuevas, vulnerabilidades explotadas y en tendencia, búsqueda de CVE.'],
+    'Alertas de CVE en tiempo real: nuevas High/Critical, explotadas y en tendencia, y búsqueda de CVE | @chthober'],
 };
 
 export default async function (input, ctx) {

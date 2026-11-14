@@ -10,15 +10,15 @@ import { api, EndpointError } from 'sdk';
 
 const PROFILE = {
   en: ['I sync your playlists with Telegram. Link a Spotify, YouTube Music or Apple Music playlist to a group, forum or channel: tracks posted in the chat are added to the playlist, and the playlist\'s tracks are posted in the chat when you tap Sync. Plus a shared Spotify queue for groups and song search.',
-    'Sync Spotify, YouTube Music and Apple Music playlists with your groups and channels.'],
+    'Sync Spotify, YouTube Music and Apple Music playlists with your groups and channels | @chthober'],
   fa: ['پلی‌لیست‌هات رو با تلگرام همگام می‌کنم. یه پلی‌لیست اسپاتیفای، یوتیوب موزیک یا اپل موزیک رو به یه گروه، انجمن یا کانال وصل کن: آهنگ‌هایی که توی چت فرستاده می‌شن به پلی‌لیست اضافه می‌شن، و با زدن همگام‌سازی آهنگ‌های پلی‌لیست توی چت پست می‌شن. به‌علاوه صف مشترک اسپاتیفای برای گروه‌ها و جستجوی آهنگ.',
-    'همگام‌سازی پلی‌لیست‌های اسپاتیفای، یوتیوب موزیک و اپل موزیک با گروه‌ها و کانال‌هات.'],
+    'همگام‌سازی پلی‌لیست‌های اسپاتیفای، یوتیوب موزیک و اپل موزیک با گروه‌ها و کانال‌هات | @chthober'],
   ar: ['أزامن قوائم التشغيل مع تيليجرام. اربط قائمة Spotify أو YouTube Music أو Apple Music بمجموعة أو منتدى أو قناة: تُضاف المقاطع المنشورة في الدردشة إلى القائمة، وتُنشر مقاطع القائمة في الدردشة عند الضغط على مزامنة. بالإضافة إلى قائمة انتظار Spotify مشتركة للمجموعات وبحث عن الأغاني.',
-    'زامن قوائم Spotify وYouTube Music وApple Music مع مجموعاتك وقنواتك.'],
+    'زامن قوائم Spotify وYouTube Music وApple Music مع مجموعاتك وقنواتك | @chthober'],
   ru: ['Синхронизирую плейлисты с Telegram. Привяжи плейлист Spotify, YouTube Music или Apple Music к группе, форуму или каналу: треки из чата добавляются в плейлист, а треки плейлиста публикуются в чате по кнопке «Синхронизировать». А ещё общая очередь Spotify для групп и поиск песен.',
-    'Синхронизация плейлистов Spotify, YouTube Music и Apple Music с группами и каналами.'],
+    'Синхронизация плейлистов Spotify, YouTube Music и Apple Music с группами и каналами | @chthober'],
   es: ['Sincronizo tus listas con Telegram. Vincula una lista de Spotify, YouTube Music o Apple Music a un grupo, foro o canal: las pistas publicadas en el chat se añaden a la lista, y las de la lista se publican en el chat al tocar Sincronizar. Además, una cola de Spotify compartida para grupos y búsqueda de canciones.',
-    'Sincroniza listas de Spotify, YouTube Music y Apple Music con tus grupos y canales.'],
+    'Sincroniza listas de Spotify, YouTube Music y Apple Music con tus grupos y canales | @chthober'],
 };
 
 const GROUP_COMMANDS = {

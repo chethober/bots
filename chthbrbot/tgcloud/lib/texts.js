@@ -41,7 +41,7 @@ const fa = (w) => {
         'متن دعوتت رو خودت بنویس، ناشناس جواب بده، فرستنده رو مسدود کن یا پیام رو گزارش بده. ' +
         'هویت فرستنده هیچ‌وقت به تو نشون داده نمی‌شه.\n\n' +
         'برای شروع «شروع» رو بزن.',
-      shortDescription: 'لینک ناشناس شخصی 🤫 از دوست‌ها و مخاطب‌هات پیام ناشناس بگیر و ناشناس جواب بده.',
+      shortDescription: 'لینک ناشناس شخصی 🤫 از دوست‌ها و مخاطب‌هات پیام ناشناس بگیر و ناشناس جواب بده | @chthober',
     },
 
     // Reply keyboard
@@ -369,7 +369,7 @@ const en = (w) => {
         'Write your own invitation text, reply anonymously, block a sender or report a message. ' +
         "The sender's identity is never shown to you.\n\n" +
         'Press Start to begin.',
-      shortDescription: 'Personal anonymous link 🤫 Get anonymous messages from friends and reply anonymously.',
+      shortDescription: 'Personal anonymous link 🤫 Get anonymous messages from friends and reply anonymously | @chthober',
     },
 
     kb: {
@@ -679,7 +679,7 @@ const ar = (w) => {
         'اكتب نص دعوتك بنفسك، وردّ دون كشف هويتك، واحظر مرسلًا أو أبلغ عن رسالة. ' +
         'هوية المرسل لا تظهر لك أبدًا.\n\n' +
         'اضغط «ابدأ» للبدء.',
-      shortDescription: 'رابط مجهول خاص 🤫 استقبل رسائل مجهولة من أصدقائك وردّ دون كشف هويتك.',
+      shortDescription: 'رابط مجهول خاص 🤫 استقبل رسائل مجهولة من أصدقائك وردّ دون كشف هويتك | @chthober',
     },
 
     kb: {
@@ -989,7 +989,7 @@ const ru = (w) => {
         'Напиши свой текст приглашения, отвечай анонимно, блокируй отправителей или жалуйся на сообщения. ' +
         'Личность отправителя тебе никогда не показывается.\n\n' +
         'Нажми «Старт», чтобы начать.',
-      shortDescription: 'Личная анонимная ссылка 🤫 Получай анонимные сообщения от друзей и отвечай анонимно.',
+      shortDescription: 'Личная анонимная ссылка 🤫 Получай анонимные сообщения от друзей и отвечай анонимно | @chthober',
     },
 
     kb: {
@@ -1299,7 +1299,7 @@ const es = (w) => {
         'Escribe tu propio texto de invitación, responde de forma anónima, bloquea a un remitente o reporta un mensaje. ' +
         'Nunca verás la identidad del remitente.\n\n' +
         'Pulsa Iniciar para empezar.',
-      shortDescription: 'Enlace anónimo personal 🤫 Recibe mensajes anónimos de tus amigos y responde de forma anónima.',
+      shortDescription: 'Enlace anónimo personal 🤫 Recibe mensajes anónimos de tus amigos y responde de forma anónima | @chthober',
     },
 
     kb: {

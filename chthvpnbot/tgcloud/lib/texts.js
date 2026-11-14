@@ -126,7 +126,7 @@ const en = {
       'join, and get the connection details. Owners never see who you are.\n\n' +
       'Run a server? Share it publicly or by private invite, with an optional password. ' +
       'Works best with xtune: every member gets their own account.\n\nOpen source.',
-    shortDescription: 'Free VPNs shared by their owners. Join one, or share yours. Works best with xtune. Open source.',
+    shortDescription: 'Free VPNs shared by their owners. Join one, or share yours. Works best with xtune. Open source | @chthober',
   },
   kb: { directory: '🌍 Directory', joined: '📂 My VPNs', add: '➕ Add VPN', mine: '🛠 My servers', language: '🌐 Language', about: 'ℹ️ About' },
 
@@ -318,7 +318,7 @@ const fa = {
       'عضو شو و اطلاعات اتصال رو بگیر. صاحب سرور هیچ‌وقت نمی‌فهمه تو کی هستی.\n\n' +
       'سرور داری؟ عمومی یا با دعوت خصوصی (و رمز دلخواه) به اشتراکش بذار. ' +
       'با xtune بهترین کار رو می‌کنه: هر عضو حساب خودش رو می‌گیره.\n\nمتن‌باز.',
-    shortDescription: 'وی‌پی‌ان‌های رایگان که صاحب‌هاشون به اشتراک گذاشتن. عضو شو یا مال خودت رو بذار. با xtune. متن‌باز.',
+    shortDescription: 'وی‌پی‌ان‌های رایگان که صاحب‌هاشون به اشتراک گذاشتن. عضو شو یا مال خودت رو بذار. با xtune. متن‌باز | @chthober',
   },
   kb: { directory: '🌍 فهرست', joined: '📂 وی‌پی‌ان‌های من', add: '➕ افزودن وی‌پی‌ان', mine: '🛠 سرورهای من', language: '🌐 زبان', about: 'ℹ️ درباره' },
 
@@ -507,7 +507,7 @@ const ar = {
       'VPN المجتمع 🌍\n\nشبكات VPN مجانية يشاركها من يديرونها. تصفّح الدليل أو افتح دعوة، انضم واحصل على بيانات الاتصال. ' +
       'لا يعرف المالك من أنت أبداً.\n\nلديك خادم؟ شاركه علناً أو بدعوة خاصة مع كلمة مرور اختيارية. ' +
       'يعمل بأفضل شكل مع xtune: كل عضو يحصل على حسابه الخاص.\n\nمفتوح المصدر.',
-    shortDescription: 'شبكات VPN مجانية يشاركها أصحابها. انضم إلى واحدة أو شارك خادمك. الأفضل مع xtune. مفتوح المصدر.',
+    shortDescription: 'شبكات VPN مجانية يشاركها أصحابها. انضم إلى واحدة أو شارك خادمك. الأفضل مع xtune. مفتوح المصدر | @chthober',
   },
   kb: { directory: '🌍 الدليل', joined: '📂 شبكاتي', add: '➕ إضافة VPN', mine: '🛠 خوادمي', language: '🌐 اللغة', about: 'ℹ️ حول' },
 
@@ -696,7 +696,7 @@ const ru = {
       'вступайте и получайте данные для подключения. Владелец никогда не узнает, кто вы.\n\n' +
       'Есть сервер? Поделитесь им открыто или по закрытому приглашению, с паролем по желанию. ' +
       'Лучше всего с xtune: у каждого участника свой аккаунт.\n\nОткрытый исходный код.',
-    shortDescription: 'Бесплатные VPN от их владельцев. Вступайте или делитесь своим. Лучше всего с xtune. Открытый код.',
+    shortDescription: 'Бесплатные VPN от их владельцев. Вступайте или делитесь своим. Лучше всего с xtune. Открытый код | @chthober',
   },
   kb: { directory: '🌍 Каталог', joined: '📂 Мои VPN', add: '➕ Добавить VPN', mine: '🛠 Мои серверы', language: '🌐 Язык', about: 'ℹ️ О боте' },
 
@@ -886,7 +886,7 @@ const es = {
       'únete y recibe los datos de conexión. El dueño nunca sabe quién eres.\n\n' +
       '¿Tienes un servidor? Compártelo en público o con invitación privada, con contraseña opcional. ' +
       'Funciona mejor con xtune: cada miembro recibe su propia cuenta.\n\nCódigo abierto.',
-    shortDescription: 'VPN gratuitas compartidas por sus dueños. Únete a una o comparte la tuya. Mejor con xtune. Código abierto.',
+    shortDescription: 'VPN gratuitas compartidas por sus dueños. Únete a una o comparte la tuya. Mejor con xtune. Código abierto | @chthober',
   },
   kb: { directory: '🌍 Directorio', joined: '📂 Mis VPN', add: '➕ Añadir VPN', mine: '🛠 Mis servidores', language: '🌐 Idioma', about: 'ℹ️ Acerca de' },
 

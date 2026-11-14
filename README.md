@@ -104,6 +104,10 @@ folder. On `main`, it then deploys with `tgcloud push` and applies the safe sche
 `tgcloud migrate --safe`. Destructive schema changes are only listed in the job log, so apply those
 by hand with `npx tgcloud migrate`. You can also run a workflow by hand from the Actions tab.
 
+A deploy does not change a bot's profile. After editing a description or bio, run the
+`bot profiles` workflow (`.github/workflows/bot-profiles.yml`) from the Actions tab: it runs the
+setup endpoint of one bot or of all of them.
+
 The workflows read these repository secrets:
 
 | Bot | Secrets |
