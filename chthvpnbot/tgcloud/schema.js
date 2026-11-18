@@ -31,9 +31,11 @@ export const vpns = table('vpns', {
   fails:       integer('fails').notNull().default(0),   // failed health checks in a row
   checkedAt:   integer('checked_at').notNull().default(0),
   announcedAt: integer('announced_at').notNull().default(0),
+  dirId:       text('dir_id'),                          // shared from the xtune app: its ID in the community directory (ownerId 0)
   createdAt:   integer('created_at').notNull(),
 }, (t) => ({
   codeIdx:  uniqueIndex('uidx_vpns_code').on(t.code),
+  dirIdx2:  index('idx_vpns_dir_id').on(t.dirId),
   ownerIdx: index('idx_vpns_owner').on(t.ownerId),
   dirIdx:   index('idx_vpns_dir').on(t.public, t.status),
 }));

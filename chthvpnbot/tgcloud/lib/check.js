@@ -80,7 +80,8 @@ async function notifyOwner(vpn, text) {
 // only get their member count refreshed.
 export async function runChecks() {
   const due = await db.select().from(vpns)
-    .where(and(lt(vpns.checkedAt, now() - CHECK_EVERY_SEC), ne(vpns.unlisted, true)))
+    // the VPNs shared from the xtune app (ownerId 0) are checked by the directory
+    .where(and(lt(vpns.checkedAt, now() - CHECK_EVERY_SEC), ne(vpns.unlisted, true), ne(vpns.ownerId, 0)))
     .orderBy(asc(vpns.checkedAt)).limit(CHECKS_PER_TICK).all();
   const out = { checked: 0, down: 0 };
   for (const v of due) {

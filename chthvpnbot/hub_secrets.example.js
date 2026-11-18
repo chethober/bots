@@ -4,3 +4,8 @@
 export const HUB_URL = '';     // e.g. https://hub.example.com
 export const HUB_SECRET = '';  // this bot's own secret, also set in the hub's SOURCE_SECRETS
 export const HUB_SOURCE = 'chthvpnbot';
+// The xtune community directory (github.com/chethober/xtune, community/): its address and the
+// Worker's BOT_KEY. CI writes them from XTUNE_DIRECTORY_URL and CHTHVPNBOT_DIRECTORY_KEY. Empty
+// switches the sync off.
+export const DIRECTORY_URL = '';
+export const DIRECTORY_KEY = '';

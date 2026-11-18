@@ -16,6 +16,7 @@ import { db } from 'sdk';
 import { eq } from 'sdk/db';
 import { reports } from '../schema.js';
 import { isAdmin, sendReport } from '../lib/admin.js';
+import { fromApp, unlistInDirectory } from '../lib/directory.js';
 import { closeScreen, drop, isScreen, sameWidget, setLocale, showScreen, textsFor, textsOf } from '../lib/chats.js';
 import { checkVpn } from '../lib/check.js';
 import {
@@ -189,16 +190,19 @@ async function onAdmin(q, op, report, L) {
   }
   if (!vpn) return done(L.adminReportGone);
   const OL = await textsOf(vpn.ownerId);
+  const app = fromApp(vpn); // shared from the xtune app: no owner here, and the directory follows
   if (op === 'au') {
     await updateVpn(vpn.id, { unlisted: true });
     await closeReports(vpn.id);
-    await safeApi('sendMessage', { chat_id: vpn.ownerId, text: OL.ownerUnlisted(vpn) });
+    await unlistInDirectory(vpn, false);
+    if (!app) await safeApi('sendMessage', { chat_id: vpn.ownerId, text: OL.ownerUnlisted(vpn) });
     return done(L.adminUnlisted);
   }
-  if (op === 'ad') {
+  if (op === 'ad' || (op === 'ab' && app)) {
     await notifyMembers(vpn, (ML) => ({ text: ML.vpnRemoved(vpn) }));
     await deleteVpn(vpn.id);
-    await safeApi('sendMessage', { chat_id: vpn.ownerId, text: OL.ownerDeleted(vpn) });
+    await unlistInDirectory(vpn, true);
+    if (!app) await safeApi('sendMessage', { chat_id: vpn.ownerId, text: OL.ownerDeleted(vpn) });
     return done(L.adminDeleted);
   }
   if (op === 'ab') {
