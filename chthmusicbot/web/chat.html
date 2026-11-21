@@ -1,0 +1,1013 @@
+<!doctype html>
+<html lang="en" data-theme="dark">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="color-scheme" content="light dark">
+<title>Chat music</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Vazirmatn:wght@400;500;600;700&display=swap" rel="stylesheet">
+<script src="https://telegram.org/js/telegram-web-app.js"></script>
+<style>
+  /* Apple's design tokens: system colors, labels, fills, materials and the
+     iOS type scale, in light and dark. The theme follows Telegram's. */
+  :root {
+    --font: -apple-system, BlinkMacSystemFont, "SF Pro Text", "SF Pro Display", "Helvetica Neue", system-ui, "Segoe UI", Roboto, "Vazirmatn", sans-serif;
+    --large-title: 700 34px/41px var(--font); --title1: 700 28px/34px var(--font); --title2: 700 22px/28px var(--font);
+    --title3: 600 20px/25px var(--font); --headline: 600 17px/22px var(--font); --body: 400 17px/22px var(--font);
+    --callout: 400 16px/21px var(--font); --subhead: 400 15px/20px var(--font); --footnote: 400 13px/18px var(--font);
+    --caption1: 400 12px/16px var(--font); --caption2: 400 11px/13px var(--font);
+    --r-xs: 8px; --r-s: 12px; --r-m: 18px; --r-l: 26px; --r-xl: 34px;
+    --ease: cubic-bezier(.32, .72, 0, 1);
+    --tab: 64px;
+  }
+  :root[data-theme="light"] {
+    --pink: #FF2D55; --red: #FF3B30; --orange: #FF9500; --green: #34C759; --blue: #007AFF; --indigo: #5856D6; --purple: #AF52DE; --gray: #8E8E93;
+    --label: #000000; --label2: rgba(60,60,67,.6); --label3: rgba(60,60,67,.3); --label4: rgba(60,60,67,.18);
+    --bg: #F2F2F7; --bg2: #FFFFFF; --sep: rgba(60,60,67,.29);
+    --fill: rgba(120,120,128,.2); --fill2: rgba(120,120,128,.16); --fill3: rgba(118,118,128,.12); --fill4: rgba(116,116,128,.08);
+    --material: rgba(255,255,255,.62); --glass: rgba(255,255,255,.42); --glass-strong: rgba(255,255,255,.72);
+    --rim: rgba(255,255,255,.95); --rim2: rgba(255,255,255,.35); --shade: rgba(0,0,0,.10); --aura: .3;
+    --thumb: #FFFFFF;
+  }
+  :root[data-theme="dark"] {
+    --pink: #FF375F; --red: #FF453A; --orange: #FF9F0A; --green: #30D158; --blue: #0A84FF; --indigo: #5E5CE6; --purple: #BF5AF2; --gray: #8E8E93;
+    --label: #FFFFFF; --label2: rgba(235,235,245,.6); --label3: rgba(235,235,245,.3); --label4: rgba(235,235,245,.16);
+    --bg: #000000; --bg2: #1C1C1E; --sep: rgba(84,84,88,.6);
+    --fill: rgba(120,120,128,.36); --fill2: rgba(120,120,128,.32); --fill3: rgba(118,118,128,.24); --fill4: rgba(118,118,128,.18);
+    --material: rgba(30,30,32,.56); --glass: rgba(255,255,255,.08); --glass-strong: rgba(255,255,255,.16);
+    --rim: rgba(255,255,255,.55); --rim2: rgba(255,255,255,.12); --shade: rgba(0,0,0,.45); --aura: .45;
+    --thumb: #636366;
+  }
+  :root { --tint: var(--pink); }
+
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  html { background: var(--bg); transition: background .3s; }
+  html, body { margin: 0; min-height: 100%; color: var(--label); font: var(--body); letter-spacing: -.41px; -webkit-font-smoothing: antialiased; }
+  body { padding-bottom: calc(var(--tab) + 92px + env(safe-area-inset-bottom)); overflow-x: hidden; }
+  button { font: inherit; color: inherit; letter-spacing: inherit; background: none; border: 0; cursor: pointer; padding: 0; }
+  button:disabled { opacity: .4; cursor: default; }
+  [hidden] { display: none !important; }
+  svg.i { width: 22px; height: 22px; flex: none; display: block; }
+  .tnum { font-variant-numeric: tabular-nums; }
+
+  /* Liquid Glass: a clear, refracting layer with a specular rim. Controls float
+     on it; content sits on the thicker material below. */
+  .glass, .material { position: relative; isolation: isolate; -webkit-backdrop-filter: blur(22px) saturate(190%); backdrop-filter: blur(22px) saturate(190%); }
+  .glass { background: radial-gradient(130% 90% at 18% 0%, var(--rim2), transparent 55%), var(--glass); box-shadow: 0 10px 30px var(--shade), 0 1px 2px var(--shade), inset 0 1px 1px var(--rim2), inset 0 -1px 2px rgba(255,255,255,.06); }
+  .material { background: var(--material); -webkit-backdrop-filter: blur(40px) saturate(180%); backdrop-filter: blur(40px) saturate(180%); box-shadow: 0 1px 0 var(--rim2) inset; }
+  .glass::before { content: ""; position: absolute; inset: 0; border-radius: inherit; padding: 1px; pointer-events: none; z-index: 2;
+    background: linear-gradient(150deg, var(--rim) 0%, transparent 32%, transparent 68%, var(--rim2) 100%);
+    -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0); -webkit-mask-composite: xor; mask: linear-gradient(#000 0 0) content-box exclude, linear-gradient(#000 0 0); }
+  .press { transition: transform .35s var(--ease), background .2s; }
+  .press:active { transform: scale(.94); }
+
+  /* Backdrop: soft color from the chat, like Apple Music's moving art. */
+  .aura { position: fixed; inset: -25% -35% auto; height: 75vh; z-index: -1; pointer-events: none; filter: blur(70px) saturate(140%); opacity: var(--aura); }
+  .aura i { position: absolute; width: 62%; height: 70%; border-radius: 50%; animation: drift 20s ease-in-out infinite alternate; }
+  .aura i:nth-child(1) { left: 8%; top: 0; background: var(--c1, var(--pink)); }
+  .aura i:nth-child(2) { right: 4%; top: 22%; background: var(--c2, var(--indigo)); animation-duration: 26s; animation-direction: alternate-reverse; }
+  @keyframes drift { to { transform: translate(10%, 12%) scale(1.15); } }
+
+  /* Navigation: an iOS large title. */
+  header { padding: 18px 20px 4px; }
+  .sub { font: var(--footnote); color: var(--label2); display: flex; align-items: center; gap: 6px; letter-spacing: -.08px; }
+  .live { width: 7px; height: 7px; border-radius: 50%; background: var(--green); box-shadow: 0 0 0 3px color-mix(in srgb, var(--green) 25%, transparent); }
+  h1 { font: var(--large-title); letter-spacing: .37px; margin: 4px 0 0; overflow-wrap: anywhere; }
+  h1 .topic { display: block; font: var(--title3); color: var(--label2); margin-top: 2px; letter-spacing: .38px; }
+  .chips { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 12px; }
+  .chip { display: inline-flex; align-items: center; gap: 6px; height: 32px; padding: 0 12px; border-radius: 999px; font: 600 13px/1 var(--font); letter-spacing: -.08px; max-width: 100%; }
+  .chip b { font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .chip svg.i { width: 14px; height: 14px; color: var(--orange); }
+  .dot { width: 8px; height: 8px; border-radius: 50%; flex: none; }
+
+  section { padding: 0 16px; }
+  .h2 { display: flex; align-items: baseline; justify-content: space-between; margin: 26px 4px 10px; }
+  .h2 h2 { font: var(--title2); letter-spacing: .35px; margin: 0; }
+  .h2 span { font: var(--subhead); color: var(--label2); }
+  .foot { font: var(--footnote); color: var(--label2); margin: 10px 16px; letter-spacing: -.08px; }
+  .err { color: var(--red); }
+  .caps { font: 600 12px/16px var(--font); letter-spacing: .4px; text-transform: uppercase; color: var(--label2); }
+
+  /* Artwork: real covers, or a gradient made from the song's name. */
+  .art { position: relative; width: 48px; height: 48px; border-radius: var(--r-xs); flex: none; background: var(--cv) center/cover no-repeat; display: grid; place-items: center; overflow: hidden; color: rgba(255,255,255,.92); font: 600 18px var(--font); box-shadow: 0 0 0 .5px var(--label4) inset; }
+  .art .pi { position: absolute; inset-block-end: 4px; inset-inline-end: 4px; width: 22px; height: 22px; border-radius: 50%; display: grid; place-items: center; color: #fff; background: rgba(0,0,0,.28); -webkit-backdrop-filter: blur(10px); backdrop-filter: blur(10px); box-shadow: inset 0 0 0 .5px rgba(255,255,255,.45); }
+  .art .pi svg { width: 11px; height: 11px; }
+  .art.playing .pi { background: var(--tint); }
+
+  .eq { display: inline-flex; gap: 2px; align-items: flex-end; height: 11px; }
+  .eq i { width: 2.5px; border-radius: 2px; background: var(--tint); animation: eq .9s ease-in-out infinite; }
+  .eq i:nth-child(2) { animation-delay: -.3s; } .eq i:nth-child(3) { animation-delay: -.6s; }
+  @keyframes eq { 0%, 100% { height: 3px; } 50% { height: 11px; } }
+
+  /* Now playing */
+  .np { margin: 16px 16px 0; padding: 14px; border-radius: var(--r-l); display: grid; grid-template-columns: 64px 1fr; gap: 14px; align-items: center; }
+  .np .art { width: 64px; height: 64px; border-radius: var(--r-s); box-shadow: 0 6px 16px var(--shade); }
+  .np .who { font: var(--caption1); color: var(--label2); display: flex; gap: 6px; align-items: center; }
+  .np .t { font: var(--headline); letter-spacing: -.43px; margin-top: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .np .a { font: var(--subhead); color: var(--label2); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; letter-spacing: -.24px; }
+  .np .ctl { grid-column: 1 / -1; display: flex; justify-content: center; align-items: center; gap: 40px; direction: ltr; padding: 4px 0 2px; }
+  .np .ctl button { display: grid; place-items: center; width: 52px; height: 52px; border-radius: 50%; color: var(--label); }
+  .np .ctl button:active { background: var(--fill3); }
+  .np .ctl svg { width: 30px; height: 30px; }
+  .np .ctl .big svg { width: 38px; height: 38px; }
+  .np .next { grid-column: 1 / -1; font: var(--footnote); color: var(--label2); border-top: .5px solid var(--sep); padding-top: 10px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .np .next b { color: var(--label); font-weight: 500; }
+
+  /* Search field */
+  .search { position: relative; margin-top: 16px; }
+  .search svg.i { position: absolute; inset-inline-start: 14px; top: 50%; transform: translateY(-50%); width: 18px; height: 18px; color: var(--label2); pointer-events: none; z-index: 3; }
+  .search input { width: 100%; height: 48px; padding: 0 16px; padding-inline-start: 42px; font: var(--body); letter-spacing: -.41px; color: var(--label); background: transparent; border: 0; border-radius: 999px; outline: none; -webkit-appearance: none; appearance: none; position: relative; z-index: 1; }
+  .search input::placeholder { color: var(--label2); }
+  .search input::-webkit-search-cancel-button { -webkit-appearance: none; }
+  .search .glass { position: absolute; inset: 0; border-radius: 999px; transition: box-shadow .25s; }
+  .search input:focus + .glass { box-shadow: 0 0 0 3px color-mix(in srgb, var(--tint) 35%, transparent), 0 10px 30px var(--shade); }
+
+  /* Inset grouped lists */
+  .list { border-radius: var(--r-l); overflow: hidden; }
+  .row { display: flex; align-items: center; gap: 12px; padding: 8px 12px 8px 14px; min-height: 64px; position: relative; }
+  .row + .row::before { content: ""; position: absolute; top: 0; inset-inline-start: 74px; inset-inline-end: 0; height: .5px; background: var(--sep); }
+  .row.on .meta .t { color: var(--tint); }
+  .meta { flex: 1; min-width: 0; }
+  .meta .t { font: var(--body); letter-spacing: -.41px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .meta .s { font: var(--subhead); letter-spacing: -.24px; color: var(--label2); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .acts { display: flex; gap: 0; flex: none; align-items: center; }
+  .ib { width: 36px; height: 36px; border-radius: 50%; display: grid; place-items: center; color: var(--label2); }
+  .ib svg { width: 18px; height: 18px; }
+  .ib:active { background: var(--fill3); }
+  .ib.del:active { color: var(--red); }
+  .ib.add { color: var(--tint); }
+  .ib.add svg { width: 28px; height: 28px; }
+
+  /* Up next */
+  .hero { display: flex; gap: 14px; align-items: center; padding: 14px; border-radius: var(--r-l); margin-bottom: 10px; }
+  .hero .art { width: 84px; height: 84px; border-radius: var(--r-s); box-shadow: 0 8px 20px var(--shade); font-size: 28px; }
+  .hero .k { font: 600 11px/13px var(--font); letter-spacing: .6px; text-transform: uppercase; color: var(--tint); }
+  .hero .t { font: var(--title3); letter-spacing: .38px; margin: 3px 0 1px; white-space: normal; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+
+  /* Buttons: capsules, prominent (tinted glass) and plain glass */
+  .btn { display: flex; align-items: center; justify-content: center; gap: 7px; width: 100%; height: 52px; padding: 0 20px; border-radius: 999px; font: var(--headline); letter-spacing: -.43px; color: var(--label); }
+  .btn svg.i { width: 18px; height: 18px; }
+  .btn.prominent { color: #fff; background: radial-gradient(120% 120% at 25% 0%, rgba(255,255,255,.35), transparent 55%), var(--tint); box-shadow: 0 10px 26px color-mix(in srgb, var(--tint) 40%, transparent), inset 0 1px 1px rgba(255,255,255,.45), inset 0 -1px 1px rgba(0,0,0,.12); }
+  .btn.plain { height: 44px; color: var(--tint); font-weight: 400; }
+  .btn.plain.bad { color: var(--red); }
+  .pair { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 16px; }
+
+  /* Playlists */
+  .pl { border-radius: var(--r-l); padding: 16px; margin-bottom: 10px; }
+  .pl .top { display: flex; gap: 12px; align-items: flex-start; }
+  .pl .badge-svc { width: 44px; height: 44px; border-radius: var(--r-s); display: grid; place-items: center; flex: none; background: var(--sc); color: #fff; box-shadow: 0 6px 14px color-mix(in srgb, var(--sc) 40%, transparent); }
+  .pl .name { font: var(--headline); letter-spacing: -.43px; overflow-wrap: anywhere; }
+  .pl .sv { font: var(--subhead); color: var(--label2); letter-spacing: -.24px; }
+  .pl .stats { display: flex; align-items: center; gap: 8px; margin-top: 14px; flex-wrap: wrap; }
+  .pill { display: inline-flex; align-items: center; gap: 5px; height: 30px; padding: 0 12px; border-radius: 999px; background: var(--fill3); font: 500 13px/1 var(--font); color: var(--label2); letter-spacing: -.08px; }
+  .pill b { color: var(--label); font-weight: 600; }
+  .pill.btnish { margin-inline-start: auto; color: var(--tint); font-weight: 600; }
+  .pl .tracks { margin-top: 12px; border-radius: var(--r-m); overflow: hidden; background: var(--fill4); }
+  .chev { transition: transform .35s var(--ease); width: 14px !important; height: 14px !important; }
+  .chev.open { transform: rotate(180deg); }
+
+  /* Sheet: the "link a playlist" form, with iOS controls */
+  .sheet { border-radius: var(--r-xl); padding: 8px 16px 16px; margin-top: 12px; }
+  .grabber { width: 36px; height: 5px; border-radius: 3px; background: var(--label3); margin: 0 auto 12px; }
+  .sheet h3 { font: var(--headline); text-align: center; margin: 0 0 6px; letter-spacing: -.43px; }
+  .gh { margin: 20px 12px 7px; }
+  .group { border-radius: var(--r-m); overflow: hidden; background: var(--fill4); }
+  .opt { display: flex; align-items: center; gap: 12px; width: 100%; min-height: 48px; padding: 10px 14px; text-align: start; position: relative; }
+  .opt + .opt::before { content: ""; position: absolute; top: 0; inset-inline-start: 14px; inset-inline-end: 0; height: .5px; background: var(--sep); }
+  .opt:active { background: var(--fill3); }
+  .opt .check { width: 18px; height: 18px; color: var(--tint); opacity: 0; flex: none; }
+  .opt[aria-checked="true"] .check { opacity: 1; }
+  .opts { max-height: 290px; overflow-y: auto; }
+  .seg { display: grid; grid-template-columns: repeat(var(--n), 1fr); padding: 2px; border-radius: 10px; background: var(--fill3); position: relative; }
+  .seg button { height: 32px; border-radius: 8px; font: 500 13px/1 var(--font); letter-spacing: -.08px; color: var(--label); display: flex; align-items: center; justify-content: center; gap: 6px; white-space: nowrap; overflow: hidden; padding: 0 6px; }
+  .seg button[aria-pressed="true"] { background: var(--thumb); font-weight: 600; box-shadow: 0 3px 8px rgba(0,0,0,.12), 0 3px 1px rgba(0,0,0,.04), inset 0 0 0 .5px rgba(0,0,0,.04); }
+  .toggle { display: flex; align-items: center; gap: 12px; width: 100%; min-height: 48px; padding: 8px 14px; text-align: start; font: var(--body); }
+  .toggle span { flex: 1; }
+  .switch { width: 51px; height: 31px; border-radius: 999px; background: var(--fill); flex: none; position: relative; transition: background .25s; }
+  .switch::after { content: ""; position: absolute; top: 2px; inset-inline-start: 2px; width: 27px; height: 27px; border-radius: 50%; background: #fff; box-shadow: 0 3px 8px rgba(0,0,0,.15), 0 3px 1px rgba(0,0,0,.06); transition: inset-inline-start .3s var(--ease); }
+  .toggle[aria-checked="true"] .switch { background: var(--green); }
+  .toggle[aria-checked="true"] .switch::after { inset-inline-start: 22px; }
+
+  /* Picks */
+  .feature { position: relative; border-radius: var(--r-l); overflow: hidden; isolation: isolate; padding: 18px; min-height: 230px; display: flex; flex-direction: column; justify-content: flex-end; color: #fff; margin-top: 8px; box-shadow: 0 14px 34px var(--shade); }
+  .feature::before { content: ""; position: absolute; inset: 0; background: var(--cv) center/cover; z-index: -2; }
+  .feature::after { content: ""; position: absolute; inset: 0; z-index: -1; background: linear-gradient(180deg, transparent 25%, rgba(0,0,0,.25) 50%, rgba(0,0,0,.72)); }
+  .feature .k { font: 600 11px/13px var(--font); letter-spacing: .6px; text-transform: uppercase; opacity: .8; }
+  .feature .t { font: var(--title1); letter-spacing: .36px; margin-top: 4px; }
+  .feature .a { font: var(--callout); opacity: .85; }
+  .feature .why { color: rgba(255,255,255,.75); }
+  .feature .bar { display: flex; gap: 10px; margin-top: 14px; }
+  .feature .bar .btn { width: auto; height: 44px; padding: 0 18px; color: #fff; }
+  .feature .bar .btn.glass { background: radial-gradient(130% 90% at 18% 0%, rgba(255,255,255,.35), transparent 55%), rgba(255,255,255,.16); }
+  .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 18px 14px; margin-top: 18px; }
+  .tile { min-width: 0; }
+  .tile .art { width: 100%; height: auto; aspect-ratio: 1; border-radius: 10px; font-size: 40px; box-shadow: 0 8px 20px var(--shade); }
+  .tile .art .pi { inset-block-end: 8px; inset-inline-end: auto; inset-inline-start: 8px; width: 30px; height: 30px; }
+  .tile .art .pi svg { width: 13px; height: 13px; }
+  .tile .fab { position: absolute; inset-block-end: 8px; inset-inline-end: 8px; width: 30px; height: 30px; border-radius: 50%; display: grid; place-items: center; color: #fff; z-index: 2; background: rgba(0,0,0,.28); -webkit-backdrop-filter: blur(10px) saturate(180%); backdrop-filter: blur(10px) saturate(180%); box-shadow: inset 0 0 0 .5px rgba(255,255,255,.5), 0 4px 10px rgba(0,0,0,.2); }
+  .tile .fab svg { width: 15px; height: 15px; }
+  .tile .t { font: 500 13px/18px var(--font); letter-spacing: -.08px; margin-top: 7px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .tile .s { font: var(--footnote); color: var(--label2); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; letter-spacing: -.08px; }
+  .why { display: flex; align-items: center; gap: 4px; font: var(--caption1); color: var(--label2); margin-top: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .why svg.i { width: 11px; height: 11px; color: var(--tint); }
+
+  /* Sleep: the Clock app's timer */
+  .timer { border-radius: var(--r-xl); padding: 24px 16px 20px; margin-top: 16px; text-align: center; }
+  .dial { position: relative; width: 236px; height: 236px; margin: 0 auto; }
+  .dial svg { width: 100%; height: 100%; transform: rotate(-90deg); }
+  .dial .in { position: absolute; inset: 0; display: grid; place-content: center; gap: 4px; }
+  .dial .clock { font: 200 54px/1 var(--font); letter-spacing: -1px; }
+  .dial .cap { font: var(--subhead); color: var(--label2); display: flex; align-items: center; justify-content: center; gap: 5px; }
+  .dial .cap svg { width: 14px; height: 14px; color: var(--orange); }
+  .dial .idle svg { width: 44px; height: 44px; margin: 0 auto 6px; color: var(--orange); }
+  .presets { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-top: 18px; }
+  .preset { aspect-ratio: 1; border-radius: 50%; display: grid; place-content: center; line-height: 1; }
+  .preset b { font: 400 22px/1 var(--font); display: block; letter-spacing: .35px; }
+  .preset small { font: var(--caption2); color: var(--label2); margin-top: 3px; display: block; }
+  .cancel { margin: 14px auto 0; width: auto; padding: 0 26px; height: 44px; color: var(--red); }
+
+  /* Empty states and placeholders */
+  .empty { text-align: center; padding: 34px 24px; color: var(--label2); font: var(--subhead); }
+  .empty svg.i { width: 50px; height: 50px; margin: 0 auto 12px; color: var(--label3); }
+  .sk { height: 64px; border-radius: var(--r-m); background: linear-gradient(90deg, var(--fill4), var(--fill3), var(--fill4)) 0 0/200% 100%; animation: sk 1.3s linear infinite; }
+  .sk + .sk { margin-top: 8px; }
+  @keyframes sk { to { background-position: -200% 0; } }
+
+  /* Tab bar: a floating glass capsule; the current tab sits under a glass lens. */
+  .tabbar { position: fixed; z-index: 30; left: 16px; right: 16px; bottom: calc(10px + env(safe-area-inset-bottom)); height: var(--tab); border-radius: 999px; display: grid; grid-template-columns: repeat(4, 1fr); padding: 4px; }
+  .tabbar button { position: relative; border-radius: 999px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; color: var(--label); font: 500 10px/12px var(--font); letter-spacing: .1px; min-width: 0; z-index: 3; transition: color .25s; }
+  .tabbar button span { max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; padding: 0 4px; }
+  .tabbar button svg.i { width: 24px; height: 24px; }
+  .tabbar button[aria-selected="true"] { color: var(--tint); }
+  .lens { position: absolute; z-index: 2; top: 4px; bottom: 4px; border-radius: 999px; background: var(--fill3); box-shadow: inset 0 1px 1px var(--rim2), inset 0 0 0 .5px var(--rim2); transition: left .45s var(--ease), width .45s var(--ease); }
+  .tabbar .badge { position: absolute; top: 5px; inset-inline-start: calc(50% + 6px); min-width: 18px; height: 18px; padding: 0 5px; border-radius: 9px; background: var(--red); color: #fff; font: 600 11px/18px var(--font); letter-spacing: 0; }
+  .tabbar .badge.pip { min-width: 0; width: 8px; height: 8px; padding: 0; top: 9px; inset-inline-start: calc(50% + 9px); background: var(--orange); }
+
+  /* Mini player: a glass capsule above the tab bar, as in Music. */
+  .mini { position: fixed; z-index: 29; left: 24px; right: 24px; bottom: calc(var(--tab) + 18px + env(safe-area-inset-bottom)); height: 56px; border-radius: 999px; display: flex; align-items: center; gap: 10px; padding: 0 8px; padding-inline-start: 8px; animation: rise .45s var(--ease); overflow: hidden; }
+  @keyframes rise { from { transform: translateY(16px) scale(.96); opacity: 0; } }
+  .mini .art { width: 40px; height: 40px; border-radius: 50%; }
+  .mini .meta .t { font: 600 15px/20px var(--font); letter-spacing: -.24px; }
+  .mini .meta .s { font: var(--caption1); display: flex; align-items: center; gap: 6px; }
+  .mini .prog { position: absolute; left: 24px; right: 24px; bottom: 5px; height: 2px; border-radius: 1px; background: var(--fill2); overflow: hidden; }
+  .mini .prog i { display: block; height: 100%; width: 0; background: var(--tint); }
+  .mini .ib { color: var(--label); }
+  .mini .ib.add { color: var(--tint); }
+
+  /* Notice: a glass capsule from the top. */
+  .toast { position: fixed; z-index: 40; left: 50%; top: calc(10px + env(safe-area-inset-top)); transform: translateX(-50%); max-width: calc(100% - 40px); min-height: 44px; padding: 11px 18px; border-radius: 999px; font: 600 15px/20px var(--font); letter-spacing: -.24px; display: flex; align-items: center; gap: 8px; animation: drop .45s var(--ease); }
+  .toast svg.i { width: 18px; height: 18px; color: var(--green); flex: none; }
+  .toast.bad svg.i { color: var(--red); }
+  @keyframes drop { from { transform: translate(-50%, -20px) scale(.9); opacity: 0; } }
+
+  /* Settings: iOS Settings rows with colored symbol squares, and an emoji picker. */
+  header { position: relative; }
+  .gear { position: absolute; top: 14px; inset-inline-end: 16px; width: 40px; height: 40px; border-radius: 50%; display: grid; place-items: center; z-index: 3; }
+  .gear svg.i { width: 20px; height: 20px; }
+  .done { position: absolute; top: 14px; inset-inline-end: 16px; height: 36px; padding: 0 16px; border-radius: 999px; font: var(--headline); color: var(--tint); z-index: 3; }
+  .set { display: flex; align-items: center; gap: 12px; width: 100%; min-height: 60px; padding: 10px 14px; text-align: start; position: relative; }
+  .set + .set::before, .picker + .set::before { content: ""; position: absolute; top: 0; inset-inline-start: 56px; inset-inline-end: 0; height: .5px; background: var(--sep); }
+  .set:active { background: var(--fill4); }
+  .sq { width: 30px; height: 30px; border-radius: 7px; display: grid; place-items: center; color: #fff; flex: none; }
+  .sq svg.i { width: 18px; height: 18px; }
+  .set .meta .t { font: var(--body); }
+  .set .meta .s { font: var(--footnote); white-space: normal; }
+  .set .val { display: flex; align-items: center; gap: 6px; color: var(--label2); font: var(--body); flex: none; }
+  .set .val .em { font-size: 24px; line-height: 1; }
+  .set .val .em.dim { opacity: .5; }
+  .set .val svg.i { width: 13px; height: 13px; color: var(--label3); transition: transform .35s var(--ease); }
+  .set[aria-expanded="true"] .val svg.i { transform: rotate(90deg); }
+  .picker { padding: 4px 14px 14px; animation: fade .35s var(--ease); }
+  .choices { display: flex; gap: 8px; margin-bottom: 10px; flex-wrap: wrap; }
+  .choice { height: 34px; padding: 0 14px; border-radius: 999px; background: var(--fill3); font: 600 14px/1 var(--font); color: var(--label); }
+  .choice[aria-pressed="true"] { background: var(--tint); color: #fff; }
+  .emojis { display: grid; grid-template-columns: repeat(8, 1fr); gap: 4px; }
+  .emo { aspect-ratio: 1; border-radius: 12px; font-size: 26px; line-height: 1; display: grid; place-items: center; transition: transform .3s var(--ease), background .2s; }
+  .emo:active { transform: scale(.85); }
+  .emo[aria-pressed="true"] { background: color-mix(in srgb, var(--tint) 16%, transparent); box-shadow: inset 0 0 0 2px var(--tint); }
+  .morebtn { display: block; margin: 10px auto 0; font: 600 14px var(--font); color: var(--tint); padding: 6px 12px; }
+  .toggle .dot { margin-inline-end: 2px; }
+  .list .toggle + .toggle::before { content: ""; position: absolute; top: 0; inset-inline-start: 36px; inset-inline-end: 0; height: .5px; background: var(--sep); }
+  .homecard { display: flex; align-items: center; gap: 12px; width: 100%; padding: 10px 14px; text-align: start; position: relative; min-height: 60px; }
+  .homecard + .homecard::before { content: ""; position: absolute; top: 0; inset-inline-start: 66px; inset-inline-end: 0; height: .5px; background: var(--sep); }
+  .homecard .art { width: 40px; height: 40px; border-radius: 50%; }
+  .fade { animation: fade .45s var(--ease); }
+  @keyframes fade { from { opacity: 0; transform: translateY(8px); } }
+  @media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation: none !important; transition: none !important; } }
+  @supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) { .glass, .material { background: var(--bg2); } }
+</style>
+</head>
+<body>
+<div class="aura" id="aura"><i></i><i></i></div>
+<div id="app"></div>
+<nav class="tabbar glass" id="tabbar" role="tablist" hidden></nav>
+<div class="mini glass" id="mini" hidden></div>
+<div class="toast glass" id="toast" hidden></div>
+<script>
+const tg = window.Telegram?.WebApp;
+tg?.ready(); tg?.expand();
+
+// The theme follows Telegram's (or the system's outside it).
+function applyTheme() {
+  const dark = tg?.colorScheme ? tg.colorScheme === 'dark' : matchMedia('(prefers-color-scheme: dark)').matches;
+  document.documentElement.dataset.theme = dark ? 'dark' : 'light';
+  const bg = dark ? '#000000' : '#F2F2F7';
+  try { tg.setHeaderColor(bg); tg.setBackgroundColor(bg); tg.setBottomBarColor?.(bg); } catch {}
+}
+applyTheme();
+try { tg.onEvent('themeChanged', applyTheme); } catch {}
+matchMedia('(prefers-color-scheme: dark)').addEventListener?.('change', applyTheme);
+
+// --- strings ----------------------------------------------------------------------
+const L = {
+  en: {
+    open_from_bot: 'Open this from a group: send /app there and tap 🎛 Open.',
+    home_title: '🎛 Chat music', home_hint: 'Your synced chats. In any other group, send /app and tap 🎛 Open.', home_empty: 'No synced chats yet. Send /app in a group the bot is in.',
+    tab_queue: '🎶 Queue', tab_playlists: '📚 Playlists', tab_picks: '✨ Picks', tab_sleep: '😴 Sleep',
+    now_playing: 'Now playing', on_device: 'on {device}', host: '{name}\'s Spotify', nothing_playing: 'Nothing is playing on the host\'s Spotify.', up_next: 'Up next on Spotify',
+    search_ph: 'Add a song: name or artist', no_results: 'Nothing found.', added: 'Added to the queue ✓', results: 'Search results',
+    queue: 'Queue', queue_empty: 'The queue is empty. Search a song above, or add one from ✨ Picks or 📚 Playlists.', by: 'added by {name}',
+    play_next: '▶️ Play next', all_spotify: '⏩ All to Spotify', clear: 'Clear', clear_confirm: 'Clear the whole queue?',
+    control_hint: 'Admins and the group player\'s host play the queue.', posted_chat: 'Posted in the chat ✓ Its audio follows.', sent_spotify: '{n} sent to Spotify ✓', missed: '{n} not found on Spotify',
+    queue_where_player: '▶️ sends songs to {name}\'s Spotify queue.', queue_where_chat: '▶️ posts the next song in the chat with its audio file. Start /player in the group to play on Spotify.',
+    pl_empty: 'No playlist is linked to this chat yet.', tracks: '{n} tracks', open: 'Open', show_tracks: 'Tracks', hide_tracks: 'Hide',
+    dir_both: '⇄ Both ways', dir_in: '💬 → 🎧 Chat to playlist', dir_out: '🎧 → 💬 Playlist to chat',
+    link_pl: '➕ Link a playlist to this chat', pick_account: 'Account', pick_playlist: 'Playlist', new_named: '✨ New playlist: “{name}”', direction: 'Direction',
+    post_existing: 'Post the tracks already in it (with 🔄 Sync now)', link: 'Link playlist', linked: 'Linked ✓', read_only: 'read only', cancel: 'Cancel',
+    connect_first: 'Connect a music service in the bot first.', open_bot: 'Open the bot', admins_link: 'Admins can link their own playlists here.', sync_hint: 'Tracks posted in the chat go into its playlists. Manage syncs in the bot.',
+    picks_hint: 'Based on what this chat plays: its playlists and its queue.', picks_cold: 'Not much to go on yet: here\'s what\'s trending. Picks get better as the chat plays.',
+    because: 'like {name}', more_from: 'more {name}', trending: 'trending', refresh: '🔄 New picks', picks_empty: 'No picks right now. Try again in a bit.', picks_wait: 'Finding music for this chat…',
+    sleep_player: 'Pauses {name}\'s Spotify (the group player) when the time is up, and tells the chat.', sleep_personal: 'Pauses your Spotify when the time is up. Start /player in the group to stop the group player instead.',
+    sleep_need_spotify: 'The sleep timer pauses Spotify: connect Spotify in the bot, or start /player in the group.', sleep_left: 'The music stops in', sleep_cancel: 'Cancel the timer', sleep_set_by_other: 'Set by someone else.',
+    sleep_late: 'Exactly on time while this page is open; otherwise as soon as the bot hears from anyone.', min: '{n} min', sleep_set: 'Sleep timer set ✓', sleep_stopped: 'Timer cancelled',
+    err_NOT_MEMBER: 'Only members of this chat can open its music.', err_NO_CHAT: 'This chat isn\'t available. Is the bot still in it?', err_CONTROL_ONLY: 'Only admins and the group player\'s host can do that.',
+    err_ADMINS_ONLY: 'Only the chat\'s admins can do that.', err_QUEUE_FULL: 'The queue is full.', err_USER_LIMIT: 'You have enough songs queued: let others add some.', err_DUPLICATE: 'That one is already there.',
+    err_EMPTY: 'The queue is empty.', err_NO_SPOTIFY: 'Connect Spotify in the bot first.', err_NO_PLAYER: 'No group player: send /player in the group.', err_NO_ACCOUNT: 'Connect that service in the bot first.',
+    err_OWNER_GONE: 'The playlist\'s owner disconnected their account.', err_NOT_FOUND: 'It\'s gone. Refreshing…', err_BAD_INPUT: 'Something\'s off with that. Try again.',
+    settings: 'Reactions', done: 'Done', react_hint: 'The reaction the bot leaves on a post, so everyone sees what happened to its song.', scope_group: 'Whole group', scope_channel: 'Whole channel', scope_forum: 'Whole forum', scope_topic: 'This topic', k_added: 'Added to a playlist', k_added_hint: 'The post\'s song went into a synced playlist.', k_queued: 'Queued on the player', k_queued_hint: 'The post\'s song went to the group player\'s Spotify.', k_repost: 'Already in the playlist', k_repost_hint: 'Every song in the post was there before.', off: 'Off', inherit: 'Same as the whole chat', more: 'More reactions', less: 'Fewer reactions', restricted: 'This chat allows only some reactions: those are the ones shown.', none_allowed: 'Reactions are turned off in this chat\'s settings, so the bot can\'t react.', syncs_title: 'Per sync', syncs_react_hint: 'A sync with its switch off never reacts.', saved: 'Saved ✓', err_NOT_ALLOWED: 'This chat doesn\'t allow that reaction.',
+  },
+  fa: {
+    open_from_bot: 'این رو از یه گروه باز کن: اونجا /app رو بفرست و 🎛 باز کن رو بزن.',
+    home_title: '🎛 موسیقی چت', home_hint: 'چت‌های همگام‌شده‌ت. توی هر گروه دیگه‌ای /app رو بفرست و 🎛 باز کن رو بزن.', home_empty: 'هنوز چت همگام‌شده‌ای نداری. توی گروهی که بات توشه /app رو بفرست.',
+    tab_queue: '🎶 صف', tab_playlists: '📚 پلی‌لیست‌ها', tab_picks: '✨ پیشنهادها', tab_sleep: '😴 خواب',
+    now_playing: 'در حال پخش', on_device: 'روی {device}', host: 'اسپاتیفای {name}', nothing_playing: 'چیزی روی اسپاتیفای میزبان پخش نمی‌شه.', up_next: 'بعدی‌ها روی اسپاتیفای',
+    search_ph: 'اضافه کردن آهنگ: اسم یا خواننده', no_results: 'چیزی پیدا نشد.', added: 'به صف اضافه شد ✓', results: 'نتیجه‌های جستجو',
+    queue: 'صف', queue_empty: 'صف خالیه. بالا یه آهنگ جستجو کن، یا از ✨ پیشنهادها یا 📚 پلی‌لیست‌ها اضافه کن.', by: 'اضافه‌شده توسط {name}',
+    play_next: '▶️ پخش بعدی', all_spotify: '⏩ همه به اسپاتیفای', clear: 'پاک کردن', clear_confirm: 'کل صف پاک بشه؟',
+    control_hint: 'مدیرها و میزبان پخش گروهی صف رو پخش می‌کنن.', posted_chat: 'توی چت فرستاده شد ✓ فایلش هم میاد.', sent_spotify: '{n} آهنگ به اسپاتیفای رفت ✓', missed: '{n} آهنگ روی اسپاتیفای پیدا نشد',
+    queue_where_player: '▶️ آهنگ‌ها رو به صف اسپاتیفای {name} می‌فرسته.', queue_where_chat: '▶️ آهنگ بعدی رو با فایلش توی چت می‌فرسته. برای پخش روی اسپاتیفای توی گروه /player رو بزن.',
+    pl_empty: 'هنوز هیچ پلی‌لیستی به این چت وصل نشده.', tracks: '{n} آهنگ', open: 'باز کن', show_tracks: 'آهنگ‌ها', hide_tracks: 'بستن',
+    dir_both: '⇄ دوطرفه', dir_in: '💬 → 🎧 چت به پلی‌لیست', dir_out: '🎧 → 💬 پلی‌لیست به چت',
+    link_pl: '➕ وصل کردن یه پلی‌لیست به این چت', pick_account: 'حساب', pick_playlist: 'پلی‌لیست', new_named: '✨ پلی‌لیست جدید: «{name}»', direction: 'جهت',
+    post_existing: 'آهنگ‌هایی که الان توشه هم پست بشن (با 🔄 همگام‌سازی)', link: 'وصل کن', linked: 'وصل شد ✓', read_only: 'فقط خواندنی', cancel: 'لغو',
+    connect_first: 'اول توی بات یه سرویس موسیقی وصل کن.', open_bot: 'باز کردن بات', admins_link: 'مدیرها می‌تونن پلی‌لیست‌های خودشون رو اینجا وصل کنن.', sync_hint: 'آهنگ‌هایی که توی چت فرستاده می‌شن به پلی‌لیست‌هاش اضافه می‌شن. همگام‌سازی‌ها رو توی بات مدیریت کن.',
+    picks_hint: 'بر اساس چیزی که این چت گوش می‌ده: پلی‌لیست‌ها و صفش.', picks_cold: 'هنوز اطلاعات زیادی نیست: اینا ترندهاست. هرچی چت بیشتر پخش کنه پیشنهادها بهتر می‌شن.',
+    because: 'شبیه {name}', more_from: 'بیشتر از {name}', trending: 'ترند', refresh: '🔄 پیشنهادهای تازه', picks_empty: 'الان پیشنهادی نیست. کمی بعد دوباره امتحان کن.', picks_wait: 'دنبال موسیقی برای این چت…',
+    sleep_player: 'وقتی زمان تموم بشه اسپاتیفای {name} (پخش گروهی) رو متوقف می‌کنه و به چت خبر می‌ده.', sleep_personal: 'وقتی زمان تموم بشه اسپاتیفای خودت رو متوقف می‌کنه. برای متوقف کردن پخش گروهی، توی گروه /player رو بزن.',
+    sleep_need_spotify: 'تایمر خواب اسپاتیفای رو متوقف می‌کنه: توی بات اسپاتیفای رو وصل کن یا توی گروه /player رو بزن.', sleep_left: 'موسیقی قطع می‌شه تا', sleep_cancel: 'لغو تایمر', sleep_set_by_other: 'یکی دیگه گذاشته.',
+    sleep_late: 'وقتی این صفحه بازه دقیقاً سر وقت؛ وگرنه به محض اینکه بات از کسی پیامی بگیره.', min: '{n} دقیقه', sleep_set: 'تایمر خواب تنظیم شد ✓', sleep_stopped: 'تایمر لغو شد',
+    err_NOT_MEMBER: 'فقط اعضای این چت می‌تونن موسیقی‌ش رو باز کنن.', err_NO_CHAT: 'این چت در دسترس نیست. بات هنوز توشه؟', err_CONTROL_ONLY: 'فقط مدیرها و میزبان پخش گروهی می‌تونن این کار رو بکنن.',
+    err_ADMINS_ONLY: 'فقط مدیرهای چت می‌تونن این کار رو بکنن.', err_QUEUE_FULL: 'صف پره.', err_USER_LIMIT: 'به اندازه کافی آهنگ توی صف داری: بذار بقیه هم اضافه کنن.', err_DUPLICATE: 'این یکی از قبل هست.',
+    err_EMPTY: 'صف خالیه.', err_NO_SPOTIFY: 'اول توی بات اسپاتیفای رو وصل کن.', err_NO_PLAYER: 'پخش گروهی فعال نیست: توی گروه /player رو بفرست.', err_NO_ACCOUNT: 'اول اون سرویس رو توی بات وصل کن.',
+    err_OWNER_GONE: 'صاحب پلی‌لیست حسابش رو قطع کرده.', err_NOT_FOUND: 'دیگه نیست. در حال به‌روزرسانی…', err_BAD_INPUT: 'یه مشکلی هست. دوباره امتحان کن.',
+    settings: 'واکنش‌ها', done: 'تمام', react_hint: 'واکنشی که بات روی پست می‌ذاره، تا همه ببینن چه اتفاقی برای آهنگش افتاد.', scope_group: 'کل گروه', scope_channel: 'کل کانال', scope_forum: 'کل انجمن', scope_topic: 'این موضوع', k_added: 'اضافه شد به پلی‌لیست', k_added_hint: 'آهنگ پست به یه پلی‌لیست همگام رفت.', k_queued: 'به صف پخش رفت', k_queued_hint: 'آهنگ پست به اسپاتیفای پخش گروهی رفت.', k_repost: 'از قبل توی پلی‌لیست بود', k_repost_hint: 'همه‌ی آهنگ‌های پست از قبل اونجا بودن.', off: 'خاموش', inherit: 'مثل کل چت', more: 'واکنش‌های بیشتر', less: 'واکنش‌های کمتر', restricted: 'این چت فقط بعضی واکنش‌ها رو اجازه می‌ده: همونا نشون داده شدن.', none_allowed: 'واکنش‌ها توی تنظیمات این چت خاموشن، پس بات نمی‌تونه واکنش بده.', syncs_title: 'برای هر همگام‌سازی', syncs_react_hint: 'همگام‌سازی‌ای که کلیدش خاموشه هیچ‌وقت واکنش نمی‌ده.', saved: 'ذخیره شد ✓', err_NOT_ALLOWED: 'این چت اون واکنش رو اجازه نمی‌ده.',
+  },
+  ar: {
+    open_from_bot: 'افتح هذا من مجموعة: أرسل /app هناك واضغط 🎛 افتح.',
+    home_title: '🎛 موسيقى الدردشة', home_hint: 'دردشاتك المتزامنة. في أي مجموعة أخرى، أرسل /app واضغط 🎛 افتح.', home_empty: 'لا توجد دردشات متزامنة بعد. أرسل /app في مجموعة فيها البوت.',
+    tab_queue: '🎶 الانتظار', tab_playlists: '📚 القوائم', tab_picks: '✨ اقتراحات', tab_sleep: '😴 النوم',
+    now_playing: 'يُشغَّل الآن', on_device: 'على {device}', host: 'Spotify الخاص بـ {name}', nothing_playing: 'لا شيء يُشغَّل على Spotify المضيف.', up_next: 'التالي على Spotify',
+    search_ph: 'أضف أغنية: الاسم أو الفنان', no_results: 'لم يُعثر على شيء.', added: 'أُضيفت إلى الانتظار ✓', results: 'نتائج البحث',
+    queue: 'قائمة الانتظار', queue_empty: 'قائمة الانتظار فارغة. ابحث عن أغنية بالأعلى، أو أضف من ✨ اقتراحات أو 📚 القوائم.', by: 'أضافها {name}',
+    play_next: '▶️ شغّل التالي', all_spotify: '⏩ الكل إلى Spotify', clear: 'مسح', clear_confirm: 'مسح قائمة الانتظار كلها؟',
+    control_hint: 'المشرفون ومضيف مشغل المجموعة يشغّلون قائمة الانتظار.', posted_chat: 'نُشرت في الدردشة ✓ ويتبعها ملفها الصوتي.', sent_spotify: 'أُرسلت {n} إلى Spotify ✓', missed: '{n} غير موجودة على Spotify',
+    queue_where_player: '▶️ يرسل الأغاني إلى قائمة انتظار Spotify الخاصة بـ {name}.', queue_where_chat: '▶️ ينشر الأغنية التالية في الدردشة مع ملفها الصوتي. ابدأ /player في المجموعة للتشغيل على Spotify.',
+    pl_empty: 'لا توجد قائمة تشغيل مرتبطة بهذه الدردشة بعد.', tracks: '{n} مقطع', open: 'افتح', show_tracks: 'المقاطع', hide_tracks: 'إخفاء',
+    dir_both: '⇄ في الاتجاهين', dir_in: '💬 → 🎧 من الدردشة إلى القائمة', dir_out: '🎧 → 💬 من القائمة إلى الدردشة',
+    link_pl: '➕ اربط قائمة تشغيل بهذه الدردشة', pick_account: 'الحساب', pick_playlist: 'قائمة التشغيل', new_named: '✨ قائمة جديدة: «{name}»', direction: 'الاتجاه',
+    post_existing: 'انشر المقاطع الموجودة فيها (مع 🔄 مزامنة الآن)', link: 'اربط القائمة', linked: 'تم الربط ✓', read_only: 'للقراءة فقط', cancel: 'إلغاء',
+    connect_first: 'اربط خدمة موسيقى في البوت أولًا.', open_bot: 'افتح البوت', admins_link: 'يمكن للمشرفين ربط قوائمهم هنا.', sync_hint: 'المقاطع المنشورة في الدردشة تُضاف إلى قوائمها. أدر المزامنات في البوت.',
+    picks_hint: 'بناءً على ما تشغّله هذه الدردشة: قوائمها وقائمة انتظارها.', picks_cold: 'لا توجد معلومات كافية بعد: إليك الرائج. تتحسن الاقتراحات كلما شغّلت الدردشة أكثر.',
+    because: 'مثل {name}', more_from: 'المزيد من {name}', trending: 'رائج', refresh: '🔄 اقتراحات جديدة', picks_empty: 'لا توجد اقتراحات الآن. حاول بعد قليل.', picks_wait: 'نبحث عن موسيقى لهذه الدردشة…',
+    sleep_player: 'يوقف Spotify الخاص بـ {name} (مشغل المجموعة) عند انتهاء الوقت، ويخبر الدردشة.', sleep_personal: 'يوقف Spotify الخاص بك عند انتهاء الوقت. ابدأ /player في المجموعة لإيقاف مشغل المجموعة بدلًا من ذلك.',
+    sleep_need_spotify: 'مؤقت النوم يوقف Spotify: اربط Spotify في البوت، أو ابدأ /player في المجموعة.', sleep_left: 'تتوقف الموسيقى بعد', sleep_cancel: 'ألغِ المؤقت', sleep_set_by_other: 'ضبطه شخص آخر.',
+    sleep_late: 'في الوقت تمامًا ما دامت هذه الصفحة مفتوحة؛ وإلا فبمجرد أن يتلقى البوت أي رسالة.', min: '{n} دقيقة', sleep_set: 'تم ضبط مؤقت النوم ✓', sleep_stopped: 'أُلغي المؤقت',
+    err_NOT_MEMBER: 'يمكن لأعضاء هذه الدردشة فقط فتح موسيقاها.', err_NO_CHAT: 'هذه الدردشة غير متاحة. هل ما زال البوت فيها؟', err_CONTROL_ONLY: 'يمكن للمشرفين ومضيف مشغل المجموعة فقط فعل ذلك.',
+    err_ADMINS_ONLY: 'يمكن لمشرفي الدردشة فقط فعل ذلك.', err_QUEUE_FULL: 'قائمة الانتظار ممتلئة.', err_USER_LIMIT: 'لديك ما يكفي من الأغاني في الانتظار: دع الآخرين يضيفون.', err_DUPLICATE: 'هذه موجودة بالفعل.',
+    err_EMPTY: 'قائمة الانتظار فارغة.', err_NO_SPOTIFY: 'اربط Spotify في البوت أولًا.', err_NO_PLAYER: 'لا يوجد مشغل مجموعة: أرسل /player في المجموعة.', err_NO_ACCOUNT: 'اربط تلك الخدمة في البوت أولًا.',
+    err_OWNER_GONE: 'فصل مالك القائمة حسابه.', err_NOT_FOUND: 'لم تعد موجودة. جارٍ التحديث…', err_BAD_INPUT: 'هناك خطأ ما. حاول مجددًا.',
+    settings: 'التفاعلات', done: 'تم', react_hint: 'التفاعل الذي يتركه البوت على المنشور، ليرى الجميع ما حدث لأغنيته.', scope_group: 'المجموعة كلها', scope_channel: 'القناة كلها', scope_forum: 'المنتدى كله', scope_topic: 'هذا الموضوع', k_added: 'أُضيفت إلى قائمة', k_added_hint: 'ذهبت أغنية المنشور إلى قائمة متزامنة.', k_queued: 'أُضيفت إلى المشغل', k_queued_hint: 'ذهبت أغنية المنشور إلى Spotify مشغل المجموعة.', k_repost: 'موجودة في القائمة', k_repost_hint: 'كل أغاني المنشور كانت هناك من قبل.', off: 'إيقاف', inherit: 'مثل الدردشة كلها', more: 'تفاعلات أكثر', less: 'تفاعلات أقل', restricted: 'هذه الدردشة تسمح ببعض التفاعلات فقط: المعروضة هي المسموحة.', none_allowed: 'التفاعلات معطلة في إعدادات هذه الدردشة، لذا لا يستطيع البوت التفاعل.', syncs_title: 'لكل مزامنة', syncs_react_hint: 'المزامنة التي مفتاحها مطفأ لا تتفاعل أبدًا.', saved: 'تم الحفظ ✓', err_NOT_ALLOWED: 'هذه الدردشة لا تسمح بهذا التفاعل.',
+  },
+  ru: {
+    open_from_bot: 'Открой это из группы: отправь там /app и нажми 🎛 Открыть.',
+    home_title: '🎛 Музыка чата', home_hint: 'Твои синхронизированные чаты. В любой другой группе отправь /app и нажми 🎛 Открыть.', home_empty: 'Синхронизированных чатов пока нет. Отправь /app в группе, где есть бот.',
+    tab_queue: '🎶 Очередь', tab_playlists: '📚 Плейлисты', tab_picks: '✨ Подборка', tab_sleep: '😴 Сон',
+    now_playing: 'Сейчас играет', on_device: 'на {device}', host: 'Spotify: {name}', nothing_playing: 'На Spotify ведущего ничего не играет.', up_next: 'Далее в Spotify',
+    search_ph: 'Добавить песню: название или исполнитель', no_results: 'Ничего не найдено.', added: 'Добавлено в очередь ✓', results: 'Результаты поиска',
+    queue: 'Очередь', queue_empty: 'Очередь пуста. Найди песню выше или добавь из ✨ Подборки или 📚 Плейлистов.', by: 'добавил(а) {name}',
+    play_next: '▶️ Следующая', all_spotify: '⏩ Всё в Spotify', clear: 'Очистить', clear_confirm: 'Очистить всю очередь?',
+    control_hint: 'Очередь запускают админы и ведущий плеера группы.', posted_chat: 'Опубликовано в чате ✓ Аудио придёт следом.', sent_spotify: 'В Spotify отправлено: {n} ✓', missed: 'Не найдено в Spotify: {n}',
+    queue_where_player: '▶️ отправляет песни в очередь Spotify ведущего ({name}).', queue_where_chat: '▶️ публикует следующую песню в чате с аудиофайлом. Запусти /player в группе, чтобы играть в Spotify.',
+    pl_empty: 'К этому чату пока не привязан ни один плейлист.', tracks: 'треков: {n}', open: 'Открыть', show_tracks: 'Треки', hide_tracks: 'Скрыть',
+    dir_both: '⇄ В обе стороны', dir_in: '💬 → 🎧 Из чата в плейлист', dir_out: '🎧 → 💬 Из плейлиста в чат',
+    link_pl: '➕ Привязать плейлист к этому чату', pick_account: 'Аккаунт', pick_playlist: 'Плейлист', new_named: '✨ Новый плейлист «{name}»', direction: 'Направление',
+    post_existing: 'Опубликовать треки, которые уже в нём (через 🔄 Синхронизировать)', link: 'Привязать', linked: 'Привязано ✓', read_only: 'только чтение', cancel: 'Отмена',
+    connect_first: 'Сначала подключи музыкальный сервис в боте.', open_bot: 'Открыть бота', admins_link: 'Админы могут привязать здесь свои плейлисты.', sync_hint: 'Треки из чата попадают в его плейлисты. Синхронизациями управляй в боте.',
+    picks_hint: 'По тому, что слушает этот чат: его плейлисты и очередь.', picks_cold: 'Пока мало данных: вот что сейчас популярно. Подборка станет точнее, когда чат будет слушать больше.',
+    because: 'похоже на {name}', more_from: 'ещё {name}', trending: 'в тренде', refresh: '🔄 Новая подборка', picks_empty: 'Сейчас подборки нет. Попробуй чуть позже.', picks_wait: 'Ищу музыку для этого чата…',
+    sleep_player: 'Когда время выйдет, ставит на паузу Spotify ведущего ({name}) и сообщает в чат.', sleep_personal: 'Когда время выйдет, ставит на паузу твой Spotify. Чтобы останавливать плеер группы, запусти /player в группе.',
+    sleep_need_spotify: 'Таймер сна ставит на паузу Spotify: подключи Spotify в боте или запусти /player в группе.', sleep_left: 'Музыка остановится через', sleep_cancel: 'Отменить таймер', sleep_set_by_other: 'Поставил кто-то другой.',
+    sleep_late: 'Точно вовремя, пока эта страница открыта; иначе — как только бот получит любое сообщение.', min: '{n} мин', sleep_set: 'Таймер сна поставлен ✓', sleep_stopped: 'Таймер отменён',
+    err_NOT_MEMBER: 'Музыку этого чата могут открыть только его участники.', err_NO_CHAT: 'Этот чат недоступен. Бот всё ещё в нём?', err_CONTROL_ONLY: 'Это могут только админы и ведущий плеера группы.',
+    err_ADMINS_ONLY: 'Это могут только админы чата.', err_QUEUE_FULL: 'Очередь заполнена.', err_USER_LIMIT: 'У тебя уже достаточно песен в очереди: дай добавить другим.', err_DUPLICATE: 'Эта уже есть.',
+    err_EMPTY: 'Очередь пуста.', err_NO_SPOTIFY: 'Сначала подключи Spotify в боте.', err_NO_PLAYER: 'Плеер группы не запущен: отправь /player в группе.', err_NO_ACCOUNT: 'Сначала подключи этот сервис в боте.',
+    err_OWNER_GONE: 'Владелец плейлиста отключил аккаунт.', err_NOT_FOUND: 'Этого уже нет. Обновляю…', err_BAD_INPUT: 'Что-то не так. Попробуй снова.',
+    settings: 'Реакции', done: 'Готово', react_hint: 'Реакция, которую бот ставит на пост, чтобы все видели, что стало с его песней.', scope_group: 'Вся группа', scope_channel: 'Весь канал', scope_forum: 'Весь форум', scope_topic: 'Эта тема', k_added: 'Добавлено в плейлист', k_added_hint: 'Песня из поста попала в связанный плейлист.', k_queued: 'В очереди плеера', k_queued_hint: 'Песня из поста ушла в Spotify плеера группы.', k_repost: 'Уже в плейлисте', k_repost_hint: 'Все песни из поста там уже были.', off: 'Выкл.', inherit: 'Как во всём чате', more: 'Больше реакций', less: 'Меньше реакций', restricted: 'В этом чате разрешены не все реакции: показаны только доступные.', none_allowed: 'Реакции выключены в настройках чата, бот не может их ставить.', syncs_title: 'Для каждой синхронизации', syncs_react_hint: 'Синхронизация с выключенным переключателем не ставит реакций.', saved: 'Сохранено ✓', err_NOT_ALLOWED: 'Этот чат не разрешает такую реакцию.',
+  },
+  es: {
+    open_from_bot: 'Ábrelo desde un grupo: envía /app allí y toca 🎛 Abrir.',
+    home_title: '🎛 Música del chat', home_hint: 'Tus chats sincronizados. En cualquier otro grupo, envía /app y toca 🎛 Abrir.', home_empty: 'Aún no hay chats sincronizados. Envía /app en un grupo donde esté el bot.',
+    tab_queue: '🎶 Cola', tab_playlists: '📚 Listas', tab_picks: '✨ Para ti', tab_sleep: '😴 Dormir',
+    now_playing: 'Sonando', on_device: 'en {device}', host: 'Spotify de {name}', nothing_playing: 'No suena nada en el Spotify del anfitrión.', up_next: 'A continuación en Spotify',
+    search_ph: 'Añadir canción: nombre o artista', no_results: 'No se encontró nada.', added: 'Añadida a la cola ✓', results: 'Resultados',
+    queue: 'Cola', queue_empty: 'La cola está vacía. Busca una canción arriba o añade desde ✨ Para ti o 📚 Listas.', by: 'añadida por {name}',
+    play_next: '▶️ Siguiente', all_spotify: '⏩ Todo a Spotify', clear: 'Vaciar', clear_confirm: '¿Vaciar toda la cola?',
+    control_hint: 'Los administradores y el anfitrión del reproductor reproducen la cola.', posted_chat: 'Publicada en el chat ✓ Su audio llega a continuación.', sent_spotify: '{n} enviadas a Spotify ✓', missed: '{n} no encontradas en Spotify',
+    queue_where_player: '▶️ envía las canciones a la cola de Spotify de {name}.', queue_where_chat: '▶️ publica la siguiente canción en el chat con su audio. Inicia /player en el grupo para reproducir en Spotify.',
+    pl_empty: 'Aún no hay listas vinculadas a este chat.', tracks: '{n} canciones', open: 'Abrir', show_tracks: 'Canciones', hide_tracks: 'Ocultar',
+    dir_both: '⇄ En ambos sentidos', dir_in: '💬 → 🎧 Del chat a la lista', dir_out: '🎧 → 💬 De la lista al chat',
+    link_pl: '➕ Vincular una lista a este chat', pick_account: 'Cuenta', pick_playlist: 'Lista', new_named: '✨ Lista nueva: «{name}»', direction: 'Sentido',
+    post_existing: 'Publicar las canciones que ya tiene (con 🔄 Sincronizar)', link: 'Vincular lista', linked: 'Vinculada ✓', read_only: 'solo lectura', cancel: 'Cancelar',
+    connect_first: 'Primero conecta un servicio de música en el bot.', open_bot: 'Abrir el bot', admins_link: 'Los administradores pueden vincular aquí sus listas.', sync_hint: 'Las canciones publicadas en el chat van a sus listas. Gestiona las sincronizaciones en el bot.',
+    picks_hint: 'Según lo que escucha este chat: sus listas y su cola.', picks_cold: 'Aún hay poco para empezar: esto es tendencia. Las sugerencias mejoran a medida que el chat escucha.',
+    because: 'como {name}', more_from: 'más de {name}', trending: 'tendencia', refresh: '🔄 Nuevas sugerencias', picks_empty: 'No hay sugerencias ahora. Inténtalo en un rato.', picks_wait: 'Buscando música para este chat…',
+    sleep_player: 'Pausa el Spotify de {name} (el reproductor del grupo) cuando acabe el tiempo y avisa al chat.', sleep_personal: 'Pausa tu Spotify cuando acabe el tiempo. Inicia /player en el grupo para detener el reproductor del grupo.',
+    sleep_need_spotify: 'El temporizador pausa Spotify: conecta Spotify en el bot o inicia /player en el grupo.', sleep_left: 'La música se detiene en', sleep_cancel: 'Cancelar temporizador', sleep_set_by_other: 'Lo puso otra persona.',
+    sleep_late: 'Puntual mientras esta página está abierta; si no, en cuanto el bot reciba cualquier mensaje.', min: '{n} min', sleep_set: 'Temporizador puesto ✓', sleep_stopped: 'Temporizador cancelado',
+    err_NOT_MEMBER: 'Solo los miembros de este chat pueden abrir su música.', err_NO_CHAT: 'Este chat no está disponible. ¿Sigue el bot en él?', err_CONTROL_ONLY: 'Solo los administradores y el anfitrión del reproductor pueden hacerlo.',
+    err_ADMINS_ONLY: 'Solo los administradores del chat pueden hacerlo.', err_QUEUE_FULL: 'La cola está llena.', err_USER_LIMIT: 'Ya tienes bastantes canciones en cola: deja que otros añadan.', err_DUPLICATE: 'Esa ya está.',
+    err_EMPTY: 'La cola está vacía.', err_NO_SPOTIFY: 'Primero conecta Spotify en el bot.', err_NO_PLAYER: 'No hay reproductor: envía /player en el grupo.', err_NO_ACCOUNT: 'Primero conecta ese servicio en el bot.',
+    err_OWNER_GONE: 'El dueño de la lista desconectó su cuenta.', err_NOT_FOUND: 'Ya no está. Actualizando…', err_BAD_INPUT: 'Algo no cuadra. Inténtalo de nuevo.',
+    settings: 'Reacciones', done: 'Listo', react_hint: 'La reacción que el bot deja en una publicación, para que todos vean qué pasó con su canción.', scope_group: 'Todo el grupo', scope_channel: 'Todo el canal', scope_forum: 'Todo el foro', scope_topic: 'Este tema', k_added: 'Añadida a una lista', k_added_hint: 'La canción de la publicación entró en una lista sincronizada.', k_queued: 'En cola del reproductor', k_queued_hint: 'La canción fue al Spotify del reproductor del grupo.', k_repost: 'Ya estaba en la lista', k_repost_hint: 'Todas las canciones de la publicación ya estaban.', off: 'Desactivada', inherit: 'Igual que todo el chat', more: 'Más reacciones', less: 'Menos reacciones', restricted: 'Este chat solo permite algunas reacciones: se muestran esas.', none_allowed: 'Las reacciones están desactivadas en este chat, así que el bot no puede reaccionar.', syncs_title: 'Por sincronización', syncs_react_hint: 'Una sincronización con el interruptor apagado nunca reacciona.', saved: 'Guardado ✓', err_NOT_ALLOWED: 'Este chat no permite esa reacción.',
+  },
+};
+const lang = (tg?.initDataUnsafe?.user?.language_code || navigator.language || 'en').slice(0, 2).toLowerCase();
+const S = L[lang] || L.en;
+if (lang === 'fa' || lang === 'ar') document.documentElement.dir = 'rtl';
+document.documentElement.lang = L[lang] ? lang : 'en';
+const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
+const tr = (k, v = {}) => String(S[k] ?? L.en[k] ?? k).replace(/\{(\w+)\}/g, (_, x) => esc(v[x] ?? ''));
+// A label without its leading emoji or trailing colon, where a symbol stands in.
+const bare = (k, v) => tr(k, v).replace(/^[^\p{L}\p{N}]+/u, '').replace(/[:：\s]+$/u, '');
+
+// --- symbols (drawn after SF Symbols) ------------------------------------------------
+const P = {
+  play: '<path d="M7.5 4.6v14.8c0 .9 1 1.5 1.8 1l11.9-7.4c.7-.5.7-1.5 0-2L9.3 3.6c-.8-.5-1.8.1-1.8 1z" fill="currentColor"/>',
+  pause: '<rect x="5.8" y="4" width="4.4" height="16" rx="1.3" fill="currentColor"/><rect x="13.8" y="4" width="4.4" height="16" rx="1.3" fill="currentColor"/>',
+  backward: '<path d="M11.4 6.2v11.6c0 .8-.9 1.3-1.6.8L1.9 13c-.6-.5-.6-1.4 0-1.9l7.9-5.6c.7-.5 1.6 0 1.6.7zM22 6.2v11.6c0 .8-.9 1.3-1.6.8L12.5 13c-.6-.5-.6-1.4 0-1.9l7.9-5.6c.7-.5 1.6 0 1.6.7z" fill="currentColor"/>',
+  forward: '<path d="M2 6.2v11.6c0 .8.9 1.3 1.6.8l7.9-5.6c.6-.5.6-1.4 0-1.9L3.6 5.5C2.9 5 2 5.4 2 6.2zM12.6 6.2v11.6c0 .8.9 1.3 1.6.8l7.9-5.6c.6-.5.6-1.4 0-1.9l-7.9-5.6c-.7-.5-1.6-.1-1.6.7z" fill="currentColor"/>',
+  plus: '<path d="M12 5v14M5 12h14" stroke="currentColor" stroke-width="2.3" stroke-linecap="round"/>',
+  plusCircle: '<circle cx="12" cy="12" r="10" fill="currentColor"/><path d="M12 7.5v9M7.5 12h9" stroke="#fff" stroke-width="2.2" stroke-linecap="round"/>',
+  x: '<path d="M7 7l10 10M17 7L7 17" stroke="currentColor" stroke-width="2.1" stroke-linecap="round"/>',
+  up: '<path d="M12 18.5V6M6.5 11.5L12 6l5.5 5.5" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round" fill="none"/>',
+  down: '<path d="M12 5.5V18M6.5 12.5L12 18l5.5-5.5" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round" fill="none"/>',
+  search: '<circle cx="10.5" cy="10.5" r="6.5" stroke="currentColor" stroke-width="2.2" fill="none"/><path d="M15.5 15.5L20.5 20.5" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"/>',
+  queue: '<path d="M3.5 6h12M3.5 11h12M3.5 16h7" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/><path d="M19.5 9v8.2a2.8 2.8 0 1 1-1.8-2.6V7.4c0-.6.5-1 1.1-.9l2.5.5" fill="currentColor" stroke="currentColor" stroke-width=".8" stroke-linejoin="round"/>',
+  library: '<rect x="3" y="7" width="18" height="14" rx="3" fill="currentColor"/><rect x="5" y="4" width="14" height="1.8" rx=".9" fill="currentColor" opacity=".6"/><rect x="7" y="1.5" width="10" height="1.6" rx=".8" fill="currentColor" opacity=".35"/>',
+  sparkles: '<path d="M10 3l1.9 5.3L17 10l-5.1 1.7L10 17l-1.9-5.3L3 10l5.1-1.7z" fill="currentColor"/><path d="M18 13.5l.9 2.4 2.4.9-2.4.9-.9 2.4-.9-2.4-2.4-.9 2.4-.9zM18 2.5l.7 1.8 1.8.7-1.8.7-.7 1.8-.7-1.8L15.5 5l1.8-.7z" fill="currentColor"/>',
+  moon: '<path d="M20.6 14.8A9 9 0 0 1 9.2 3.4a.6.6 0 0 0-.8-.7A9.5 9.5 0 1 0 21.3 15.6a.6.6 0 0 0-.7-.8z" fill="currentColor"/>',
+  out: '<rect x="3.5" y="3.5" width="17" height="17" rx="4" stroke="currentColor" stroke-width="2" fill="none"/><path d="M9.5 14.5l5-5M10.5 9.5h4v4" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" fill="none"/>',
+  chev: '<path d="M6 9.5l6 6 6-6" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" fill="none"/>',
+  chevR: '<path d="M9.5 6l6 6-6 6" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" fill="none"/>',
+  refresh: '<path d="M19.5 12a7.5 7.5 0 1 1-2.2-5.3M19.5 4.5v4.2h-4.2" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" fill="none"/>',
+  trash: '<path d="M4.5 6.5h15M9.5 6.5V4.8c0-.7.6-1.3 1.3-1.3h2.4c.7 0 1.3.6 1.3 1.3v1.7M6.5 6.5l.9 12.2c.1 1 .9 1.8 1.9 1.8h5.4c1 0 1.8-.8 1.9-1.8l.9-12.2" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" fill="none"/>',
+  link: '<path d="M10 14a4 4 0 0 0 5.7 0l3-3a4 4 0 0 0-5.7-5.7l-1 1M14 10a4 4 0 0 0-5.7 0l-3 3a4 4 0 0 0 5.7 5.7l1-1" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" fill="none"/>',
+  check: '<path d="M5 12.5l4.5 4.5L19 7.5" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" fill="none"/>',
+  checkCircle: '<circle cx="12" cy="12" r="10" fill="currentColor"/><path d="M7.5 12.3l3 3 6-6.3" stroke="#fff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" fill="none"/>',
+  warn: '<circle cx="12" cy="12" r="10" fill="currentColor"/><path d="M12 7v6" stroke="#fff" stroke-width="2.4" stroke-linecap="round"/><circle cx="12" cy="16.6" r="1.4" fill="#fff"/>',
+  note: '<path d="M18 3.5v11.8a3.3 3.3 0 1 1-2-3V7.6l-7 1.6v8.1a3.3 3.3 0 1 1-2-3V6.4c0-.5.3-.9.8-1l9-2.1c.6-.2 1.2.3 1.2.9z" fill="currentColor"/>',
+  gear: '<path d="M12 8.6a3.4 3.4 0 1 0 0 6.8 3.4 3.4 0 0 0 0-6.8z" fill="none" stroke="currentColor" stroke-width="2"/><path d="M19.4 13.5c.1-.5.1-1 .1-1.5s0-1-.1-1.5l2-1.6-2-3.4-2.4 1a7.6 7.6 0 0 0-2.6-1.5L14 2.5h-4l-.4 2.5A7.6 7.6 0 0 0 7 6.5l-2.4-1-2 3.4 2 1.6c-.1.5-.1 1-.1 1.5s0 1 .1 1.5l-2 1.6 2 3.4 2.4-1c.8.6 1.7 1.1 2.6 1.5l.4 2.5h4l.4-2.5c.9-.4 1.8-.9 2.6-1.5l2.4 1 2-3.4z" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/>',
+  bolt: '<path d="M13.5 2.5L5 13.5h6l-1.5 8 8.5-11h-6z" fill="currentColor"/>',
+  repeat: '<path d="M4 11V9.5A3.5 3.5 0 0 1 7.5 6H19M16 3l3 3-3 3M20 13v1.5a3.5 3.5 0 0 1-3.5 3.5H5M8 21l-3-3 3-3" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" fill="none"/>',
+  person: '<circle cx="12" cy="7.5" r="4" fill="currentColor"/><path d="M4 20.5c.8-4 4-6.5 8-6.5s7.2 2.5 8 6.5" fill="currentColor"/>',
+};
+const ic = (name, cls = 'i') => `<svg class="${cls}" viewBox="0 0 24 24" aria-hidden="true">${P[name]}</svg>`;
+const EQ = '<span class="eq"><i></i><i></i><i></i></span>';
+const SVC_COLOR = { spotify: '#1DB954', youtube: '#FF0033', apple: '#FA2D48' };
+
+function hue(s) { let h = 0; for (const c of String(s ?? '')) h = (h * 31 + c.codePointAt(0)) % 360; return h; }
+const gradOf = (s) => { const h = hue(s); return `linear-gradient(160deg, hsl(${h} 78% 62%), hsl(${(h + 40) % 360} 70% 42%))`; };
+const cssUrl = (u) => String(u).replace(/["'()\\\s]/g, (c) => encodeURIComponent(c));
+const initial = (s) => esc([...String(s ?? '♪').trim()][0] ?? '♪').toUpperCase();
+const coverBg = (song) => (song.artwork ? `url(&quot;${esc(cssUrl(song.artwork))}&quot;)` : gradOf(`${song.title}${song.artist}`));
+
+// --- calls -------------------------------------------------------------------------
+function call(op, input = {}) {
+  return new Promise((resolve, reject) => tg.Serverless.call('chatApp', { op, chat: chatParam, ...input }, (err, res) => (err ? reject(err) : resolve(res))));
+}
+const errText = (e) => (e?.parameters?.code && (S[`err_${e.parameters.code}`] || L.en[`err_${e.parameters.code}`])) || e?.message || String(e);
+
+let toastTimer;
+function toast(text, kind = 'success') {
+  const el = document.getElementById('toast');
+  el.innerHTML = `${ic(kind === 'error' ? 'warn' : 'checkCircle')}<span>${esc(text)}</span>`;
+  el.classList.toggle('bad', kind === 'error'); el.hidden = false;
+  el.style.animation = 'none'; void el.offsetWidth; el.style.animation = '';
+  clearTimeout(toastTimer); toastTimer = setTimeout(() => { el.hidden = true; }, 2600);
+  try { tg.HapticFeedback.notificationOccurred(kind); } catch {}
+}
+
+async function act(btn, op, input, { ok } = {}) {
+  if (btn) btn.disabled = true;
+  try {
+    const res = await call(op, input);
+    if (res?.chat) state = res;
+    if (ok) toast(typeof ok === 'function' ? ok(res) : ok);
+    render();
+    return res;
+  } catch (e) {
+    toast(errText(e), 'error');
+    if (e?.parameters?.code === 'NOT_FOUND') refresh();
+    return null;
+  } finally {
+    if (btn) btn.disabled = false;
+  }
+}
+
+// --- state ------------------------------------------------------------------------
+const app = document.getElementById('app');
+const tabbar = document.getElementById('tabbar');
+let chatParam = null;
+let state = null;
+let tab = 'queue';
+let clockSkew = 0;
+let results = null;
+let picks = null;
+let openTracks = {};
+let linking = null;
+let reactions = null;        // ⚙︎ Reactions: the server's view, or 'loading'
+let reactScope = null;       // 'chat' | 'topic'
+let openKind = null;
+let showMore = false;
+try { tab = localStorage.getItem('chat_tab') || 'queue'; } catch {}
+
+const serverNow = () => Date.now() / 1000 + clockSkew;
+const svc = (p) => state?.services?.[p] ?? { name: p, icon: '🎵' };
+
+function setAura(seed) {
+  const h = hue(seed);
+  const a = document.getElementById('aura');
+  a.style.setProperty('--c1', `hsl(${h} 85% 58%)`);
+  a.style.setProperty('--c2', `hsl(${(h + 60) % 360} 80% 55%)`);
+}
+
+// --- preview player (30-second clips) -------------------------------------------------
+const audio = new Audio();
+let previewing = null;
+function setPreview(song) {
+  const mini = document.getElementById('mini');
+  if (!song) { audio.pause(); previewing = null; mini.hidden = true; markPlaying(); return; }
+  previewing = song;
+  audio.src = song.preview; audio.play().catch(() => toast('▶︎ ✕', 'error'));
+  mini.innerHTML = `<div class="art" style="--cv:${coverBg(song)}">${song.artwork ? '' : initial(song.title)}</div>
+    <div class="meta"><div class="t">${esc(song.title)}</div><div class="s">${EQ}<span>${esc(song.artist ?? '')}</span></div></div>
+    <button class="ib add press" id="miniAdd" aria-label="+">${ic('plusCircle')}</button><button class="ib press" id="miniStop" aria-label="stop">${ic('pause')}</button>
+    <div class="prog"><i id="prog"></i></div>`;
+  mini.hidden = false;
+  document.getElementById('miniStop').onclick = () => setPreview(null);
+  document.getElementById('miniAdd').onclick = (e) => act(e.currentTarget, 'queueAdd', { song }, { ok: tr('added') });
+  markPlaying();
+}
+audio.addEventListener('timeupdate', () => { const p = document.getElementById('prog'); if (p) p.style.width = `${(audio.currentTime / (audio.duration || 30)) * 100}%`; });
+audio.addEventListener('ended', () => setPreview(null));
+function markPlaying() {
+  document.querySelectorAll('[data-preview]').forEach((el) => {
+    const on = Boolean(previewing) && el.dataset.preview === previewing.preview;
+    el.classList.toggle('playing', on);
+    const pi = el.querySelector('.pi');
+    if (pi) pi.innerHTML = ic(on ? 'pause' : 'play');
+    el.closest('.row')?.classList.toggle('on', on);
+  });
+}
+
+// --- pieces -------------------------------------------------------------------------
+const songs = new Map();
+let songSeq = 0;
+function keep(song) { const k = `s${++songSeq}`; songs.set(k, song); return k; }
+
+function art(song, k) {
+  const pv = song.preview ? ` press" data-act="preview" data-song="${k}" data-preview="${esc(song.preview)}` : '';
+  return `<button class="art${pv}" style="--cv:${coverBg(song)}"${song.preview ? '' : ' disabled'}>${song.artwork ? '' : initial(song.title)}${song.preview ? `<span class="pi">${ic('play')}</span>` : ''}</button>`;
+}
+const addBtn = (k) => `<button class="ib add press" data-act="add" data-song="${k}" aria-label="+">${ic('plusCircle')}</button>`;
+
+function row(song, { sub = '', actions = '' } = {}) {
+  const k = keep(song);
+  return `<div class="row">${art(song, k)}
+    <div class="meta"><div class="t">${esc(song.title)}</div><div class="s">${esc(song.artist ?? '')}${sub ? ` · ${sub}` : ''}</div></div>
+    <div class="acts">${actions.replace(/\{k\}/g, k)}</div></div>`;
+}
+const skeleton = (n = 3) => `<div>${'<div class="sk"></div>'.repeat(n)}</div>`;
+const emptyState = (symbol, text) => `<div class="empty fade">${ic(symbol)}${text}</div>`;
+const heading = (title, count) => `<div class="h2"><h2>${title}</h2>${count != null ? `<span class="tnum">${count}</span>` : ''}</div>`;
+
+function nowPlaying() {
+  const p = state.player;
+  if (!p) return '';
+  const t = p.track;
+  return `<div class="np material fade">
+    <div class="art" style="--cv:${gradOf(t ? t.title + t.artist : 'x')}">${t ? initial(t.title) : ic('note')}</div>
+    <div class="meta">
+      <div class="who">${p.playing ? EQ : ''}<span>${tr('host', { name: p.host ?? '' })}${p.device ? ` · ${tr('on_device', { device: p.device })}` : ''}</span></div>
+      ${t ? `<div class="t">${esc(t.title)}</div><div class="a">${esc(t.artist ?? '')}</div>` : `<div class="a" style="margin-top:4px">${p.error ? `<span class="err">${esc(p.error)}</span>` : tr('nothing_playing')}</div>`}
+    </div>
+    ${state.me.control ? `<div class="ctl"><button class="press" data-act="ctl" data-a="prev" aria-label="prev">${ic('backward')}</button><button class="big press" data-act="ctl" data-a="play" aria-label="play">${ic(p.playing ? 'pause' : 'play')}</button><button class="press" data-act="ctl" data-a="next" aria-label="next">${ic('forward')}</button></div>` : ''}
+    ${p.next?.length ? `<div class="next">${esc(tr('up_next'))} · <b>${p.next.slice(0, 3).map((x) => esc(x.label)).join('</b> · <b>')}</b></div>` : ''}
+  </div>`;
+}
+
+// --- tabs ---------------------------------------------------------------------------
+function queueView() {
+  const ctl = state.me.control;
+  const q = state.queue;
+  let html = `<form class="search" id="searchForm">${ic('search')}<input type="search" id="q" placeholder="${tr('search_ph')}" autocomplete="off" enterkeyhint="search"><div class="glass"></div></form>`;
+  if (results) {
+    html += heading(tr('results'));
+    html += results === 'loading' ? skeleton(2)
+      : results.length ? `<div class="list material fade">${results.map((s) => row(s, { actions: addBtn('{k}') })).join('')}</div>` : `<p class="foot">${tr('no_results')}</p>`;
+  }
+  html += heading(tr('queue'), q.length || null);
+  if (!q.length) return html + emptyState('queue', `<p>${tr('queue_empty')}</p>`);
+  const [first, ...rest] = q;
+  const k = keep(first);
+  const tools = (s, i) => `${ctl && i > 0 ? `<button class="ib press" data-act="up" data-id="${s.id}" aria-label="up">${ic('up')}</button>` : ''}${ctl && i < q.length - 1 ? `<button class="ib press" data-act="down" data-id="${s.id}" aria-label="down">${ic('down')}</button>` : ''}${ctl || s.mine ? `<button class="ib del press" data-act="rm" data-id="${s.id}" aria-label="remove">${ic('x')}</button>` : ''}`;
+  html += `<div class="hero material fade">${art(first, k)}
+      <div class="meta"><div class="k">${bare('play_next')}</div><div class="t">${esc(first.title)}</div><div class="s">${esc(first.artist ?? '')}</div><div class="s" style="font:var(--footnote)">${tr('by', { name: first.by ?? '—' })}</div></div>
+      <div class="acts" style="flex-direction:column">${tools(first, 0)}</div></div>`;
+  if (rest.length) html += `<div class="list material fade">${rest.map((s, i) => row(s, { sub: tr('by', { name: s.by ?? '—' }), actions: tools(s, i + 1) })).join('')}</div>`;
+  if (ctl) {
+    html += state.player
+      ? `<div class="pair"><button class="btn prominent press" data-act="play">${ic('play')}${bare('play_next')}</button><button class="btn glass press" data-act="playall">${ic('forward')}${bare('all_spotify')}</button></div>`
+      : `<div style="margin-top:16px"><button class="btn prominent press" data-act="play">${ic('play')}${bare('play_next')}</button></div>`;
+    html += `<p class="foot">${state.player ? tr('queue_where_player', { name: state.player.host ?? '' }) : tr('queue_where_chat')}</p>`;
+    html += `<button class="btn plain bad press" data-act="clear">${tr('clear')}</button>`;
+  } else html += `<p class="foot">${tr('control_hint')}</p>`;
+  return html;
+}
+
+const DIRS = { both: '⇄', in: '💬 → 🎧', out: '🎧 → 💬' };
+function playlistsView() {
+  let html = heading(bare('tab_playlists'), state.playlists.length || null);
+  if (!state.playlists.length) html += emptyState('library', `<p>${tr('pl_empty')}</p>`);
+  for (const pl of state.playlists) {
+    const s = svc(pl.provider);
+    const tracks = openTracks[pl.id];
+    html += `<div class="pl material fade" style="--sc:${SVC_COLOR[pl.provider] ?? 'var(--indigo)'}">
+      <div class="top"><div class="badge-svc">${ic('note')}</div><div class="meta"><div class="name">${esc(pl.name ?? '—')}</div><div class="sv">${esc(s.name)}</div></div>
+        ${pl.url ? `<button class="ib press" data-act="openurl" data-url="${esc(pl.url)}" aria-label="${tr('open')}">${ic('out')}</button>` : ''}</div>
+      <div class="stats"><span class="pill"><b class="tnum">${pl.tracks}</b>${bare('tracks', { n: '' }) || '♪'}</span><span class="pill">${bare(`dir_${pl.direction}`)}</span>
+        <button class="pill btnish press" data-act="tracks" data-id="${pl.id}">${tracks ? tr('hide_tracks') : tr('show_tracks')}${ic('chev', `i chev${tracks ? ' open' : ''}`)}</button></div>
+      ${tracks === 'loading' ? `<div style="margin-top:12px">${skeleton(3)}</div>` : Array.isArray(tracks) ? `<div class="tracks">${tracks.slice(0, 100).map((x) => row(x, { actions: addBtn('{k}') })).join('') || '<p class="foot">—</p>'}</div>` : ''}
+    </div>`;
+  }
+  html += `<p class="foot">${tr('sync_hint')}</p>`;
+  if (!state.me.admin) return html + `<p class="foot">${tr('admins_link')}</p>`;
+  if (!state.me.accounts.length) return html + `<p class="foot">${tr('connect_first')}</p><button class="btn glass press" data-act="bot">${tr('open_bot')}</button>`;
+  if (!linking) return html + `<button class="btn prominent press" data-act="linkstart">${ic('link')}${bare('link_pl')}</button>`;
+  return html + linkSheet();
+}
+
+function linkSheet() {
+  if (linking === 'loading') return `<div class="sheet material">${skeleton(3)}</div>`;
+  const accts = linking.accounts;
+  const acct = accts.find((a) => a.provider === linking.provider) ?? accts[0];
+  const chosen = acct.playlists.find((p) => p.id === linking.playlistId);
+  const readOnly = chosen && !chosen.editable;
+  const dirs = readOnly ? ['out'] : ['both', 'in', 'out'];
+  const dir = dirs.includes(linking.direction) ? linking.direction : dirs[0];
+  const name = state.chat.topic || state.chat.title || '';
+  const opt = (id, title, sub) => `<button class="opt" role="radio" aria-checked="${(linking.playlistId ?? '') === id}" data-act="lkpl" data-id="${esc(id)}"><span class="meta"><span class="t" style="display:block">${title}</span>${sub ? `<span class="s" style="display:block;font:var(--footnote)">${sub}</span>` : ''}</span>${ic('check', 'i check')}</button>`;
+  return `<div class="sheet material fade"><div class="grabber"></div><h3>${bare('link_pl')}</h3>
+    <div class="gh caps">${tr('pick_account')}</div>
+    <div class="seg" style="--n:${accts.length}">${accts.map((a) => `<button aria-pressed="${a.provider === acct.provider}" data-act="lkacct" data-p="${a.provider}"><span class="dot" style="background:${SVC_COLOR[a.provider]}"></span>${esc(svc(a.provider).name)}</button>`).join('')}</div>
+    ${acct.error ? `<p class="foot err">${esc(acct.error)}</p>` : ''}
+    <div class="gh caps">${tr('pick_playlist')}</div>
+    <div class="group opts">${opt('', `${ic('sparkles', 'i" style="display:inline;width:15px;height:15px;color:var(--tint);vertical-align:-2px')} ${bare('new_named', { name })}`, '')}
+      ${acct.playlists.map((p) => opt(p.id, esc(p.name), `${p.total != null ? tr('tracks', { n: p.total }) : ''}${p.editable ? '' : ` · ${tr('read_only')}`}`)).join('')}</div>
+    <div class="gh caps">${tr('direction')}</div>
+    <div class="seg" style="--n:${dirs.length}">${dirs.map((d) => `<button aria-pressed="${d === dir}" data-act="lkdir" data-d="${d}">${DIRS[d]}</button>`).join('')}</div>
+    <p class="foot" style="margin:8px 12px 0">${bare(`dir_${dir}`)}</p>
+    ${dir !== 'in' && linking.playlistId ? `<div class="group" style="margin-top:16px"><button class="toggle" role="switch" aria-checked="${Boolean(linking.postExisting)}" data-act="lkpost"><span>${tr('post_existing')}</span><span class="switch"></span></button></div>` : ''}
+    <div style="margin-top:18px"><button class="btn prominent press" data-act="link">${tr('link')}</button><button class="btn plain press" data-act="linkcancel">${tr('cancel')}</button></div>
+  </div>`;
+}
+
+function picksView() {
+  let html = heading(bare('tab_picks')) + `<p class="foot" style="margin-top:-4px">${tr('picks_hint')}</p>`;
+  if (!picks || picks === 'loading') return html + `<div class="sk" style="height:230px;border-radius:26px"></div><div class="grid"><div class="sk" style="height:180px"></div><div class="sk" style="height:180px"></div></div><p class="foot" style="text-align:center">${tr('picks_wait')}</p>`;
+  if (picks.error) return html + emptyState('sparkles', `<p class="err">${esc(picks.error)}</p>`) + `<button class="btn glass press" data-act="repick">${ic('refresh')}${bare('refresh')}</button>`;
+  if (!picks.items.length) return html + emptyState('sparkles', `<p>${tr('picks_empty')}</p>`) + `<button class="btn glass press" data-act="repick">${ic('refresh')}${bare('refresh')}</button>`;
+  if (picks.items.every((x) => x.reason === 'trending')) html += `<p class="foot">${tr('picks_cold')}</p>`;
+  const why = (x) => `<div class="why">${x.reason === 'trending' ? '🔥' : ic('sparkles')}<span>${x.reason === 'similar' ? tr('because', { name: x.because }) : x.reason === 'more' ? tr('more_from', { name: x.because }) : tr('trending')}</span></div>`;
+  const [top, ...rest] = picks.items;
+  const k = keep(top);
+  html += `<div class="feature fade" style="--cv:${coverBg(top)}">
+    <div class="k">${esc(state.chat.title ?? '')}</div>
+    <div class="t">${esc(top.title)}</div><div class="a">${esc(top.artist ?? '')}</div>${why(top)}
+    <div class="bar">${top.preview ? `<button class="btn glass press" data-act="preview" data-song="${k}" data-preview="${esc(top.preview)}">${ic('play')}30s</button>` : ''}<button class="btn prominent press" data-act="add" data-song="${k}">${ic('plus')}${bare('tab_queue')}</button></div>
+  </div>`;
+  html += `<div class="grid">${rest.map((x) => {
+    const kk = keep(x);
+    return `<div class="tile fade"><div style="position:relative">${art(x, kk)}<button class="fab press" data-act="add" data-song="${kk}" aria-label="+">${ic('plus')}</button></div><div class="t">${esc(x.title)}</div><div class="s">${esc(x.artist ?? '')}</div>${why(x)}</div>`;
+  }).join('')}</div>`;
+  return html + `<div style="margin-top:22px"><button class="btn glass press" data-act="repick">${ic('refresh')}${bare('refresh')}</button></div>`;
+}
+
+function sleepView() {
+  const s = state.sleep;
+  const p = state.player;
+  const canSet = p ? state.me.control : state.me.spotify;
+  const R = 104;
+  const C = 2 * Math.PI * R;
+  const left = s ? Math.max(0, Math.round(s.at - serverNow())) : 0;
+  const total = s ? Math.max(1, s.at - (s.from ?? s.at - 3600)) : 1;
+  let html = heading(bare('tab_sleep'));
+  html += `<div class="timer material fade">
+    <div class="dial"><svg viewBox="0 0 236 236"><circle cx="118" cy="118" r="${R}" stroke="var(--fill3)" stroke-width="9" fill="none"/>
+      <circle id="arc" cx="118" cy="118" r="${R}" stroke="var(--orange)" stroke-width="9" fill="none" stroke-linecap="round" stroke-dasharray="${C}" stroke-dashoffset="${s ? C * (1 - left / total) : C}" style="transition:stroke-dashoffset 1s linear" data-c="${C}" data-total="${total}"/></svg>
+      <div class="in">${s ? `<div class="clock tnum" id="clock">${fmt(left)}</div><div class="cap">${ic('moon')}${tr('sleep_left')}</div>` : `<div class="idle">${ic('moon')}<div class="cap">${bare('tab_sleep')}</div></div>`}</div></div>
+    ${s && !s.mine ? `<p class="foot">${tr('sleep_set_by_other')}</p>` : ''}
+    ${s && (p ? state.me.control : (s.mine || state.me.admin)) ? `<button class="btn glass cancel press" data-act="sleep" data-m="0">${tr('sleep_cancel')}</button>` : ''}
+  </div>`;
+  html += `<p class="foot">${p ? tr('sleep_player', { name: p.host ?? '' }) : canSet ? tr('sleep_personal') : tr('sleep_need_spotify')}</p>`;
+  if (canSet) html += `<div class="presets">${state.sleepMinutes.map((m) => `<button class="preset glass press" data-act="sleep" data-m="${m}"><b class="tnum">${m}</b><small>${bare('min', { n: '' }) || 'min'}</small></button>`).join('')}</div>`;
+  else if (p) html += `<p class="foot">${tr('control_hint')}</p>`;
+  else html += `<button class="btn glass press" data-act="bot">${tr('open_bot')}</button>`;
+  return html + `<p class="foot" style="color:var(--label3)">${tr('sleep_late')}</p>`;
+}
+
+const fmt = (sec) => { const h = Math.floor(sec / 3600); const m = Math.floor((sec % 3600) / 60); const s = sec % 60; return `${h ? `${h}:` : ''}${String(m).padStart(h ? 2 : 1, '0')}:${String(s).padStart(2, '0')}`; };
+
+const KIND_LOOK = { added: ['var(--green)', 'note'], queued: ['var(--orange)', 'bolt'], repost: ['var(--indigo)', 'repeat'] };
+function settingsView() {
+  let html = heading(tr('settings')) + `<p class="foot" style="margin-top:-4px">${tr('react_hint')}</p>`;
+  if (!reactions || reactions === 'loading') return html + skeleton(3);
+  const r = reactions;
+  const topicScope = reactScope === 'topic' && r.topic;
+  const raw = topicScope ? r.topic : r.chat;
+  const fallback = (k) => (topicScope ? (r.chat[k] ?? r.defaults[k]) : r.defaults[k]);
+  const current = (k) => raw[k] ?? fallback(k);
+  const wholeLabel = state.chat.type === 'channel' ? tr('scope_channel') : state.chat.forum ? tr('scope_forum') : tr('scope_group');
+  if (r.topic) html += `<div class="seg" style="--n:2;margin:4px 0 14px"><button aria-pressed="${!topicScope}" data-act="rxscope" data-s="chat">${wholeLabel}</button><button aria-pressed="${Boolean(topicScope)}" data-act="rxscope" data-s="topic">${tr('scope_topic')}</button></div>`;
+  if (r.none) html += `<p class="foot err">${tr('none_allowed')}</p>`;
+  else if (r.restricted) html += `<p class="foot">${tr('restricted')}</p>`;
+  html += '<div class="list material fade">';
+  for (const k of r.kinds) {
+    const [color, icon] = KIND_LOOK[k];
+    const val = current(k);
+    const inherited = raw[k] == null;
+    const open = openKind === k;
+    html += `<button class="set" data-act="rxkind" data-k="${k}" aria-expanded="${open}"><span class="sq" style="background:${color}">${ic(icon)}</span>
+      <span class="meta"><span class="t" style="display:block">${tr(`k_${k}`)}</span><span class="s" style="display:block">${tr(`k_${k}_hint`)}</span></span>
+      <span class="val">${val ? `<span class="em${inherited ? ' dim' : ''}">${esc(val)}</span>` : `<span>${tr('off')}</span>`}${ic('chevR')}</span></button>`;
+    if (open) {
+      const emojis = showMore ? [...r.suggested, ...r.more] : r.suggested;
+      html += `<div class="picker"><div class="choices">
+          ${topicScope ? `<button class="choice press" data-act="rxset" data-k="${k}" data-e="~" aria-pressed="${inherited}">${wholeLabel} · ${fallback(k) ? esc(fallback(k)) : tr('off')}</button>` : ''}
+          <button class="choice press" data-act="rxset" data-k="${k}" data-e="" aria-pressed="${!inherited && raw[k] === ''}">${tr('off')}</button></div>
+        <div class="emojis">${emojis.map((e) => `<button class="emo" data-act="rxset" data-k="${k}" data-e="${esc(e)}" aria-pressed="${!inherited && raw[k] === e}">${esc(e)}</button>`).join('')}</div>
+        ${r.more.length ? `<button class="morebtn" data-act="rxmore">${showMore ? tr('less') : tr('more')}</button>` : ''}</div>`;
+    }
+  }
+  html += '</div>';
+  if (r.syncs.length) {
+    html += heading(tr('syncs_title')) + `<div class="list material">${r.syncs.map((x) => `<button class="toggle" role="switch" aria-checked="${x.reaction}" data-act="rxsync" data-id="${x.id}" style="position:relative"><span class="dot" style="background:${SVC_COLOR[x.provider]}"></span><span>${esc(x.name ?? '—')}</span><span class="switch"></span></button>`).join('')}</div>`;
+    html += `<p class="foot">${tr('syncs_react_hint')}</p>`;
+  }
+  return html;
+}
+
+async function openSettings() {
+  tab = 'settings'; reactions = 'loading'; openKind = null; showMore = false;
+  reactScope = parseInt(chatParam.split('t')[1] || '0', 10) ? 'topic' : 'chat';
+  render(); window.scrollTo({ top: 0 });
+  try { reactions = await call('reactions'); } catch (e) { toast(errText(e), 'error'); tab = 'queue'; }
+  render();
+}
+
+async function saveReactions(btn, op, input) {
+  if (btn) btn.disabled = true;
+  try { reactions = await call(op, input); toast(tr('saved')); render(); } catch (e) { toast(errText(e), 'error'); } finally { if (btn) btn.disabled = false; }
+}
+
+const TABS = [['queue', 'queue'], ['playlists', 'library'], ['picks', 'sparkles'], ['sleep', 'moon']];
+function renderTabbar() {
+  tabbar.hidden = false;
+  tabbar.innerHTML = `<span class="lens" id="lens"></span>${TABS.map(([x, icon]) => `<button role="tab" data-tab="${x}" aria-selected="${x === tab}">${ic(icon)}<span>${bare(`tab_${x}`)}</span>${x === 'queue' && state.queue.length ? `<span class="badge tnum">${state.queue.length}</span>` : ''}${x === 'sleep' && state.sleep ? '<span class="badge pip"></span>' : ''}</button>`).join('')}`;
+  moveLens(false);
+}
+function moveLens(animate = true) {
+  const lens = document.getElementById('lens');
+  const b = tabbar.querySelector('[aria-selected="true"]');
+  if (!lens || !b) return;
+  if (!animate) lens.style.transition = 'none';
+  lens.style.left = `${b.offsetLeft}px`; lens.style.width = `${b.offsetWidth}px`;
+  if (!animate) { void lens.offsetWidth; lens.style.transition = ''; }
+}
+addEventListener('resize', () => moveLens(false));
+
+function render() {
+  if (!state) return;
+  songs.clear();
+  const focused = document.activeElement?.id === 'q';
+  const qv = document.getElementById('q')?.value ?? '';
+  const view = { queue: queueView, playlists: playlistsView, picks: picksView, sleep: sleepView, settings: settingsView }[tab]();
+  const chips = [
+    ...state.playlists.slice(0, 2).map((p) => `<span class="chip glass"><span class="dot" style="background:${SVC_COLOR[p.provider]}"></span><b>${esc(p.name ?? '')}</b></span>`),
+    state.sleep ? `<span class="chip glass">${ic('moon')}<b class="tnum" id="chipClock">${fmt(Math.max(0, Math.round(state.sleep.at - serverNow())))}</b></span>` : '',
+  ].join('');
+  const corner = tab === 'settings' ? `<button class="done glass press" data-act="settingsdone">${tr('done')}</button>`
+    : state.me.admin ? `<button class="gear glass press" data-act="settings" aria-label="${tr('settings')}">${ic('gear')}</button>` : '';
+  app.innerHTML = `<header>${corner}<div class="sub"><span class="live"></span><bdi dir="ltr">@${esc(state.bot)}</bdi></div>
+      <h1 style="padding-inline-end:48px">${esc(state.chat.title ?? '')}${state.chat.topic ? `<span class="topic"># ${esc(state.chat.topic)}</span>` : ''}</h1>
+      ${chips ? `<div class="chips">${chips}</div>` : ''}</header>
+    ${tab === 'queue' ? nowPlaying() : ''}
+    <section>${view}</section>`;
+  renderTabbar();
+  const q = document.getElementById('q');
+  if (q) { q.value = qv; if (focused) { q.focus(); q.setSelectionRange(qv.length, qv.length); } }
+  markPlaying();
+  armSleepClock();
+}
+
+// --- events ------------------------------------------------------------------------
+let searchTimer;
+app.addEventListener('input', (e) => {
+  if (e.target.id !== 'q') return;
+  clearTimeout(searchTimer);
+  const v = e.target.value.trim();
+  if (v.length < 2) { if (results) { results = null; render(); } return; }
+  searchTimer = setTimeout(() => search(v), 450);
+});
+app.addEventListener('submit', (e) => { e.preventDefault(); const v = document.getElementById('q').value.trim(); if (v.length >= 2) search(v); document.getElementById('q').blur(); });
+async function search(v) {
+  results = 'loading'; render();
+  try { const r = await call('search', { q: v }); if (document.getElementById('q')?.value.trim() === v) { results = r.results; render(); } } catch (e) { results = null; toast(errText(e), 'error'); render(); }
+}
+
+tabbar.addEventListener('click', (e) => {
+  const b = e.target.closest('[data-tab]');
+  if (!b || b.dataset.tab === tab) return;
+  tabbar.querySelectorAll('[data-tab]').forEach((x) => x.setAttribute('aria-selected', String(x === b)));
+  moveLens(true);
+  tab = b.dataset.tab;
+  try { localStorage.setItem('chat_tab', tab); } catch {}
+  try { tg.HapticFeedback.selectionChanged(); } catch {}
+  setTimeout(() => { render(); window.scrollTo({ top: 0 }); if (tab === 'picks' && !picks) loadPicks(false); }, 120);
+});
+
+app.addEventListener('click', async (e) => {
+  const b = e.target.closest('[data-act]');
+  if (!b) return;
+  const a = b.dataset.act;
+  const song = b.dataset.song && songs.get(b.dataset.song);
+  if (a === 'preview' && song) return previewing?.preview === song.preview ? setPreview(null) : setPreview(song);
+  if (a === 'add' && song) return act(b, 'queueAdd', { song }, { ok: tr('added') });
+  if (a === 'rm') return act(b, 'queueRemove', { id: Number(b.dataset.id) });
+  if (a === 'up' || a === 'down') return act(b, 'queueMove', { id: Number(b.dataset.id), dir: a === 'up' ? -1 : 1 });
+  if (a === 'clear') return confirmThen(tr('clear_confirm'), () => act(b, 'queueClear'));
+  if (a === 'play' || a === 'playall') {
+    return act(b, 'play', { all: a === 'playall' }, {
+      ok: (r) => (r.result.to === 'chat' ? tr('posted_chat') : [r.result.played ? tr('sent_spotify', { n: r.result.played }) : '', r.result.missed ? tr('missed', { n: r.result.missed }) : ''].filter(Boolean).join(' · ')),
+    });
+  }
+  if (a === 'ctl') { try { tg.HapticFeedback.impactOccurred('light'); } catch {} return act(b, 'control', { action: b.dataset.a }); }
+  if (a === 'openurl') return tg.openLink(b.dataset.url);
+  if (a === 'bot') return tg.openTelegramLink(`https://t.me/${state?.bot ?? 'chthmusicbot'}?start=accounts`);
+  if (a === 'tracks') {
+    const id = Number(b.dataset.id);
+    if (openTracks[id]) { delete openTracks[id]; return render(); }
+    openTracks[id] = 'loading'; render();
+    try { openTracks[id] = (await call('tracks', { linkId: id })).tracks; } catch (err) { delete openTracks[id]; toast(errText(err), 'error'); }
+    return render();
+  }
+  if (a === 'repick') return loadPicks(true);
+  if (a === 'settings') return openSettings();
+  if (a === 'settingsdone') { tab = 'queue'; render(); window.scrollTo({ top: 0 }); return; }
+  if (a === 'rxscope') { reactScope = b.dataset.s; openKind = null; try { tg.HapticFeedback.selectionChanged(); } catch {} return render(); }
+  if (a === 'rxkind') { openKind = openKind === b.dataset.k ? null : b.dataset.k; showMore = false; return render(); }
+  if (a === 'rxmore') { showMore = !showMore; return render(); }
+  if (a === 'rxset') {
+    const e = b.dataset.e;
+    return saveReactions(b, 'setReaction', { scope: reactScope === 'topic' && reactions?.topic ? 'topic' : 'chat', kind: b.dataset.k, emoji: e === '~' ? null : e });
+  }
+  if (a === 'rxsync') return saveReactions(b, 'syncReaction', { linkId: Number(b.dataset.id), on: b.getAttribute('aria-checked') !== 'true' });
+  if (a === 'sleep') {
+    const m = Number(b.dataset.m);
+    return act(b, 'sleep', { minutes: m }, { ok: m ? tr('sleep_set') : tr('sleep_stopped') });
+  }
+  if (a === 'linkstart') {
+    linking = 'loading'; render();
+    try {
+      const r = await call('myPlaylists');
+      linking = { accounts: r.accounts, provider: r.accounts[0]?.provider, playlistId: null, direction: 'both', postExisting: false };
+    } catch (err) { linking = null; toast(errText(err), 'error'); }
+    return render();
+  }
+  if (!linking || linking === 'loading') return;
+  try { tg.HapticFeedback.selectionChanged(); } catch {}
+  if (a === 'lkacct') { linking.provider = b.dataset.p; linking.playlistId = null; return render(); }
+  if (a === 'lkpl') { linking.playlistId = b.dataset.id || null; return render(); }
+  if (a === 'lkdir') { linking.direction = b.dataset.d; return render(); }
+  if (a === 'lkpost') { linking.postExisting = !linking.postExisting; return render(); }
+  if (a === 'linkcancel') { linking = null; return render(); }
+  if (a === 'link') {
+    const acct = linking.accounts.find((x) => x.provider === linking.provider) ?? linking.accounts[0];
+    const chosen = acct.playlists.find((p) => p.id === linking.playlistId);
+    const dir = chosen && !chosen.editable ? 'out' : linking.direction;
+    const input = { provider: acct.provider, direction: dir, postExisting: Boolean(linking.postExisting), ...(linking.playlistId ? { playlistId: linking.playlistId } : { create: true }) };
+    const r = await act(b, 'addPlaylist', input, { ok: tr('linked') });
+    if (r) { linking = null; picks = null; render(); }
+  }
+});
+
+function confirmThen(text, fn) {
+  if (tg?.showConfirm) tg.showConfirm(text, (yes) => yes && fn()); else if (confirm(text)) fn();
+}
+
+async function loadPicks(refreshing) {
+  picks = 'loading'; render();
+  try { picks = await call('picks', { refresh: refreshing }); } catch (e) { picks = { error: errText(e), items: [] }; }
+  render();
+}
+
+// --- clocks -----------------------------------------------------------------------------
+let clockTimer = null;
+let fireTimer = null;
+function armSleepClock() {
+  clearInterval(clockTimer); clearTimeout(fireTimer);
+  if (!state?.sleep) return;
+  const tickClock = () => {
+    const left = Math.max(0, Math.round(state.sleep.at - serverNow()));
+    for (const id of ['clock', 'chipClock']) { const el = document.getElementById(id); if (el) el.textContent = fmt(left); }
+    const arc = document.getElementById('arc');
+    if (arc) arc.setAttribute('stroke-dashoffset', String(Number(arc.dataset.c) * (1 - left / Number(arc.dataset.total))));
+  };
+  clockTimer = setInterval(tickClock, 1000);
+  // The server has no cron: when the time comes, this page asks it to fire the timer.
+  const ms = Math.max(0, (state.sleep.at - serverNow()) * 1000) + 1500;
+  if (ms < 2 ** 31) fireTimer = setTimeout(() => refresh(), ms);
+}
+
+async function refresh() {
+  try {
+    const res = await call('tick');
+    clockSkew = res.now - Date.now() / 1000;
+    state = res;
+    if (document.activeElement?.tagName !== 'INPUT') render();
+  } catch (e) {
+    console.warn(e);
+  }
+}
+setInterval(() => { if (document.visibilityState === 'visible' && chatParam) refresh(); }, 20000);
+document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible' && chatParam) refresh(); });
+
+// --- start ----------------------------------------------------------------------------
+async function openChat(param) {
+  chatParam = param;
+  app.innerHTML = `<header><div class="sk" style="height:14px;width:110px"></div><div class="sk" style="height:34px;width:65%;margin-top:10px"></div></header><section style="margin-top:20px">${skeleton(4)}</section>`;
+  try {
+    state = await call('state');
+    clockSkew = state.now - Date.now() / 1000;
+    setAura(state.chat.title);
+    if (!TABS.some(([x]) => x === tab)) tab = 'queue'; // ⚙︎ isn't remembered
+    render();
+    if (tab === 'picks') loadPicks(false);
+  } catch (e) {
+    app.innerHTML = `<section style="padding-top:60px">${emptyState('warn', `<p class="err">${esc(errText(e))}</p>`)}</section>`;
+  }
+}
+
+async function home() {
+  setAura('home');
+  try {
+    const r = await new Promise((resolve, reject) => tg.Serverless.call('chatApp', { op: 'home' }, (err, res) => (err ? reject(err) : resolve(res))));
+    const head = `<header><div class="sub"><span class="live"></span><bdi dir="ltr">@${esc(r.bot)}</bdi></div><h1>${bare('home_title')}</h1></header>`;
+    if (!r.chats.length) { app.innerHTML = `${head}<section>${emptyState('note', `<p>${tr('home_empty')}</p>`)}</section>`; return; }
+    app.innerHTML = `${head}<section><p class="foot">${tr('home_hint')}</p><div class="list material">${r.chats.map((c) => `<button class="homecard" data-chat="${esc(c.param)}"><span class="art" style="--cv:${gradOf(c.title)}">${initial(c.title)}</span><span class="meta"><span class="t" style="display:block">${esc(c.title)}</span></span>${ic('chevR', 'i" style="width:14px;height:14px;color:var(--label3)')}</button>`).join('')}</div></section>`;
+    app.querySelectorAll('[data-chat]').forEach((b) => { b.onclick = () => openChat(b.dataset.chat); });
+  } catch (e) {
+    app.innerHTML = `<section style="padding-top:60px">${emptyState('warn', `<p class="err">${esc(errText(e))}</p>`)}</section>`;
+  }
+}
+
+(() => {
+  if (!tg?.initData) { setAura('x'); app.innerHTML = `<section style="padding-top:80px">${emptyState('note', `<p>${tr('open_from_bot')}</p>`)}</section>`; return; }
+  const param = tg.initDataUnsafe?.start_param || new URLSearchParams(location.search).get('chat');
+  if (param && /^c\d+(t\d+)?$/.test(param)) openChat(param); else home();
+})();
+</script>
+</body>
+</html>

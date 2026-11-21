@@ -13,6 +13,7 @@ import { accountsView, linksView, linkView, sendHome } from '../lib/views.js';
 import { onWizardCallback } from '../lib/wizard.js';
 import { onFindCallback, onSongCallback } from '../lib/find.js';
 import { onPlayerCallback } from '../lib/player.js';
+import { fireDueTimers } from '../lib/sleep.js';
 import { onBackfillCallback, startBackfill } from '../lib/backfill.js';
 import { deleteAccount } from '../lib/accounts.js';
 import { youtubeStart, youtubePoll } from '../lib/login.js';
@@ -131,6 +132,7 @@ async function onLinks(q, locale, arg) {
 }
 
 export default async function (q) {
+  await fireDueTimers(); // 😴 no cron: any update fires the sleep timers that are due
   const data = q.data ?? '';
   const locale = await localeFor(q.from);
   const [head, ...rest] = data.split(':');

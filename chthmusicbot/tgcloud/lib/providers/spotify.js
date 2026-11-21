@@ -168,6 +168,13 @@ export const spotify = {
     return call(acct, 'PUT', state?.is_playing ? '/me/player/pause' : '/me/player/play');
   },
 
+  /** Pause (the sleep timer); nothing playing is fine too. */
+  async pause(acct) {
+    const state = await call(acct, 'GET', '/me/player');
+    if (state?.is_playing) await call(acct, 'PUT', '/me/player/pause');
+    return Boolean(state?.is_playing);
+  },
+
   queue(acct, id) {
     return call(acct, 'POST', `/me/player/queue?uri=${encodeURIComponent(`spotify:track:${id}`)}`);
   },

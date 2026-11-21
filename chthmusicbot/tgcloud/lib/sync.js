@@ -12,7 +12,8 @@
 import { api, db, BotApiError } from 'sdk';
 import { and, eq, inArray, isNull } from 'sdk/db';
 import { links, linkTracks } from '../schema.js';
-import { ADDED_REACTION, SYNC_BATCH } from './config.js';
+import { SYNC_BATCH } from './config.js';
+import { react } from './reactions.js';
 import { providerOf } from './providers/index.js';
 import { getAccount } from './accounts.js';
 import { resolveRef } from './tracks.js';
@@ -176,10 +177,6 @@ async function addPost(link, refs, message, memo) {
         .where(and(eq(linkTracks.linkId, link.id), inArray(linkTracks.trackId, fresh))).run();
       throw e;
     }
-    if (link.reaction) {
-      await api.setMessageReaction({ chat_id: message.chat.id, message_id: message.message_id, reaction: [{ type: 'emoji', emoji: ADDED_REACTION }] })
-        .catch((e) => console.warn('cannot react', e.description ?? e.message));
-    }
     return 'added';
   }
   if (!link.dedupe) return 'duplicate';
@@ -201,19 +198,27 @@ async function addPost(link, refs, message, memo) {
     text: t(locale, 'repost_removed', { who }),
     reply_parameters: original?.messageId ? { message_id: original.messageId, allow_sending_without_reply: true } : undefined,
   }).catch(() => {});
-  return 'duplicate';
+  return 'removed';
 }
 
-/** A music post in a group, forum or channel: add its tracks to every playlist it feeds. */
+/**
+ * A music post in a group, forum or channel: add its tracks to every playlist
+ * it feeds, then react once (reactions.js): "added" if any sync with reactions
+ * on took a track, else "repost" if they all had them (and the post is still there).
+ */
 export async function onChatPost(message, refs, threadId) {
   const memo = new Map();
+  const outcomes = new Set();
   for (const link of await linksForPost(message, threadId)) {
     try {
-      await addPost(link, refs, message, memo);
+      const outcome = await addPost(link, refs, message, memo);
+      if (link.reaction) outcomes.add(outcome);
     } catch (e) {
       await reportError(link, e);
     }
   }
+  if (outcomes.has('added')) await react(message, threadId, 'added');
+  else if (outcomes.has('duplicate') && !outcomes.has('removed')) await react(message, threadId, 'repost');
 }
 
 // --- playlist → chat ---------------------------------------------------------

@@ -165,3 +165,54 @@ export const backfillItems = table('backfill_items', {
 }, (t) => ({
   byUser: index('idx_backfill_items_user').on(t.userId, t.status),
 }));
+
+// The Mini App's shared queue of a chat (or forum topic). ▶️ Play next sends
+// the first song to the group player's Spotify, or posts it in the chat with its
+// audio. status: queued | played | missed | removed.
+export const queueItems = table('queue_items', {
+  id:          integer('id').primaryKey({ autoIncrement: true }),
+  chatId:      integer('chat_id').notNull(),
+  threadId:    integer('thread_id').notNull().default(0),
+  title:       text('title'),
+  artist:      text('artist'),
+  url:         text('url'),                            // a music link (lookup.js)
+  artwork:     text('artwork'),
+  preview:     text('preview'),                        // a 30-second preview, played in the Mini App
+  addedBy:     integer('added_by'),
+  addedByName: text('added_by_name'),
+  position:    integer('position').notNull().default(0),
+  status:      text('status').notNull().default('queued'),
+  createdAt:   integer('created_at').notNull(),
+  playedAt:    integer('played_at'),
+}, (t) => ({
+  byChat: index('idx_queue_items_chat').on(t.chatId, t.threadId, t.status),
+}));
+
+// A chat's sleep timer: at `at` (unix seconds) userId's Spotify is paused (the
+// group player's host, or whoever set it when the chat has no player). There's
+// no cron: due timers fire on the next update the bot gets, or from the Mini
+// App's own clock while someone has it open.
+export const sleepTimers = table('sleep_timers', {
+  chatId:    integer('chat_id').primaryKey(),
+  threadId:  integer('thread_id').notNull().default(0),
+  userId:    integer('user_id').notNull(),
+  setBy:     integer('set_by'),
+  at:        integer('at').notNull(),
+  createdAt: integer('created_at').notNull(),
+}, (t) => ({
+  byAt: index('idx_sleep_timers_at').on(t.at),
+}));
+
+// A chat's reaction settings (the Mini App's ⚙︎ Reactions), for the whole chat
+// (threadId 0) or one forum topic. Per kind: null = inherit (a topic follows
+// its chat, a chat the defaults), '' = off, or a reaction emoji.
+export const chatSettings = table('chat_settings', {
+  id:             integer('id').primaryKey({ autoIncrement: true }),
+  chatId:         integer('chat_id').notNull(),
+  threadId:       integer('thread_id').notNull().default(0),
+  addedReaction:  text('added_reaction'),             // a post's track went into a playlist
+  queuedReaction: text('queued_reaction'),            // a post's song was queued on the group player
+  repostReaction: text('repost_reaction'),            // a post's songs were all in the playlist already
+}, (t) => ({
+  chatThread: uniqueIndex('idx_chat_settings_chat_thread').on(t.chatId, t.threadId),
+}));

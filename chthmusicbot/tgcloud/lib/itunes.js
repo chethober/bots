@@ -12,6 +12,7 @@ export async function searchSongs(term, limit = 6) {
     artist: r.artistName,
     album: r.collectionName,
     artwork: r.artworkUrl100,
+    preview: r.previewUrl ?? null,
     url: `https://song.link/i/${r.trackId}`,
   }));
 }

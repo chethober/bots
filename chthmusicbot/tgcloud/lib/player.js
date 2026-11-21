@@ -8,7 +8,8 @@
 import { api, db } from 'sdk';
 import { eq } from 'sdk/db';
 import { players } from '../schema.js';
-import { BOT_USERNAME, QUEUED_REACTION } from './config.js';
+import { BOT_USERNAME } from './config.js';
+import { react } from './reactions.js';
 import { providerOf } from './providers/index.js';
 import { getAccount } from './accounts.js';
 import { isChatAdmin, threadOf } from './chats.js';
@@ -16,6 +17,7 @@ import { resolveRef } from './tracks.js';
 import { localeFor } from './i18n.js';
 import { errorText } from './errors.js';
 import { t } from './strings.js';
+import { appLink } from './applink.js';
 import { esc, now, trackLabel } from './util.js';
 
 const spotify = providerOf('spotify');
@@ -50,14 +52,14 @@ async function cardView(row) {
     reply_markup: {
       inline_keyboard: [
         [{ text: '⏮', callback_data: 'pl:prev' }, { text: '⏯', callback_data: 'pl:play' }, { text: '⏭', callback_data: 'pl:next' }, { text: '🔄', callback_data: 'pl:ref' }],
-        [{ text: t(locale, 'player_add'), switch_inline_query_current_chat: '' }],
+        [{ text: t(locale, 'player_add'), switch_inline_query_current_chat: '' }, { text: t(locale, 'app_button'), url: appLink(row.chatId, row.threadId ?? 0) }],
         [{ text: t(locale, row.queuePosts ? 'queue_posts_on' : 'queue_posts_off'), callback_data: 'pl:qp' }, { text: t(locale, 'player_end'), callback_data: 'pl:end' }],
       ],
     },
   };
 }
 
-async function refreshCard(row) {
+export async function refreshCard(row) {
   if (!row.messageId) return;
   await api.editMessageText({ chat_id: row.chatId, message_id: row.messageId, ...await cardView(row) })
     .catch((e) => { if (!/not modified/.test(e.description ?? '')) console.warn('card edit failed', e.description); });
@@ -143,6 +145,6 @@ export async function queueFromPost(message, refs) {
     }).catch(() => {});
   }
   if (!queued) return;
-  await api.setMessageReaction({ chat_id: message.chat.id, message_id: message.message_id, reaction: [{ type: 'emoji', emoji: QUEUED_REACTION }] }).catch(() => {});
+  await react(message, threadOf(message), 'queued');
   await refreshCard(row);
 }
