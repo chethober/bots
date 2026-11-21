@@ -1,0 +1,602 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Chat music</title>
+<script src="https://telegram.org/js/telegram-web-app.js"></script>
+<style>
+  :root {
+    --bg: var(--tg-theme-bg-color, #fff); --text: var(--tg-theme-text-color, #111);
+    --hint: var(--tg-theme-hint-color, #8a8a8f); --link: var(--tg-theme-link-color, #2481cc);
+    --btn: var(--tg-theme-button-color, #2481cc); --btn-text: var(--tg-theme-button-text-color, #fff);
+    --card: var(--tg-theme-secondary-bg-color, #f2f2f5); --sep: color-mix(in srgb, var(--hint) 25%, transparent);
+    --head: var(--tg-theme-header-bg-color, var(--bg)); --danger: var(--tg-theme-destructive-text-color, #e5484d);
+  }
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  html, body { margin: 0; background: var(--bg); color: var(--text); font: 15px/1.4 -apple-system, system-ui, "Segoe UI", Roboto, sans-serif; }
+  body { padding-bottom: calc(76px + env(safe-area-inset-bottom)); }
+  button { font: inherit; color: inherit; background: none; border: 0; cursor: pointer; padding: 0; }
+  button:disabled { opacity: .5; cursor: default; }
+  a { color: var(--link); }
+  [hidden] { display: none !important; }
+  header { padding: 16px 16px 8px; }
+  h1 { font-size: 20px; margin: 0; line-height: 1.25; overflow-wrap: anywhere; }
+  h2 { font-size: 13px; text-transform: uppercase; letter-spacing: .04em; color: var(--hint); font-weight: 600; margin: 18px 16px 6px; }
+  .sub { color: var(--hint); font-size: 13px; margin-top: 2px; }
+  .hint { color: var(--hint); font-size: 13px; margin: 8px 16px; }
+  .err { color: var(--danger); }
+  main { padding: 0 0 8px; }
+  .card { background: var(--card); border-radius: 14px; margin: 8px 12px; padding: 12px; }
+  .tabs { position: sticky; top: 0; z-index: 5; display: grid; grid-template-columns: repeat(4, 1fr); gap: 4px; padding: 8px 12px; background: var(--bg); border-bottom: 1px solid var(--sep); }
+  .tabs button { padding: 8px 2px; border-radius: 10px; font-size: 13px; font-weight: 600; color: var(--hint); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .tabs button[aria-selected="true"] { background: var(--card); color: var(--text); }
+  .primary { display: block; width: calc(100% - 24px); margin: 10px 12px; padding: 13px; border-radius: 12px; background: var(--btn); color: var(--btn-text); font-weight: 600; text-align: center; }
+  .secondary { display: block; width: calc(100% - 24px); margin: 6px 12px; padding: 11px; border-radius: 12px; background: var(--card); color: var(--link); font-weight: 600; text-align: center; }
+  .row2 { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin: 10px 12px; }
+  .row2 .primary, .row2 .secondary { width: 100%; margin: 0; }
+  .list { margin: 0 12px; border-radius: 14px; background: var(--card); overflow: hidden; }
+  .item { display: flex; align-items: center; gap: 10px; padding: 8px 10px; min-height: 56px; }
+  .item + .item { border-top: 1px solid var(--sep); }
+  .art { width: 44px; height: 44px; border-radius: 8px; flex: none; background: var(--sep) center/cover no-repeat; display: grid; place-items: center; font-size: 20px; position: relative; overflow: hidden; }
+  .art:disabled { opacity: 1; }
+  .art.play::after { content: "▶"; position: absolute; inset: 0; display: grid; place-items: center; background: rgba(0,0,0,.35); color: #fff; font-size: 16px; }
+  .art.playing::after { content: "❚❚"; font-size: 13px; }
+  .meta { flex: 1; min-width: 0; }
+  .title { font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .artist, .note { color: var(--hint); font-size: 13px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .acts { display: flex; gap: 2px; flex: none; }
+  .icon { width: 36px; height: 36px; border-radius: 10px; display: grid; place-items: center; font-size: 17px; color: var(--link); }
+  .icon:active { background: var(--sep); }
+  .icon.danger { color: var(--danger); }
+  .search { display: flex; gap: 8px; margin: 10px 12px; }
+  input[type=search], select, input[type=text] { width: 100%; padding: 11px 12px; font: inherit; border-radius: 12px; border: 1px solid var(--sep); background: var(--card); color: var(--text); outline: none; }
+  select { appearance: auto; }
+  .player { display: flex; gap: 12px; align-items: center; }
+  .player .controls { display: flex; gap: 4px; direction: ltr; }
+  .player .controls button { width: 42px; height: 42px; border-radius: 50%; background: var(--bg); font-size: 18px; }
+  .pill { display: inline-block; font-size: 12px; padding: 2px 8px; border-radius: 999px; background: var(--bg); color: var(--hint); margin-top: 4px; }
+  .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(84px, 1fr)); gap: 8px; margin: 10px 12px; }
+  .grid button { padding: 14px 4px; border-radius: 12px; background: var(--card); font-weight: 600; }
+  .grid button:active { background: var(--sep); }
+  .clock { font-size: 48px; font-weight: 700; text-align: center; font-variant-numeric: tabular-nums; margin: 8px 0 0; }
+  .center { text-align: center; }
+  .empty { padding: 22px 16px; text-align: center; color: var(--hint); }
+  .choice { display: flex; align-items: center; gap: 10px; padding: 10px; }
+  .choice + .choice { border-top: 1px solid var(--sep); }
+  .choice input { width: 18px; height: 18px; flex: none; accent-color: var(--btn); }
+  label.check { display: flex; gap: 10px; align-items: center; margin: 10px 16px; }
+  label.check input { width: 18px; height: 18px; accent-color: var(--btn); }
+  .toast { position: fixed; left: 50%; bottom: calc(86px + env(safe-area-inset-bottom)); transform: translateX(-50%); background: rgba(20,20,20,.92); color: #fff; padding: 9px 14px; border-radius: 12px; font-size: 14px; max-width: calc(100% - 32px); z-index: 20; text-align: center; }
+  .preview { position: fixed; left: 0; right: 0; bottom: 0; z-index: 10; display: flex; align-items: center; gap: 10px; padding: 10px 12px calc(10px + env(safe-area-inset-bottom)); background: var(--head); border-top: 1px solid var(--sep); }
+  .preview .bar { height: 3px; background: var(--sep); border-radius: 2px; overflow: hidden; margin-top: 4px; }
+  .preview .bar i { display: block; height: 100%; width: 0; background: var(--btn); }
+  .spin { display: inline-block; width: 18px; height: 18px; border: 2px solid var(--sep); border-top-color: var(--btn); border-radius: 50%; animation: s 0.8s linear infinite; vertical-align: middle; }
+  @keyframes s { to { transform: rotate(360deg); } }
+</style>
+</head>
+<body>
+<div id="app"><div class="empty"><span class="spin"></span></div></div>
+<div class="preview" id="preview" hidden>
+  <div class="art" id="pvArt"></div>
+  <div class="meta"><div class="title" id="pvTitle"></div><div class="bar"><i id="pvBar"></i></div></div>
+  <div class="acts"><button class="icon" id="pvAdd" title="+">＋</button><button class="icon" id="pvStop">■</button></div>
+</div>
+<div class="toast" id="toast" hidden></div>
+<script>
+const tg = window.Telegram?.WebApp;
+tg?.ready(); tg?.expand();
+
+// --- strings ----------------------------------------------------------------------
+const L = {
+  en: {
+    open_from_bot: 'Open this from a group: send /app there and tap 🎛 Open.',
+    home_title: '🎛 Chat music', home_hint: 'Your synced chats. In any other group, send /app and tap 🎛 Open.', home_empty: 'No synced chats yet. Send /app in a group the bot is in.',
+    tab_queue: '🎶 Queue', tab_playlists: '📚 Playlists', tab_picks: '✨ Picks', tab_sleep: '😴 Sleep',
+    now_playing: 'Now playing', on_device: 'on {device}', host: '{name}\'s Spotify', nothing_playing: 'Nothing is playing on the host\'s Spotify.', up_next: 'Up next on Spotify',
+    search_ph: 'Add a song: name or artist', no_results: 'Nothing found.', added: 'Added to the queue ✓', results: 'Search results',
+    queue: 'Queue', queue_empty: 'The queue is empty. Search a song above, or add one from ✨ Picks or 📚 Playlists.', by: 'added by {name}',
+    play_next: '▶️ Play next', all_spotify: '⏩ All to Spotify', clear: 'Clear', clear_confirm: 'Clear the whole queue?',
+    control_hint: 'Admins and the group player\'s host play the queue.', posted_chat: 'Posted in the chat ✓ Its audio follows.', sent_spotify: '{n} sent to Spotify ✓', missed: '{n} not found on Spotify',
+    queue_where_player: '▶️ sends songs to {name}\'s Spotify queue.', queue_where_chat: '▶️ posts the next song in the chat with its audio file. Start /player in the group to play on Spotify.',
+    pl_empty: 'No playlist is linked to this chat yet.', tracks: '{n} tracks', open: 'Open', show_tracks: 'Tracks', hide_tracks: 'Hide',
+    dir_both: '⇄ Both ways', dir_in: '💬 → 🎧 Chat to playlist', dir_out: '🎧 → 💬 Playlist to chat',
+    link_pl: '➕ Link a playlist to this chat', pick_account: 'Account', pick_playlist: 'Playlist', new_named: '✨ New playlist: “{name}”', direction: 'Direction',
+    post_existing: 'Post the tracks already in it (with 🔄 Sync now)', link: 'Link playlist', linked: 'Linked ✓', read_only: 'read only', cancel: 'Cancel',
+    connect_first: 'Connect a music service in the bot first.', open_bot: 'Open the bot', admins_link: 'Admins can link their own playlists here.', sync_hint: 'Tracks posted in the chat go into its playlists. Manage syncs in the bot.',
+    picks_hint: 'Based on what this chat plays: its playlists and its queue.', picks_cold: 'Not much to go on yet: here\'s what\'s trending. Picks get better as the chat plays.',
+    because: 'like {name}', more_from: 'more {name}', trending: 'trending', refresh: '🔄 New picks', picks_empty: 'No picks right now. Try again in a bit.', picks_wait: 'Finding music for this chat…',
+    sleep_player: 'Pauses {name}\'s Spotify (the group player) when the time is up, and tells the chat.', sleep_personal: 'Pauses your Spotify when the time is up. Start /player in the group to stop the group player instead.',
+    sleep_need_spotify: 'The sleep timer pauses Spotify: connect Spotify in the bot, or start /player in the group.', sleep_left: 'The music stops in', sleep_cancel: 'Cancel the timer', sleep_set_by_other: 'Set by someone else.',
+    sleep_late: 'Exactly on time while this page is open; otherwise as soon as the bot hears from anyone.', min: '{n} min', sleep_set: 'Sleep timer set ✓', sleep_stopped: 'Timer cancelled',
+    err_NOT_MEMBER: 'Only members of this chat can open its music.', err_NO_CHAT: 'This chat isn\'t available. Is the bot still in it?', err_CONTROL_ONLY: 'Only admins and the group player\'s host can do that.',
+    err_ADMINS_ONLY: 'Only the chat\'s admins can do that.', err_QUEUE_FULL: 'The queue is full.', err_USER_LIMIT: 'You have enough songs queued: let others add some.', err_DUPLICATE: 'That one is already there.',
+    err_EMPTY: 'The queue is empty.', err_NO_SPOTIFY: 'Connect Spotify in the bot first.', err_NO_PLAYER: 'No group player: send /player in the group.', err_NO_ACCOUNT: 'Connect that service in the bot first.',
+    err_OWNER_GONE: 'The playlist\'s owner disconnected their account.', err_NOT_FOUND: 'It\'s gone. Refreshing…', err_BAD_INPUT: 'Something\'s off with that. Try again.',
+  },
+  fa: {
+    open_from_bot: 'این رو از یه گروه باز کن: اونجا /app رو بفرست و 🎛 باز کن رو بزن.',
+    home_title: '🎛 موسیقی چت', home_hint: 'چت‌های همگام‌شده‌ت. توی هر گروه دیگه‌ای /app رو بفرست و 🎛 باز کن رو بزن.', home_empty: 'هنوز چت همگام‌شده‌ای نداری. توی گروهی که بات توشه /app رو بفرست.',
+    tab_queue: '🎶 صف', tab_playlists: '📚 پلی‌لیست‌ها', tab_picks: '✨ پیشنهادها', tab_sleep: '😴 خواب',
+    now_playing: 'در حال پخش', on_device: 'روی {device}', host: 'اسپاتیفای {name}', nothing_playing: 'چیزی روی اسپاتیفای میزبان پخش نمی‌شه.', up_next: 'بعدی‌ها روی اسپاتیفای',
+    search_ph: 'اضافه کردن آهنگ: اسم یا خواننده', no_results: 'چیزی پیدا نشد.', added: 'به صف اضافه شد ✓', results: 'نتیجه‌های جستجو',
+    queue: 'صف', queue_empty: 'صف خالیه. بالا یه آهنگ جستجو کن، یا از ✨ پیشنهادها یا 📚 پلی‌لیست‌ها اضافه کن.', by: 'اضافه‌شده توسط {name}',
+    play_next: '▶️ پخش بعدی', all_spotify: '⏩ همه به اسپاتیفای', clear: 'پاک کردن', clear_confirm: 'کل صف پاک بشه؟',
+    control_hint: 'مدیرها و میزبان پخش گروهی صف رو پخش می‌کنن.', posted_chat: 'توی چت فرستاده شد ✓ فایلش هم میاد.', sent_spotify: '{n} آهنگ به اسپاتیفای رفت ✓', missed: '{n} آهنگ روی اسپاتیفای پیدا نشد',
+    queue_where_player: '▶️ آهنگ‌ها رو به صف اسپاتیفای {name} می‌فرسته.', queue_where_chat: '▶️ آهنگ بعدی رو با فایلش توی چت می‌فرسته. برای پخش روی اسپاتیفای توی گروه /player رو بزن.',
+    pl_empty: 'هنوز هیچ پلی‌لیستی به این چت وصل نشده.', tracks: '{n} آهنگ', open: 'باز کن', show_tracks: 'آهنگ‌ها', hide_tracks: 'بستن',
+    dir_both: '⇄ دوطرفه', dir_in: '💬 → 🎧 چت به پلی‌لیست', dir_out: '🎧 → 💬 پلی‌لیست به چت',
+    link_pl: '➕ وصل کردن یه پلی‌لیست به این چت', pick_account: 'حساب', pick_playlist: 'پلی‌لیست', new_named: '✨ پلی‌لیست جدید: «{name}»', direction: 'جهت',
+    post_existing: 'آهنگ‌هایی که الان توشه هم پست بشن (با 🔄 همگام‌سازی)', link: 'وصل کن', linked: 'وصل شد ✓', read_only: 'فقط خواندنی', cancel: 'لغو',
+    connect_first: 'اول توی بات یه سرویس موسیقی وصل کن.', open_bot: 'باز کردن بات', admins_link: 'مدیرها می‌تونن پلی‌لیست‌های خودشون رو اینجا وصل کنن.', sync_hint: 'آهنگ‌هایی که توی چت فرستاده می‌شن به پلی‌لیست‌هاش اضافه می‌شن. همگام‌سازی‌ها رو توی بات مدیریت کن.',
+    picks_hint: 'بر اساس چیزی که این چت گوش می‌ده: پلی‌لیست‌ها و صفش.', picks_cold: 'هنوز اطلاعات زیادی نیست: اینا ترندهاست. هرچی چت بیشتر پخش کنه پیشنهادها بهتر می‌شن.',
+    because: 'شبیه {name}', more_from: 'بیشتر از {name}', trending: 'ترند', refresh: '🔄 پیشنهادهای تازه', picks_empty: 'الان پیشنهادی نیست. کمی بعد دوباره امتحان کن.', picks_wait: 'دنبال موسیقی برای این چت…',
+    sleep_player: 'وقتی زمان تموم بشه اسپاتیفای {name} (پخش گروهی) رو متوقف می‌کنه و به چت خبر می‌ده.', sleep_personal: 'وقتی زمان تموم بشه اسپاتیفای خودت رو متوقف می‌کنه. برای متوقف کردن پخش گروهی، توی گروه /player رو بزن.',
+    sleep_need_spotify: 'تایمر خواب اسپاتیفای رو متوقف می‌کنه: توی بات اسپاتیفای رو وصل کن یا توی گروه /player رو بزن.', sleep_left: 'موسیقی قطع می‌شه تا', sleep_cancel: 'لغو تایمر', sleep_set_by_other: 'یکی دیگه گذاشته.',
+    sleep_late: 'وقتی این صفحه بازه دقیقاً سر وقت؛ وگرنه به محض اینکه بات از کسی پیامی بگیره.', min: '{n} دقیقه', sleep_set: 'تایمر خواب تنظیم شد ✓', sleep_stopped: 'تایمر لغو شد',
+    err_NOT_MEMBER: 'فقط اعضای این چت می‌تونن موسیقی‌ش رو باز کنن.', err_NO_CHAT: 'این چت در دسترس نیست. بات هنوز توشه؟', err_CONTROL_ONLY: 'فقط مدیرها و میزبان پخش گروهی می‌تونن این کار رو بکنن.',
+    err_ADMINS_ONLY: 'فقط مدیرهای چت می‌تونن این کار رو بکنن.', err_QUEUE_FULL: 'صف پره.', err_USER_LIMIT: 'به اندازه کافی آهنگ توی صف داری: بذار بقیه هم اضافه کنن.', err_DUPLICATE: 'این یکی از قبل هست.',
+    err_EMPTY: 'صف خالیه.', err_NO_SPOTIFY: 'اول توی بات اسپاتیفای رو وصل کن.', err_NO_PLAYER: 'پخش گروهی فعال نیست: توی گروه /player رو بفرست.', err_NO_ACCOUNT: 'اول اون سرویس رو توی بات وصل کن.',
+    err_OWNER_GONE: 'صاحب پلی‌لیست حسابش رو قطع کرده.', err_NOT_FOUND: 'دیگه نیست. در حال به‌روزرسانی…', err_BAD_INPUT: 'یه مشکلی هست. دوباره امتحان کن.',
+  },
+  ar: {
+    open_from_bot: 'افتح هذا من مجموعة: أرسل /app هناك واضغط 🎛 افتح.',
+    home_title: '🎛 موسيقى الدردشة', home_hint: 'دردشاتك المتزامنة. في أي مجموعة أخرى، أرسل /app واضغط 🎛 افتح.', home_empty: 'لا توجد دردشات متزامنة بعد. أرسل /app في مجموعة فيها البوت.',
+    tab_queue: '🎶 الانتظار', tab_playlists: '📚 القوائم', tab_picks: '✨ اقتراحات', tab_sleep: '😴 النوم',
+    now_playing: 'يُشغَّل الآن', on_device: 'على {device}', host: 'Spotify الخاص بـ {name}', nothing_playing: 'لا شيء يُشغَّل على Spotify المضيف.', up_next: 'التالي على Spotify',
+    search_ph: 'أضف أغنية: الاسم أو الفنان', no_results: 'لم يُعثر على شيء.', added: 'أُضيفت إلى الانتظار ✓', results: 'نتائج البحث',
+    queue: 'قائمة الانتظار', queue_empty: 'قائمة الانتظار فارغة. ابحث عن أغنية بالأعلى، أو أضف من ✨ اقتراحات أو 📚 القوائم.', by: 'أضافها {name}',
+    play_next: '▶️ شغّل التالي', all_spotify: '⏩ الكل إلى Spotify', clear: 'مسح', clear_confirm: 'مسح قائمة الانتظار كلها؟',
+    control_hint: 'المشرفون ومضيف مشغل المجموعة يشغّلون قائمة الانتظار.', posted_chat: 'نُشرت في الدردشة ✓ ويتبعها ملفها الصوتي.', sent_spotify: 'أُرسلت {n} إلى Spotify ✓', missed: '{n} غير موجودة على Spotify',
+    queue_where_player: '▶️ يرسل الأغاني إلى قائمة انتظار Spotify الخاصة بـ {name}.', queue_where_chat: '▶️ ينشر الأغنية التالية في الدردشة مع ملفها الصوتي. ابدأ /player في المجموعة للتشغيل على Spotify.',
+    pl_empty: 'لا توجد قائمة تشغيل مرتبطة بهذه الدردشة بعد.', tracks: '{n} مقطع', open: 'افتح', show_tracks: 'المقاطع', hide_tracks: 'إخفاء',
+    dir_both: '⇄ في الاتجاهين', dir_in: '💬 → 🎧 من الدردشة إلى القائمة', dir_out: '🎧 → 💬 من القائمة إلى الدردشة',
+    link_pl: '➕ اربط قائمة تشغيل بهذه الدردشة', pick_account: 'الحساب', pick_playlist: 'قائمة التشغيل', new_named: '✨ قائمة جديدة: «{name}»', direction: 'الاتجاه',
+    post_existing: 'انشر المقاطع الموجودة فيها (مع 🔄 مزامنة الآن)', link: 'اربط القائمة', linked: 'تم الربط ✓', read_only: 'للقراءة فقط', cancel: 'إلغاء',
+    connect_first: 'اربط خدمة موسيقى في البوت أولًا.', open_bot: 'افتح البوت', admins_link: 'يمكن للمشرفين ربط قوائمهم هنا.', sync_hint: 'المقاطع المنشورة في الدردشة تُضاف إلى قوائمها. أدر المزامنات في البوت.',
+    picks_hint: 'بناءً على ما تشغّله هذه الدردشة: قوائمها وقائمة انتظارها.', picks_cold: 'لا توجد معلومات كافية بعد: إليك الرائج. تتحسن الاقتراحات كلما شغّلت الدردشة أكثر.',
+    because: 'مثل {name}', more_from: 'المزيد من {name}', trending: 'رائج', refresh: '🔄 اقتراحات جديدة', picks_empty: 'لا توجد اقتراحات الآن. حاول بعد قليل.', picks_wait: 'نبحث عن موسيقى لهذه الدردشة…',
+    sleep_player: 'يوقف Spotify الخاص بـ {name} (مشغل المجموعة) عند انتهاء الوقت، ويخبر الدردشة.', sleep_personal: 'يوقف Spotify الخاص بك عند انتهاء الوقت. ابدأ /player في المجموعة لإيقاف مشغل المجموعة بدلًا من ذلك.',
+    sleep_need_spotify: 'مؤقت النوم يوقف Spotify: اربط Spotify في البوت، أو ابدأ /player في المجموعة.', sleep_left: 'تتوقف الموسيقى بعد', sleep_cancel: 'ألغِ المؤقت', sleep_set_by_other: 'ضبطه شخص آخر.',
+    sleep_late: 'في الوقت تمامًا ما دامت هذه الصفحة مفتوحة؛ وإلا فبمجرد أن يتلقى البوت أي رسالة.', min: '{n} دقيقة', sleep_set: 'تم ضبط مؤقت النوم ✓', sleep_stopped: 'أُلغي المؤقت',
+    err_NOT_MEMBER: 'يمكن لأعضاء هذه الدردشة فقط فتح موسيقاها.', err_NO_CHAT: 'هذه الدردشة غير متاحة. هل ما زال البوت فيها؟', err_CONTROL_ONLY: 'يمكن للمشرفين ومضيف مشغل المجموعة فقط فعل ذلك.',
+    err_ADMINS_ONLY: 'يمكن لمشرفي الدردشة فقط فعل ذلك.', err_QUEUE_FULL: 'قائمة الانتظار ممتلئة.', err_USER_LIMIT: 'لديك ما يكفي من الأغاني في الانتظار: دع الآخرين يضيفون.', err_DUPLICATE: 'هذه موجودة بالفعل.',
+    err_EMPTY: 'قائمة الانتظار فارغة.', err_NO_SPOTIFY: 'اربط Spotify في البوت أولًا.', err_NO_PLAYER: 'لا يوجد مشغل مجموعة: أرسل /player في المجموعة.', err_NO_ACCOUNT: 'اربط تلك الخدمة في البوت أولًا.',
+    err_OWNER_GONE: 'فصل مالك القائمة حسابه.', err_NOT_FOUND: 'لم تعد موجودة. جارٍ التحديث…', err_BAD_INPUT: 'هناك خطأ ما. حاول مجددًا.',
+  },
+  ru: {
+    open_from_bot: 'Открой это из группы: отправь там /app и нажми 🎛 Открыть.',
+    home_title: '🎛 Музыка чата', home_hint: 'Твои синхронизированные чаты. В любой другой группе отправь /app и нажми 🎛 Открыть.', home_empty: 'Синхронизированных чатов пока нет. Отправь /app в группе, где есть бот.',
+    tab_queue: '🎶 Очередь', tab_playlists: '📚 Плейлисты', tab_picks: '✨ Подборка', tab_sleep: '😴 Сон',
+    now_playing: 'Сейчас играет', on_device: 'на {device}', host: 'Spotify: {name}', nothing_playing: 'На Spotify ведущего ничего не играет.', up_next: 'Далее в Spotify',
+    search_ph: 'Добавить песню: название или исполнитель', no_results: 'Ничего не найдено.', added: 'Добавлено в очередь ✓', results: 'Результаты поиска',
+    queue: 'Очередь', queue_empty: 'Очередь пуста. Найди песню выше или добавь из ✨ Подборки или 📚 Плейлистов.', by: 'добавил(а) {name}',
+    play_next: '▶️ Следующая', all_spotify: '⏩ Всё в Spotify', clear: 'Очистить', clear_confirm: 'Очистить всю очередь?',
+    control_hint: 'Очередь запускают админы и ведущий плеера группы.', posted_chat: 'Опубликовано в чате ✓ Аудио придёт следом.', sent_spotify: 'В Spotify отправлено: {n} ✓', missed: 'Не найдено в Spotify: {n}',
+    queue_where_player: '▶️ отправляет песни в очередь Spotify ведущего ({name}).', queue_where_chat: '▶️ публикует следующую песню в чате с аудиофайлом. Запусти /player в группе, чтобы играть в Spotify.',
+    pl_empty: 'К этому чату пока не привязан ни один плейлист.', tracks: 'треков: {n}', open: 'Открыть', show_tracks: 'Треки', hide_tracks: 'Скрыть',
+    dir_both: '⇄ В обе стороны', dir_in: '💬 → 🎧 Из чата в плейлист', dir_out: '🎧 → 💬 Из плейлиста в чат',
+    link_pl: '➕ Привязать плейлист к этому чату', pick_account: 'Аккаунт', pick_playlist: 'Плейлист', new_named: '✨ Новый плейлист «{name}»', direction: 'Направление',
+    post_existing: 'Опубликовать треки, которые уже в нём (через 🔄 Синхронизировать)', link: 'Привязать', linked: 'Привязано ✓', read_only: 'только чтение', cancel: 'Отмена',
+    connect_first: 'Сначала подключи музыкальный сервис в боте.', open_bot: 'Открыть бота', admins_link: 'Админы могут привязать здесь свои плейлисты.', sync_hint: 'Треки из чата попадают в его плейлисты. Синхронизациями управляй в боте.',
+    picks_hint: 'По тому, что слушает этот чат: его плейлисты и очередь.', picks_cold: 'Пока мало данных: вот что сейчас популярно. Подборка станет точнее, когда чат будет слушать больше.',
+    because: 'похоже на {name}', more_from: 'ещё {name}', trending: 'в тренде', refresh: '🔄 Новая подборка', picks_empty: 'Сейчас подборки нет. Попробуй чуть позже.', picks_wait: 'Ищу музыку для этого чата…',
+    sleep_player: 'Когда время выйдет, ставит на паузу Spotify ведущего ({name}) и сообщает в чат.', sleep_personal: 'Когда время выйдет, ставит на паузу твой Spotify. Чтобы останавливать плеер группы, запусти /player в группе.',
+    sleep_need_spotify: 'Таймер сна ставит на паузу Spotify: подключи Spotify в боте или запусти /player в группе.', sleep_left: 'Музыка остановится через', sleep_cancel: 'Отменить таймер', sleep_set_by_other: 'Поставил кто-то другой.',
+    sleep_late: 'Точно вовремя, пока эта страница открыта; иначе — как только бот получит любое сообщение.', min: '{n} мин', sleep_set: 'Таймер сна поставлен ✓', sleep_stopped: 'Таймер отменён',
+    err_NOT_MEMBER: 'Музыку этого чата могут открыть только его участники.', err_NO_CHAT: 'Этот чат недоступен. Бот всё ещё в нём?', err_CONTROL_ONLY: 'Это могут только админы и ведущий плеера группы.',
+    err_ADMINS_ONLY: 'Это могут только админы чата.', err_QUEUE_FULL: 'Очередь заполнена.', err_USER_LIMIT: 'У тебя уже достаточно песен в очереди: дай добавить другим.', err_DUPLICATE: 'Эта уже есть.',
+    err_EMPTY: 'Очередь пуста.', err_NO_SPOTIFY: 'Сначала подключи Spotify в боте.', err_NO_PLAYER: 'Плеер группы не запущен: отправь /player в группе.', err_NO_ACCOUNT: 'Сначала подключи этот сервис в боте.',
+    err_OWNER_GONE: 'Владелец плейлиста отключил аккаунт.', err_NOT_FOUND: 'Этого уже нет. Обновляю…', err_BAD_INPUT: 'Что-то не так. Попробуй снова.',
+  },
+  es: {
+    open_from_bot: 'Ábrelo desde un grupo: envía /app allí y toca 🎛 Abrir.',
+    home_title: '🎛 Música del chat', home_hint: 'Tus chats sincronizados. En cualquier otro grupo, envía /app y toca 🎛 Abrir.', home_empty: 'Aún no hay chats sincronizados. Envía /app en un grupo donde esté el bot.',
+    tab_queue: '🎶 Cola', tab_playlists: '📚 Listas', tab_picks: '✨ Para ti', tab_sleep: '😴 Dormir',
+    now_playing: 'Sonando', on_device: 'en {device}', host: 'Spotify de {name}', nothing_playing: 'No suena nada en el Spotify del anfitrión.', up_next: 'A continuación en Spotify',
+    search_ph: 'Añadir canción: nombre o artista', no_results: 'No se encontró nada.', added: 'Añadida a la cola ✓', results: 'Resultados',
+    queue: 'Cola', queue_empty: 'La cola está vacía. Busca una canción arriba o añade desde ✨ Para ti o 📚 Listas.', by: 'añadida por {name}',
+    play_next: '▶️ Siguiente', all_spotify: '⏩ Todo a Spotify', clear: 'Vaciar', clear_confirm: '¿Vaciar toda la cola?',
+    control_hint: 'Los administradores y el anfitrión del reproductor reproducen la cola.', posted_chat: 'Publicada en el chat ✓ Su audio llega a continuación.', sent_spotify: '{n} enviadas a Spotify ✓', missed: '{n} no encontradas en Spotify',
+    queue_where_player: '▶️ envía las canciones a la cola de Spotify de {name}.', queue_where_chat: '▶️ publica la siguiente canción en el chat con su audio. Inicia /player en el grupo para reproducir en Spotify.',
+    pl_empty: 'Aún no hay listas vinculadas a este chat.', tracks: '{n} canciones', open: 'Abrir', show_tracks: 'Canciones', hide_tracks: 'Ocultar',
+    dir_both: '⇄ En ambos sentidos', dir_in: '💬 → 🎧 Del chat a la lista', dir_out: '🎧 → 💬 De la lista al chat',
+    link_pl: '➕ Vincular una lista a este chat', pick_account: 'Cuenta', pick_playlist: 'Lista', new_named: '✨ Lista nueva: «{name}»', direction: 'Sentido',
+    post_existing: 'Publicar las canciones que ya tiene (con 🔄 Sincronizar)', link: 'Vincular lista', linked: 'Vinculada ✓', read_only: 'solo lectura', cancel: 'Cancelar',
+    connect_first: 'Primero conecta un servicio de música en el bot.', open_bot: 'Abrir el bot', admins_link: 'Los administradores pueden vincular aquí sus listas.', sync_hint: 'Las canciones publicadas en el chat van a sus listas. Gestiona las sincronizaciones en el bot.',
+    picks_hint: 'Según lo que escucha este chat: sus listas y su cola.', picks_cold: 'Aún hay poco para empezar: esto es tendencia. Las sugerencias mejoran a medida que el chat escucha.',
+    because: 'como {name}', more_from: 'más de {name}', trending: 'tendencia', refresh: '🔄 Nuevas sugerencias', picks_empty: 'No hay sugerencias ahora. Inténtalo en un rato.', picks_wait: 'Buscando música para este chat…',
+    sleep_player: 'Pausa el Spotify de {name} (el reproductor del grupo) cuando acabe el tiempo y avisa al chat.', sleep_personal: 'Pausa tu Spotify cuando acabe el tiempo. Inicia /player en el grupo para detener el reproductor del grupo.',
+    sleep_need_spotify: 'El temporizador pausa Spotify: conecta Spotify en el bot o inicia /player en el grupo.', sleep_left: 'La música se detiene en', sleep_cancel: 'Cancelar temporizador', sleep_set_by_other: 'Lo puso otra persona.',
+    sleep_late: 'Puntual mientras esta página está abierta; si no, en cuanto el bot reciba cualquier mensaje.', min: '{n} min', sleep_set: 'Temporizador puesto ✓', sleep_stopped: 'Temporizador cancelado',
+    err_NOT_MEMBER: 'Solo los miembros de este chat pueden abrir su música.', err_NO_CHAT: 'Este chat no está disponible. ¿Sigue el bot en él?', err_CONTROL_ONLY: 'Solo los administradores y el anfitrión del reproductor pueden hacerlo.',
+    err_ADMINS_ONLY: 'Solo los administradores del chat pueden hacerlo.', err_QUEUE_FULL: 'La cola está llena.', err_USER_LIMIT: 'Ya tienes bastantes canciones en cola: deja que otros añadan.', err_DUPLICATE: 'Esa ya está.',
+    err_EMPTY: 'La cola está vacía.', err_NO_SPOTIFY: 'Primero conecta Spotify en el bot.', err_NO_PLAYER: 'No hay reproductor: envía /player en el grupo.', err_NO_ACCOUNT: 'Primero conecta ese servicio en el bot.',
+    err_OWNER_GONE: 'El dueño de la lista desconectó su cuenta.', err_NOT_FOUND: 'Ya no está. Actualizando…', err_BAD_INPUT: 'Algo no cuadra. Inténtalo de nuevo.',
+  },
+};
+const lang = (tg?.initDataUnsafe?.user?.language_code || navigator.language || 'en').slice(0, 2).toLowerCase();
+const S = L[lang] || L.en;
+if (lang === 'fa' || lang === 'ar') document.documentElement.dir = 'rtl';
+document.documentElement.lang = L[lang] ? lang : 'en';
+const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
+const tr = (k, v = {}) => String(S[k] ?? L.en[k] ?? k).replace(/\{(\w+)\}/g, (_, x) => esc(v[x] ?? ''));
+
+// --- calls -------------------------------------------------------------------------
+function call(op, input = {}) {
+  return new Promise((resolve, reject) => tg.Serverless.call('chatApp', { op, chat: chatParam, ...input }, (err, res) => (err ? reject(err) : resolve(res))));
+}
+const errText = (e) => (e?.parameters?.code && (S[`err_${e.parameters.code}`] || L.en[`err_${e.parameters.code}`])) || e?.message || String(e);
+
+let toastTimer;
+function toast(text, haptic = 'success') {
+  const el = document.getElementById('toast');
+  el.textContent = text; el.hidden = false;
+  clearTimeout(toastTimer); toastTimer = setTimeout(() => { el.hidden = true; }, 2600);
+  try { if (haptic === 'error') tg.HapticFeedback.notificationOccurred('error'); else tg.HapticFeedback.notificationOccurred(haptic); } catch {}
+}
+
+/** Run a call from a button: disabled meanwhile, errors toasted, state replaced. */
+async function act(btn, op, input, { ok } = {}) {
+  if (btn) btn.disabled = true;
+  try {
+    const res = await call(op, input);
+    if (res?.chat) state = res;
+    if (ok) toast(typeof ok === 'function' ? ok(res) : ok);
+    render();
+    return res;
+  } catch (e) {
+    toast(errText(e), 'error');
+    if (e?.parameters?.code === 'NOT_FOUND') refresh();
+    return null;
+  } finally {
+    if (btn) btn.disabled = false;
+  }
+}
+
+// --- state ------------------------------------------------------------------------
+const app = document.getElementById('app');
+let chatParam = null;
+let state = null;
+let tab = 'queue';
+let clockSkew = 0;           // server seconds - local seconds
+let results = null;          // search results
+let picks = null;            // { items, seeds } | 'loading'
+let openTracks = {};         // linkId → tracks | 'loading'
+let linking = null;          // the "link a playlist" form, or null
+try { tab = localStorage.getItem('chat_tab') || 'queue'; } catch {}
+
+const serverNow = () => Date.now() / 1000 + clockSkew;
+const svc = (p) => state?.services?.[p] ?? { name: p, icon: '🎵' };
+
+// --- preview (30 s clips from iTunes / Deezer, played here) -------------------------
+const audio = new Audio();
+let previewing = null;
+function setPreview(song) {
+  const bar = document.getElementById('preview');
+  if (!song) { audio.pause(); previewing = null; bar.hidden = true; markPlaying(); return; }
+  previewing = song;
+  audio.src = song.preview; audio.play().catch(() => toast('▶︎ ✕', 'error'));
+  document.getElementById('pvTitle').textContent = [song.title, song.artist].filter(Boolean).join(' — ');
+  document.getElementById('pvArt').style.backgroundImage = song.artwork ? `url("${cssUrl(song.artwork)}")` : '';
+  bar.hidden = false;
+  markPlaying();
+}
+audio.addEventListener('timeupdate', () => { document.getElementById('pvBar').style.width = `${(audio.currentTime / (audio.duration || 30)) * 100}%`; });
+audio.addEventListener('ended', () => setPreview(null));
+document.getElementById('pvStop').onclick = () => setPreview(null);
+document.getElementById('pvAdd').onclick = (e) => previewing && act(e.currentTarget, 'queueAdd', { song: previewing }, { ok: tr('added') });
+function markPlaying() {
+  document.querySelectorAll('[data-preview]').forEach((el) => el.classList.toggle('playing', Boolean(previewing) && el.dataset.preview === previewing.preview));
+}
+
+// --- views ------------------------------------------------------------------------
+const songs = new Map(); // data-song keys → song objects, rebuilt per render
+let songSeq = 0;
+function keep(song) { const k = `s${++songSeq}`; songs.set(k, song); return k; }
+
+// A URL for CSS url("…"): quotes, brackets, backslashes and spaces percent-encoded.
+const cssUrl = (u) => String(u).replace(/["'()\\\s]/g, (c) => encodeURIComponent(c));
+
+function songRow(song, { note = '', actions = '' } = {}) {
+  const k = keep(song);
+  const attrs = [
+    `class="art${song.preview ? ' play' : ''}"`,
+    song.artwork ? `style="background-image:url(&quot;${esc(cssUrl(song.artwork))}&quot;)"` : '',
+    song.preview ? `data-act="preview" data-song="${k}" data-preview="${esc(song.preview)}"` : 'disabled',
+  ].filter(Boolean).join(' ');
+  return `<div class="item"><button ${attrs}>${song.artwork ? '' : '🎵'}</button>
+    <div class="meta"><div class="title">${esc(song.title)}</div><div class="artist">${esc(song.artist ?? '')}${note ? ` · ${note}` : ''}</div></div>
+    <div class="acts">${actions.replace(/\{k\}/g, k)}</div></div>`;
+}
+const addBtn = '<button class="icon" data-act="add" data-song="{k}" aria-label="+">＋</button>';
+
+function playerCard() {
+  const p = state.player;
+  if (!p) return '';
+  const ctl = state.me.control;
+  const now = p.track
+    ? `<div class="title">${p.playing ? '▶️' : '⏸'} ${esc(p.track.title)}</div><div class="artist">${esc(p.track.artist ?? '')}</div>`
+    : `<div class="artist">${p.error ? `<span class="err">${esc(p.error)}</span>` : tr('nothing_playing')}</div>`;
+  return `<div class="card"><div class="player"><div class="meta">
+      <div class="note">🟢 ${tr('host', { name: p.host ?? '' })}${p.device ? ` · ${tr('on_device', { device: p.device })}` : ''}</div>${now}</div>
+      ${ctl ? `<div class="controls"><button data-act="ctl" data-a="prev">⏮</button><button data-act="ctl" data-a="play">⏯</button><button data-act="ctl" data-a="next">⏭</button></div>` : ''}
+    </div>
+    ${p.next?.length ? `<div class="note" style="margin-top:8px">${tr('up_next')}: ${p.next.slice(0, 3).map((x) => esc(x.label)).join(' · ')}</div>` : ''}</div>`;
+}
+
+function queueView() {
+  const ctl = state.me.control;
+  const q = state.queue;
+  let html = `<form class="search" id="searchForm"><input type="search" id="q" placeholder="${tr('search_ph')}" autocomplete="off" enterkeyhint="search"></form>`;
+  if (results) {
+    html += `<h2>${tr('results')}</h2>`;
+    html += results === 'loading' ? '<div class="empty"><span class="spin"></span></div>'
+      : results.length ? `<div class="list">${results.map((s) => songRow(s, { actions: addBtn })).join('')}</div>` : `<div class="empty">${tr('no_results')}</div>`;
+  }
+  html += `<h2>${tr('queue')}${q.length ? ` · ${q.length}` : ''}</h2>`;
+  if (!q.length) html += `<div class="empty">${tr('queue_empty')}</div>`;
+  else {
+    html += `<div class="list">${q.map((s, i) => songRow(s, {
+      note: tr('by', { name: s.by ?? '—' }),
+      actions: `${ctl && i > 0 ? `<button class="icon" data-act="up" data-id="${s.id}" aria-label="up">↑</button>` : ''}${ctl && i < q.length - 1 ? `<button class="icon" data-act="down" data-id="${s.id}" aria-label="down">↓</button>` : ''}${ctl || s.mine ? `<button class="icon danger" data-act="rm" data-id="${s.id}" aria-label="remove">✕</button>` : ''}`,
+    })).join('')}</div>`;
+  }
+  if (ctl && q.length) {
+    html += state.player
+      ? `<div class="row2"><button class="primary" data-act="play">${tr('play_next')}</button><button class="secondary" data-act="playall">${tr('all_spotify')}</button></div>`
+      : `<button class="primary" data-act="play">${tr('play_next')}</button>`;
+    html += `<p class="hint">${state.player ? tr('queue_where_player', { name: state.player.host ?? '' }) : tr('queue_where_chat')}</p>`;
+    html += `<button class="secondary" style="color:var(--danger)" data-act="clear">${tr('clear')}</button>`;
+  } else if (q.length) html += `<p class="hint">${tr('control_hint')}</p>`;
+  return html;
+}
+
+const DIRS = { both: '⇄', in: '💬→🎧', out: '🎧→💬' };
+function playlistsView() {
+  let html = '';
+  if (!state.playlists.length) html += `<div class="empty">${tr('pl_empty')}</div>`;
+  for (const pl of state.playlists) {
+    const s = svc(pl.provider);
+    const tracks = openTracks[pl.id];
+    html += `<div class="card"><div class="player"><div class="meta"><div class="title">${s.icon} ${esc(pl.name ?? '—')}</div>
+      <div class="note">${s.name} · ${tr('tracks', { n: pl.tracks })} · ${DIRS[pl.direction] ?? ''}</div></div>
+      <div class="acts">${pl.url ? `<button class="icon" data-act="openurl" data-url="${esc(pl.url)}" aria-label="${tr('open')}">↗</button>` : ''}
+      <button class="icon" data-act="tracks" data-id="${pl.id}">${tracks ? '▴' : '▾'}</button></div></div></div>`;
+    if (tracks === 'loading') html += '<div class="empty"><span class="spin"></span></div>';
+    else if (Array.isArray(tracks)) html += `<div class="list">${tracks.slice(0, 100).map((x) => songRow(x, { actions: addBtn })).join('') || `<div class="empty">—</div>`}</div>`;
+  }
+  html += `<p class="hint">${tr('sync_hint')}</p>`;
+  if (!state.me.admin) return html + `<p class="hint">${tr('admins_link')}</p>`;
+  if (!state.me.accounts.length) {
+    return html + `<p class="hint">${tr('connect_first')}</p><button class="secondary" data-act="bot">${tr('open_bot')}</button>`;
+  }
+  if (!linking) return html + `<button class="primary" data-act="linkstart">${tr('link_pl')}</button>`;
+  return html + linkForm();
+}
+
+function linkForm() {
+  if (linking === 'loading') return '<div class="empty"><span class="spin"></span></div>';
+  const accts = linking.accounts;
+  const acct = accts.find((a) => a.provider === linking.provider) ?? accts[0];
+  const chosen = acct.playlists.find((p) => p.id === linking.playlistId);
+  const readOnly = chosen && !chosen.editable;
+  const dirs = readOnly ? ['out'] : ['both', 'in', 'out'];
+  const dir = dirs.includes(linking.direction) ? linking.direction : dirs[0];
+  const name = state.chat.topic || state.chat.title || '';
+  return `<h2>${tr('pick_account')}</h2><div style="margin:0 12px"><select id="lkAcct">${accts.map((a) => `<option value="${a.provider}"${a.provider === acct.provider ? ' selected' : ''}>${svc(a.provider).icon} ${esc(svc(a.provider).name)} · ${esc(a.account ?? '')}</option>`).join('')}</select></div>
+    ${acct.error ? `<p class="hint err">${esc(acct.error)}</p>` : ''}
+    <h2>${tr('pick_playlist')}</h2><div class="list" style="max-height:300px;overflow:auto">
+      <label class="choice"><input type="radio" name="lkPl" value="" ${!linking.playlistId ? 'checked' : ''}><span class="meta"><span class="title">${tr('new_named', { name })}</span></span></label>
+      ${acct.playlists.map((p) => `<label class="choice"><input type="radio" name="lkPl" value="${esc(p.id)}" ${p.id === linking.playlistId ? 'checked' : ''}><span class="meta"><span class="title">${esc(p.name)}</span><span class="note">${p.total != null ? tr('tracks', { n: p.total }) : ''}${p.editable ? '' : ` · 👁 ${tr('read_only')}`}</span></span></label>`).join('')}
+    </div>
+    <h2>${tr('direction')}</h2><div class="list">${dirs.map((d) => `<label class="choice"><input type="radio" name="lkDir" value="${d}" ${d === dir ? 'checked' : ''}><span>${tr(`dir_${d}`)}</span></label>`).join('')}</div>
+    ${dir !== 'in' && linking.playlistId ? `<label class="check"><input type="checkbox" id="lkPost" ${linking.postExisting ? 'checked' : ''}><span>${tr('post_existing')}</span></label>` : ''}
+    <button class="primary" data-act="link">${tr('link')}</button><button class="secondary" data-act="linkcancel">${tr('cancel')}</button>`;
+}
+
+function picksView() {
+  let html = `<p class="hint">${tr('picks_hint')}</p>`;
+  if (!picks || picks === 'loading') return html + `<div class="empty"><span class="spin"></span><br><br>${tr('picks_wait')}</div>`;
+  if (picks.error) return html + `<div class="empty err">${esc(picks.error)}</div><button class="secondary" data-act="repick">${tr('refresh')}</button>`;
+  if (!picks.items.length) return html + `<div class="empty">${tr('picks_empty')}</div><button class="secondary" data-act="repick">${tr('refresh')}</button>`;
+  if (picks.items.every((x) => x.reason === 'trending')) html += `<p class="hint">${tr('picks_cold')}</p>`;
+  const reason = (x) => (x.reason === 'similar' ? tr('because', { name: x.because }) : x.reason === 'more' ? tr('more_from', { name: x.because }) : `🔥 ${tr('trending')}`);
+  html += `<div class="list">${picks.items.map((x) => songRow(x, { note: reason(x), actions: addBtn })).join('')}</div>`;
+  return html + `<button class="secondary" data-act="repick">${tr('refresh')}</button>`;
+}
+
+function sleepView() {
+  const s = state.sleep;
+  const p = state.player;
+  const canSet = p ? state.me.control : state.me.spotify;
+  let html = '';
+  if (s) {
+    const left = Math.max(0, Math.round(s.at - serverNow()));
+    const allowed = p ? state.me.control : (s.mine || state.me.admin);
+    html += `<div class="card center"><div class="note">${tr('sleep_left')}</div><div class="clock" id="clock">${fmt(left)}</div>
+      ${s.mine ? '' : `<div class="note">${tr('sleep_set_by_other')}</div>`}</div>`;
+    if (allowed) html += `<button class="secondary" style="color:var(--danger)" data-act="sleep" data-m="0">${tr('sleep_cancel')}</button>`;
+  }
+  html += `<p class="hint">${p ? tr('sleep_player', { name: p.host ?? '' }) : canSet ? tr('sleep_personal') : tr('sleep_need_spotify')}</p>`;
+  if (canSet) html += `<div class="grid">${state.sleepMinutes.map((m) => `<button data-act="sleep" data-m="${m}">${tr('min', { n: m })}</button>`).join('')}</div>`;
+  else if (p) html += `<p class="hint">${tr('control_hint')}</p>`;
+  else html += `<button class="secondary" data-act="bot">${tr('open_bot')}</button>`;
+  return html + `<p class="hint">${tr('sleep_late')}</p>`;
+}
+
+const fmt = (sec) => { const h = Math.floor(sec / 3600); const m = Math.floor((sec % 3600) / 60); const s = sec % 60; return `${h ? `${h}:` : ''}${String(m).padStart(h ? 2 : 1, '0')}:${String(s).padStart(2, '0')}`; };
+
+const TABS = ['queue', 'playlists', 'picks', 'sleep'];
+function render() {
+  if (!state) return;
+  songs.clear();
+  const focused = document.activeElement?.id === 'q';
+  const qv = document.getElementById('q')?.value ?? '';
+  const title = [state.chat.title, state.chat.topic].filter(Boolean).join(' › ');
+  const view = { queue: queueView, playlists: playlistsView, picks: picksView, sleep: sleepView }[tab]();
+  app.innerHTML = `<header><h1>${esc(title)}</h1><div class="sub">${state.playlists.length ? state.playlists.map((p) => `${svc(p.provider).icon} ${esc(p.name ?? '')}`).slice(0, 3).join(' · ') : '🎛'}${state.sleep ? ` · 😴 ${fmt(Math.max(0, Math.round(state.sleep.at - serverNow())))}` : ''}</div></header>
+    ${playerCard()}
+    <nav class="tabs" role="tablist">${TABS.map((x) => `<button role="tab" data-tab="${x}" aria-selected="${x === tab}">${tr(`tab_${x}`)}</button>`).join('')}</nav>
+    <main>${view}</main>`;
+  const q = document.getElementById('q');
+  if (q) { q.value = qv; if (focused) { q.focus(); q.setSelectionRange(qv.length, qv.length); } }
+  markPlaying();
+  armSleepClock();
+}
+
+// --- events ------------------------------------------------------------------------
+let searchTimer;
+app.addEventListener('input', (e) => {
+  if (e.target.id !== 'q') return;
+  clearTimeout(searchTimer);
+  const v = e.target.value.trim();
+  if (v.length < 2) { if (results) { results = null; render(); } return; }
+  searchTimer = setTimeout(() => search(v), 450);
+});
+app.addEventListener('submit', (e) => { e.preventDefault(); const v = document.getElementById('q').value.trim(); if (v.length >= 2) search(v); document.getElementById('q').blur(); });
+async function search(v) {
+  results = 'loading'; render();
+  try { const r = await call('search', { q: v }); if (document.getElementById('q')?.value.trim() === v) { results = r.results; render(); } } catch (e) { results = null; toast(errText(e), 'error'); render(); }
+}
+
+app.addEventListener('change', (e) => {
+  if (!linking || linking === 'loading') return;
+  if (e.target.id === 'lkAcct') { linking.provider = e.target.value; linking.playlistId = null; render(); }
+  if (e.target.name === 'lkPl') { linking.playlistId = e.target.value || null; render(); }
+  if (e.target.name === 'lkDir') { linking.direction = e.target.value; render(); }
+  if (e.target.id === 'lkPost') linking.postExisting = e.target.checked;
+});
+
+app.addEventListener('click', async (e) => {
+  const tabBtn = e.target.closest('[data-tab]');
+  if (tabBtn) {
+    tab = tabBtn.dataset.tab;
+    try { localStorage.setItem('chat_tab', tab); } catch {}
+    try { tg.HapticFeedback.selectionChanged(); } catch {}
+    render(); window.scrollTo(0, 0);
+    if (tab === 'picks' && !picks) loadPicks(false);
+    return;
+  }
+  const b = e.target.closest('[data-act]');
+  if (!b) return;
+  const a = b.dataset.act;
+  const song = b.dataset.song && songs.get(b.dataset.song);
+  if (a === 'preview' && song) return previewing?.preview === song.preview ? setPreview(null) : setPreview(song);
+  if (a === 'add' && song) return act(b, 'queueAdd', { song }, { ok: tr('added') });
+  if (a === 'rm') return act(b, 'queueRemove', { id: Number(b.dataset.id) });
+  if (a === 'up' || a === 'down') return act(b, 'queueMove', { id: Number(b.dataset.id), dir: a === 'up' ? -1 : 1 });
+  if (a === 'clear') return confirmThen(tr('clear_confirm'), () => act(b, 'queueClear'));
+  if (a === 'play' || a === 'playall') {
+    return act(b, 'play', { all: a === 'playall' }, {
+      ok: (r) => (r.result.to === 'chat' ? tr('posted_chat') : [r.result.played ? tr('sent_spotify', { n: r.result.played }) : '', r.result.missed ? tr('missed', { n: r.result.missed }) : ''].filter(Boolean).join(' · ')),
+    });
+  }
+  if (a === 'ctl') return act(b, 'control', { action: b.dataset.a });
+  if (a === 'openurl') return tg.openLink(b.dataset.url);
+  if (a === 'bot') return tg.openTelegramLink(`https://t.me/${state?.bot ?? 'chthmusicbot'}?start=accounts`);
+  if (a === 'tracks') {
+    const id = Number(b.dataset.id);
+    if (openTracks[id]) { delete openTracks[id]; return render(); }
+    openTracks[id] = 'loading'; render();
+    try { openTracks[id] = (await call('tracks', { linkId: id })).tracks; } catch (err) { delete openTracks[id]; toast(errText(err), 'error'); }
+    return render();
+  }
+  if (a === 'repick') return loadPicks(true);
+  if (a === 'sleep') {
+    const m = Number(b.dataset.m);
+    return act(b, 'sleep', { minutes: m }, { ok: m ? tr('sleep_set') : tr('sleep_stopped') });
+  }
+  if (a === 'linkstart') {
+    linking = 'loading'; render();
+    try {
+      const r = await call('myPlaylists');
+      linking = { accounts: r.accounts, provider: r.accounts[0]?.provider, playlistId: null, direction: 'both', postExisting: false };
+    } catch (err) { linking = null; toast(errText(err), 'error'); }
+    return render();
+  }
+  if (a === 'linkcancel') { linking = null; return render(); }
+  if (a === 'link') {
+    const acct = linking.accounts.find((x) => x.provider === linking.provider) ?? linking.accounts[0];
+    const chosen = acct.playlists.find((p) => p.id === linking.playlistId);
+    const dir = chosen && !chosen.editable ? 'out' : linking.direction;
+    const input = { provider: acct.provider, direction: dir, postExisting: Boolean(linking.postExisting), ...(linking.playlistId ? { playlistId: linking.playlistId } : { create: true }) };
+    const r = await act(b, 'addPlaylist', input, { ok: tr('linked') });
+    if (r) { linking = null; picks = null; render(); }
+  }
+});
+
+function confirmThen(text, fn) {
+  if (tg?.showConfirm) tg.showConfirm(text, (yes) => yes && fn()); else if (confirm(text)) fn();
+}
+
+async function loadPicks(refreshing) {
+  picks = 'loading'; render();
+  try { picks = await call('picks', { refresh: refreshing }); } catch (e) { picks = { error: errText(e), items: [] }; }
+  render();
+}
+
+// --- clocks: the sleep countdown, its timer firing, and a gentle poll -----------------
+let clockTimer = null;
+let fireTimer = null;
+function armSleepClock() {
+  clearInterval(clockTimer); clearTimeout(fireTimer);
+  if (!state?.sleep) return;
+  clockTimer = setInterval(() => {
+    const el = document.getElementById('clock');
+    const left = Math.max(0, Math.round(state.sleep.at - serverNow()));
+    if (el) el.textContent = fmt(left);
+  }, 1000);
+  // The server has no cron: when the time comes, this page asks it to fire the timer.
+  const ms = Math.max(0, (state.sleep.at - serverNow()) * 1000) + 1500;
+  if (ms < 2 ** 31) fireTimer = setTimeout(() => refresh(), ms);
+}
+
+async function refresh() {
+  try {
+    const res = await call('tick');
+    clockSkew = res.now - Date.now() / 1000;
+    state = res;
+    if (document.activeElement?.tagName !== 'INPUT' && document.activeElement?.tagName !== 'SELECT') render();
+  } catch (e) {
+    console.warn(e);
+  }
+}
+setInterval(() => { if (document.visibilityState === 'visible' && chatParam) refresh(); }, 20000);
+document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible' && chatParam) refresh(); });
+
+// --- start ----------------------------------------------------------------------------
+async function openChat(param) {
+  chatParam = param;
+  app.innerHTML = '<div class="empty"><span class="spin"></span></div>';
+  try {
+    state = await call('state');
+    clockSkew = state.now - Date.now() / 1000;
+    if (TABS.indexOf(tab) < 0) tab = 'queue';
+    render();
+    if (tab === 'picks') loadPicks(false);
+  } catch (e) {
+    app.innerHTML = `<div class="empty err">${esc(errText(e))}</div>`;
+  }
+}
+
+async function home() {
+  try {
+    const r = await new Promise((resolve, reject) => tg.Serverless.call('chatApp', { op: 'home' }, (err, res) => (err ? reject(err) : resolve(res))));
+    if (!r.chats.length) { app.innerHTML = `<header><h1>${tr('home_title')}</h1></header><div class="empty">${tr('home_empty')}</div>`; return; }
+    app.innerHTML = `<header><h1>${tr('home_title')}</h1></header><p class="hint">${tr('home_hint')}</p>
+      <div class="list">${r.chats.map((c) => `<button class="item" style="width:100%;text-align:start" data-chat="${esc(c.param)}"><span class="art">${c.type === 'channel' ? '📢' : '👥'}</span><span class="meta"><span class="title">${esc(c.title)}</span></span><span class="icon">›</span></button>`).join('')}</div>`;
+    app.querySelectorAll('[data-chat]').forEach((b) => { b.onclick = () => openChat(b.dataset.chat); });
+  } catch (e) {
+    app.innerHTML = `<div class="empty err">${esc(errText(e))}</div>`;
+  }
+}
+
+(() => {
+  if (!tg?.initData) { app.innerHTML = `<div class="empty">${tr('open_from_bot')}</div>`; return; }
+  const param = tg.initDataUnsafe?.start_param || new URLSearchParams(location.search).get('chat');
+  if (param && /^c\d+(t\d+)?$/.test(param)) openChat(param); else home();
+})();
+</script>
+</body>
+</html>

@@ -584,6 +584,37 @@ const strings = {
     ar: 'لم أستطع فتح تلك الدردشة. أضفني كمشرف وحاول مجددًا.', ru: 'Не удалось открыть этот чат. Добавь меня администратором и попробуй снова.',
     es: 'No pude abrir ese chat. Añádeme como administrador e inténtalo de nuevo.',
   },
+  // --- the chat Mini App (/app) -------------------------------------------------
+  app_here: {
+    en: '🎛 This chat\'s music: its playlists, a shared queue, a sleep timer and picks based on what you play.',
+    fa: '🎛 موسیقی این چت: پلی‌لیست‌هاش، یه صف مشترک، تایمر خواب و پیشنهادهایی بر اساس چیزی که گوش می‌دید.',
+    ar: '🎛 موسيقى هذه الدردشة: قوائم تشغيلها، وقائمة انتظار مشتركة، ومؤقت نوم، واقتراحات مبنية على ما تستمعون إليه.',
+    ru: '🎛 Музыка этого чата: его плейлисты, общая очередь, таймер сна и подборка по тому, что вы слушаете.',
+    es: '🎛 La música de este chat: sus listas, una cola compartida, un temporizador para dormir y sugerencias según lo que escucháis.',
+  },
+  app_open: { en: '🎛 Open', fa: '🎛 باز کن', ar: '🎛 افتح', ru: '🎛 Открыть', es: '🎛 Abrir' },
+  app_button: { en: '🎛 Queue · sleep · picks', fa: '🎛 صف · خواب · پیشنهاد', ar: '🎛 الانتظار · النوم · اقتراحات', ru: '🎛 Очередь · сон · подборка', es: '🎛 Cola · dormir · sugerencias' },
+  queue_post: {
+    en: '🎶 queued by {name}', fa: '🎶 به صف اضافه‌شده توسط {name}', ar: '🎶 أضافها {name} إلى الانتظار',
+    ru: '🎶 в очередь добавил(а) {name}', es: '🎶 en cola por {name}',
+  },
+  sleep_set_chat: {
+    en: '😴 {name} set a sleep timer: the music stops in {minutes} min.',
+    fa: '😴 {name} تایمر خواب گذاشت: موسیقی {minutes} دقیقه دیگه قطع می‌شه.',
+    ar: '😴 ضبط {name} مؤقت النوم: تتوقف الموسيقى بعد {minutes} دقيقة.',
+    ru: '😴 {name} поставил(а) таймер сна: музыка остановится через {minutes} мин.',
+    es: '😴 {name} puso un temporizador: la música se detiene en {minutes} min.',
+  },
+  sleep_done: {
+    en: '😴 Sleep timer: the music is paused. Good night!', fa: '😴 تایمر خواب: موسیقی متوقف شد. شب بخیر!',
+    ar: '😴 مؤقت النوم: توقفت الموسيقى. تصبحون على خير!', ru: '😴 Таймер сна: музыка на паузе. Спокойной ночи!',
+    es: '😴 Temporizador: la música está en pausa. ¡Buenas noches!',
+  },
+  sleep_done_private: {
+    en: '😴 Sleep timer: your Spotify is paused. Good night!', fa: '😴 تایمر خواب: اسپاتیفای‌ت متوقف شد. شب بخیر!',
+    ar: '😴 مؤقت النوم: تم إيقاف Spotify مؤقتًا. تصبح على خير!', ru: '😴 Таймер сна: твой Spotify на паузе. Спокойной ночи!',
+    es: '😴 Temporizador: tu Spotify está en pausa. ¡Buenas noches!',
+  },
 };
 
 export const STRINGS = strings;

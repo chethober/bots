@@ -65,6 +65,20 @@ Anyone can use it with their own accounts: connect a music service, pick a chat,
 - **🎶 Group player.** `/player` in a group shares the sender's Spotify: the card shows what's playing and
   what's next with ⏮ ⏯ ⏭ (host and admins). Anyone queues songs by posting a link or audio file, or with
   inline mode (`@chthmusicbot song name`, also behind the card's ➕ button).
+- **🎛 Chat Mini App.** `/app` in a group, topic or channel posts a 🎛 Open button (the group player's card has one
+  too) that opens the chat's own Mini App, for its members only:
+  - 🎶 **Queue:** one shared queue per chat or topic. Anyone adds songs (search, the chat's playlists, ✨ Picks) and
+    removes their own; admins and the player's host reorder, clear and play it. ▶️ Play next sends the first song to
+    the group player's Spotify (⏩ the whole queue at once), or, without a player, posts it in the chat with its audio
+    file from @chethoberbot, so Telegram's own player plays it. Every song has a 30-second preview to try first.
+  - 📚 **Playlists:** the chat's synced playlists with their tracks (➕ to queue any of them). Admins link one of their
+    own playlists, or a new one named after the chat, without leaving the group.
+  - ✨ **Picks:** songs for the chat, from what it plays: its playlists' newest tracks and its queue give its artists;
+    their related artists' top tracks and deeper cuts by the chat's favourites are suggested, never a song it already
+    has and at most two per artist (Deezer's free API, no key). A chat with nothing to go on gets the charts.
+    Picks are cached for an hour; 🔄 asks for new ones.
+  - 😴 **Sleep timer:** 5 minutes to 2 hours, then the group player's Spotify is paused and the chat is told. In a chat
+    without a player it pauses the Spotify of whoever set it instead.
 - Five languages, buttons instead of commands, clean chat, ℹ️ About with ⭐ tips, like the other bots here.
 
 ### Limits
@@ -76,6 +90,9 @@ Anyone can use it with their own accounts: connect a music service, pick a chat,
   added tracks a day across all users. A YouTube link is used by its id; a link from another service costs a search.
 - **Apple Music** lets apps add tracks to library playlists but not remove them. A user's sign-in lasts about six
   months. MusicKit's sign-in popup can be blocked inside Telegram: the page then offers to finish in the browser.
+- **😴 No cron on tgcloud:** a sleep timer fires on time while someone has the Mini App open (its own clock calls in);
+  otherwise with the next update the bot gets from anyone (a message, a button, a Mini App call), so on a quiet bot
+  it can be late. Pausing needs Spotify Premium, like the rest of the player.
 - **No live audio:** bots can't join Telegram voice chats, so the group player controls the host's Spotify
   instead of streaming into the chat.
 - **@chethoberbot** gets plain "Artist - Title" messages and its replies are copied back: everything to a private
@@ -99,7 +116,7 @@ the bot maps links by id first. song.link's web pages ("Listen anywhere") still 
 ## Run your own
 
 You need Node.js 18+ and a bot from [@BotFather](https://t.me/BotFather). In BotFather, also turn on
-**inline mode** (`/setinline`) and **bot-to-bot communication** (to reach @chethoberbot).
+**inline mode** (`/setinline`), the **main Mini App** (step 2) and **bot-to-bot communication** (to reach @chethoberbot).
 
 1. **Deploy:**
    ```sh
@@ -112,7 +129,9 @@ You need Node.js 18+ and a bot from [@BotFather](https://t.me/BotFather). In Bot
    npx tgcloud run endpoints/setup '{}'           # descriptions and group commands
    ```
 2. **Set the Mini App's address.** `push` prints it (`https://app<id>.tgcloud.ai`): put it in `MINIAPP_URL`
-   in `tgcloud/lib/config.js` and push again.
+   in `tgcloud/lib/config.js` and push again. Then in @BotFather → your bot → *Bot Settings* → *Configure Mini App*,
+   turn the main Mini App on with the URL `<MINIAPP_URL>/chat`: the 🎛 buttons in groups are
+   `t.me/<bot>?startapp=…` links, which open the main Mini App (inline Web App buttons only work in private chats).
 3. **Services** (in `tgcloud/lib/secrets.js`; a service without credentials shows as unavailable):
    - **Spotify:** create an app at https://developer.spotify.com/dashboard with the redirect URI
      `<MINIAPP_URL>/callback` and the Web API, and set `SPOTIFY_CLIENT_ID` (no secret: the login uses
@@ -133,7 +152,7 @@ the optional `CHTHMUSICBOT_SPOTIFY_CLIENT_ID`, `CHTHMUSICBOT_GOOGLE_CLIENT_ID`, 
 
 ```
 tgcloud/
-├── schema.js                 accounts, logins, chats, topics, links, link_tracks, backfill_items, drafts, finds, songs, relays, players
+├── schema.js                 accounts, logins, chats, topics, links, link_tracks, backfill_items, drafts, finds, songs, relays, players, queue_items, sleep_timers
 ├── handlers/
 │   ├── message.js            private chat (buttons, wizard, find), group posts and commands, @chethoberbot replies
 │   ├── channel_post.js       channel posts feed the channel's syncs; channel commands
@@ -143,6 +162,7 @@ tgcloud/
 │   └── pre_checkout_query.js ⭐ tips
 ├── endpoints/
 │   ├── getState.js · spotifyStart.js · spotifyFinish.js · appleStart.js · appleFinish.js   the Mini App's logins
+│   ├── chatApp.js            the chat Mini App: { op, chat, … } (lib/chatapp.js)
 │   └── setup.js              one-off: descriptions and group commands
 └── lib/
     ├── providers/            spotify.js · youtube.js · apple.js: one shape (playlists, search, links, player)
@@ -151,10 +171,15 @@ tgcloud/
     ├── tracks.js · lookup.js · itunes.js   recognizing songs and matching them across services
     ├── songs.js              posted songs and their ❤️ ➕ 🎵 buttons (handled in find.js)
     ├── backfill.js           ⏮ Add old songs: forwarded posts and chat exports
+    ├── chatapp.js · applink.js  the chat Mini App: who may do what, its ops, its t.me/…?startapp= links and /app
+    ├── queue.js              the shared queue: ▶️ to the group player's Spotify, or posted in the chat
+    ├── sleep.js              😴 sleep timers, fired by any update (there's no cron)
+    ├── recs.js               ✨ picks from Deezer's related artists
     ├── wizard.js · views.js · find.js · player.js · relay.js · login.js
     └── accounts.js · chats.js · drafts.js · http.js · errors.js · strings.js · i18n.js · screen.js · tips.js
 web/
 ├── index.html                Mini App: Spotify (PKCE, own-app option) and Apple Music (MusicKit JS) sign-in
+├── chat.html                 the chat Mini App: 🎶 queue, 📚 playlists, ✨ picks, 😴 sleep timer
 └── callback.html             Spotify's redirect target
 scripts/apple-token.mjs       makes the Apple Music developer token
 ```

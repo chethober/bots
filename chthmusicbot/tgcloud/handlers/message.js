@@ -1,6 +1,6 @@
 // handlers/message.js — the private chat (buttons, wizard input, 🔎 Find music),
 // groups and forums (music posts feed their syncs and the group player; /player,
-// /sync, /playlist, /top, /random, /song) and replies from @chethoberbot.
+// /app (the chat Mini App), /sync, /playlist, /top, /random, /song) and replies from @chethoberbot.
 
 import { api } from 'sdk';
 import { ADMIN_IDS, BOT_USERNAME, SOURCE_URL } from '../lib/config.js';
@@ -18,6 +18,8 @@ import { isRelayBot, onRelayMessage } from '../lib/relay.js';
 import { extractRefs } from '../lib/tracks.js';
 import { onChatPost } from '../lib/sync.js';
 import { startPlayer, queueFromPost } from '../lib/player.js';
+import { postAppButton } from '../lib/applink.js';
+import { fireDueTimers } from '../lib/sleep.js';
 import { onChatCommand, parseCommand } from '../lib/chatcmds.js';
 import { isChatAdmin, setTopicName, threadOf, upsertChat, getChat } from '../lib/chats.js';
 import { errorText } from '../lib/errors.js';
@@ -89,6 +91,7 @@ async function onGroup(message) {
 
   const command = parseCommand(message.text);
   if (command?.cmd === 'player') return startPlayer(message);
+  if (command?.cmd === 'app') return postAppButton(message, threadId);
   if (command?.cmd === 'sync') {
     const locale = await localeFor(message.from);
     await api.deleteMessage({ chat_id: chatId, message_id: message.message_id }).catch(() => {});
@@ -111,6 +114,7 @@ export default async function (message) {
   // A /start reaches the hub with the CHTH link that brought the user (src_ tags are
   // stripped here, so the rest of the bot sees a plain /start).
   await reportStart(message);
+  await fireDueTimers(); // 😴 no cron: any update fires the sleep timers that are due
   if (message.chat.type === 'private' && isRelayBot(message.from)) return onRelayMessage(message, relayMarkup);
   if (message.chat.type === 'private') return onPrivate(message);
   if (message.chat.type === 'group' || message.chat.type === 'supergroup') return onGroup(message);

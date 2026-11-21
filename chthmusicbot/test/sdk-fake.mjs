@@ -126,7 +126,7 @@ export class EndpointError extends Error {
 const apiResults = {
   getMe: () => ({ id: 1, is_bot: true, username: 'chthmusicbot' }),
   getChat: (p) => ({ id: p.chat_id, type: 'supergroup', title: 'Music Club', is_forum: false }),
-  getChatMember: () => ({ status: 'administrator' }),
+  getChatMember: (p) => state.members?.[p.user_id] ?? ({ status: 'administrator' }),
   getFileContent: (id) => new TextEncoder().encode(state.files[id]),
 };
 export const api = new Proxy({}, {

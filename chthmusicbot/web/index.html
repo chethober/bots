@@ -269,6 +269,9 @@ async function appleBrowserView(params) {
   try {
     if (route === 'apple-browser') return appleBrowserView(params);
     if (!tg?.initData) { app.innerHTML = `<p>${tr('open_from_bot')}</p>`; return; }
+    // Logins always open with ?p=…; without one this is the bot's main Mini App
+    // (t.me/<bot>?startapp=…, or the profile's Open button) pointed at the root: the chat Mini App.
+    if (!route) { location.replace(`/chat${location.hash}`); return; }
     const state = await call('getState');
     if (route === 'apple') return appleView(state);
     return spotifyView(state);
