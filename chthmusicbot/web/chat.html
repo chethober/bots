@@ -3,89 +3,255 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="color-scheme" content="dark">
 <title>Chat music</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Unbounded:wght@500;700;800&family=Manrope:wght@400;500;600;700;800&family=Vazirmatn:wght@400;600;800&display=swap" rel="stylesheet">
 <script src="https://telegram.org/js/telegram-web-app.js"></script>
 <style>
+  /* Midnight: the app's own look, the same in every Telegram theme. */
   :root {
-    --bg: var(--tg-theme-bg-color, #fff); --text: var(--tg-theme-text-color, #111);
-    --hint: var(--tg-theme-hint-color, #8a8a8f); --link: var(--tg-theme-link-color, #2481cc);
-    --btn: var(--tg-theme-button-color, #2481cc); --btn-text: var(--tg-theme-button-text-color, #fff);
-    --card: var(--tg-theme-secondary-bg-color, #f2f2f5); --sep: color-mix(in srgb, var(--hint) 25%, transparent);
-    --head: var(--tg-theme-header-bg-color, var(--bg)); --danger: var(--tg-theme-destructive-text-color, #e5484d);
+    --bg: #0c0a16; --bg2: #13101f; --surface: rgba(255,255,255,.055); --surface2: rgba(255,255,255,.09);
+    --line: rgba(255,255,255,.09); --text: #f5f2ff; --muted: #a29cc0; --dim: #6f6990;
+    --violet: #8b6cff; --pink: #ff4f9a; --amber: #ffb84d; --mint: #3ee6b0; --danger: #ff5c7a;
+    --grad: linear-gradient(120deg, var(--violet), var(--pink) 60%, var(--amber));
+    --display: 'Unbounded', 'Vazirmatn', system-ui, sans-serif;
+    --body: 'Manrope', 'Vazirmatn', -apple-system, system-ui, sans-serif;
+    --r: 18px; --dock: 74px;
   }
   * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
-  html, body { margin: 0; background: var(--bg); color: var(--text); font: 15px/1.4 -apple-system, system-ui, "Segoe UI", Roboto, sans-serif; }
-  body { padding-bottom: calc(76px + env(safe-area-inset-bottom)); }
+  html, body { margin: 0; min-height: 100%; background: var(--bg); color: var(--text); font: 500 15px/1.45 var(--body); -webkit-font-smoothing: antialiased; }
+  body { padding-bottom: calc(var(--dock) + 96px + env(safe-area-inset-bottom)); overflow-x: hidden; }
   button { font: inherit; color: inherit; background: none; border: 0; cursor: pointer; padding: 0; }
-  button:disabled { opacity: .5; cursor: default; }
-  a { color: var(--link); }
+  button:disabled { opacity: .45; cursor: default; }
   [hidden] { display: none !important; }
-  header { padding: 16px 16px 8px; }
-  h1 { font-size: 20px; margin: 0; line-height: 1.25; overflow-wrap: anywhere; }
-  h2 { font-size: 13px; text-transform: uppercase; letter-spacing: .04em; color: var(--hint); font-weight: 600; margin: 18px 16px 6px; }
-  .sub { color: var(--hint); font-size: 13px; margin-top: 2px; }
-  .hint { color: var(--hint); font-size: 13px; margin: 8px 16px; }
+  svg.i { width: 20px; height: 20px; flex: none; display: block; }
+  .tnum { font-variant-numeric: tabular-nums; }
+
+  /* Backdrop: two slow color clouds from the chat's colors. */
+  .aura { position: fixed; inset: -20% -30% auto; height: 70vh; z-index: -1; pointer-events: none; filter: blur(60px); opacity: .55; }
+  .aura i { position: absolute; width: 60%; height: 70%; border-radius: 50%; animation: drift 18s ease-in-out infinite alternate; }
+  .aura i:nth-child(1) { left: 10%; top: 0; background: var(--c1, var(--violet)); }
+  .aura i:nth-child(2) { right: 5%; top: 20%; background: var(--c2, var(--pink)); animation-duration: 23s; animation-direction: alternate-reverse; }
+  @keyframes drift { to { transform: translate(12%, 10%) scale(1.15); } }
+
+  /* Header */
+  header { padding: 22px 20px 6px; }
+  .eyebrow { font: 700 11px/1 var(--body); letter-spacing: .16em; text-transform: uppercase; color: var(--muted); display: flex; align-items: center; gap: 8px; }
+  .eyebrow .dot { width: 6px; height: 6px; border-radius: 50%; background: var(--mint); box-shadow: 0 0 0 4px rgba(62,230,176,.15); }
+  h1 { font: 800 27px/1.12 var(--display); margin: 10px 0 0; letter-spacing: -.01em; overflow-wrap: anywhere; }
+  h1 .topic { display: block; font-size: 15px; font-weight: 500; color: var(--muted); margin-top: 6px; font-family: var(--body); }
+  .chips { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 12px; }
+  .chip { display: inline-flex; align-items: center; gap: 6px; padding: 5px 10px; border-radius: 999px; background: var(--surface); border: 1px solid var(--line); font-size: 12px; font-weight: 600; color: var(--muted); max-width: 100%; }
+  .chip b { color: var(--text); font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .chip svg.i { width: 14px; height: 14px; }
+  .svc { width: 8px; height: 8px; border-radius: 50%; flex: none; }
+
+  section { padding: 0 16px; }
+  .label { font: 700 11px/1 var(--body); letter-spacing: .14em; text-transform: uppercase; color: var(--dim); margin: 26px 4px 12px; display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+  .label .count { font-family: var(--display); color: var(--muted); letter-spacing: 0; }
+  .note { color: var(--muted); font-size: 13px; line-height: 1.5; margin: 12px 4px; }
   .err { color: var(--danger); }
-  main { padding: 0 0 8px; }
-  .card { background: var(--card); border-radius: 14px; margin: 8px 12px; padding: 12px; }
-  .tabs { position: sticky; top: 0; z-index: 5; display: grid; grid-template-columns: repeat(4, 1fr); gap: 4px; padding: 8px 12px; background: var(--bg); border-bottom: 1px solid var(--sep); }
-  .tabs button { padding: 8px 2px; border-radius: 10px; font-size: 13px; font-weight: 600; color: var(--hint); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-  .tabs button[aria-selected="true"] { background: var(--card); color: var(--text); }
-  .primary { display: block; width: calc(100% - 24px); margin: 10px 12px; padding: 13px; border-radius: 12px; background: var(--btn); color: var(--btn-text); font-weight: 600; text-align: center; }
-  .secondary { display: block; width: calc(100% - 24px); margin: 6px 12px; padding: 11px; border-radius: 12px; background: var(--card); color: var(--link); font-weight: 600; text-align: center; }
-  .row2 { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin: 10px 12px; }
-  .row2 .primary, .row2 .secondary { width: 100%; margin: 0; }
-  .list { margin: 0 12px; border-radius: 14px; background: var(--card); overflow: hidden; }
-  .item { display: flex; align-items: center; gap: 10px; padding: 8px 10px; min-height: 56px; }
-  .item + .item { border-top: 1px solid var(--sep); }
-  .art { width: 44px; height: 44px; border-radius: 8px; flex: none; background: var(--sep) center/cover no-repeat; display: grid; place-items: center; font-size: 20px; position: relative; overflow: hidden; }
-  .art:disabled { opacity: 1; }
-  .art.play::after { content: "▶"; position: absolute; inset: 0; display: grid; place-items: center; background: rgba(0,0,0,.35); color: #fff; font-size: 16px; }
-  .art.playing::after { content: "❚❚"; font-size: 13px; }
+
+  /* Now playing: a record that spins while it plays. */
+  .np { position: relative; margin: 18px 16px 0; padding: 16px; border-radius: 24px; background: linear-gradient(135deg, rgba(139,108,255,.22), rgba(255,79,154,.12)); border: 1px solid rgba(255,255,255,.1); display: grid; grid-template-columns: 84px 1fr; gap: 16px; align-items: center; overflow: hidden; }
+  .vinyl { width: 84px; height: 84px; border-radius: 50%; position: relative; background: radial-gradient(circle, #111 0 8%, transparent 8.5%), repeating-radial-gradient(circle, #121019 0 2px, #1d1a28 2.5px 3.5px); box-shadow: 0 8px 24px rgba(0,0,0,.5), inset 0 0 0 1px rgba(255,255,255,.06); animation: spin 4s linear infinite; animation-play-state: paused; }
+  .vinyl.on { animation-play-state: running; }
+  .vinyl::before { content: ""; position: absolute; inset: 30%; border-radius: 50%; background: var(--label, var(--grad)); }
+  .vinyl::after { content: ""; position: absolute; inset: 46%; border-radius: 50%; background: var(--bg); }
+  .vinyl .shine { position: absolute; inset: 0; border-radius: 50%; background: conic-gradient(from 30deg, transparent 0 20%, rgba(255,255,255,.12) 25%, transparent 30% 70%, rgba(255,255,255,.08) 75%, transparent 80%); }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .np .who { font-size: 12px; color: var(--muted); display: flex; gap: 6px; align-items: center; }
+  .np .t { font: 700 17px/1.25 var(--display); margin: 4px 0 2px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .np .a { color: var(--muted); font-size: 14px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .np .ctl { grid-column: 1 / -1; display: flex; align-items: center; justify-content: center; gap: 18px; direction: ltr; margin-top: 2px; }
+  .np .ctl button { width: 44px; height: 44px; border-radius: 50%; display: grid; place-items: center; background: var(--surface); }
+  .np .ctl button.big { width: 56px; height: 56px; background: var(--text); color: var(--bg); box-shadow: 0 8px 24px rgba(255,255,255,.12); }
+  .np .ctl button:active { transform: scale(.92); }
+  .np .next { grid-column: 1 / -1; font-size: 12px; color: var(--muted); border-top: 1px solid var(--line); padding-top: 10px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .np .next b { color: var(--text); font-weight: 600; }
+
+  /* Equalizer bars on whatever is sounding. */
+  .eq { display: inline-flex; gap: 2px; align-items: flex-end; height: 12px; }
+  .eq i { width: 3px; border-radius: 2px; background: var(--mint); animation: eq .9s ease-in-out infinite; }
+  .eq i:nth-child(2) { animation-delay: -.3s; } .eq i:nth-child(3) { animation-delay: -.6s; }
+  @keyframes eq { 0%, 100% { height: 3px; } 50% { height: 12px; } }
+
+  /* Covers: real artwork, or a gradient made from the song's name. */
+  .cover { position: relative; width: 52px; height: 52px; border-radius: 14px; flex: none; background: var(--cv) center/cover no-repeat; display: grid; place-items: center; overflow: hidden; font: 800 18px var(--display); color: rgba(255,255,255,.9); box-shadow: 0 6px 16px rgba(0,0,0,.35); }
+  .cover.pv::after { content: ""; position: absolute; inset: 0; background: rgba(8,6,16,.35); opacity: 0; transition: opacity .2s; }
+  .cover.pv:hover::after, .cover.pv.playing::after { opacity: 1; }
+  .cover .pi { position: absolute; z-index: 1; width: 26px; height: 26px; border-radius: 50%; background: rgba(255,255,255,.92); color: #111; display: grid; place-items: center; opacity: 0; transform: scale(.8); transition: .2s; }
+  .cover.pv .pi { opacity: .95; transform: scale(1); width: 22px; height: 22px; inset-block-end: 4px; inset-inline-end: 4px; }
+  .cover.pv .pi svg { width: 12px; height: 12px; }
+  .cover.playing .pi { background: var(--mint); }
+
+  /* Song rows */
+  .rows { display: flex; flex-direction: column; gap: 6px; }
+  .row { display: flex; align-items: center; gap: 12px; padding: 8px; border-radius: var(--r); background: var(--surface); border: 1px solid transparent; transition: background .2s, border-color .2s; }
+  .row.on { border-color: rgba(62,230,176,.35); background: rgba(62,230,176,.06); }
+  .row .n { width: 22px; text-align: center; font: 700 12px var(--display); color: var(--dim); flex: none; }
   .meta { flex: 1; min-width: 0; }
-  .title { font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-  .artist, .note { color: var(--hint); font-size: 13px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .meta .t { font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; display: flex; align-items: center; gap: 8px; }
+  .meta .t span { overflow: hidden; text-overflow: ellipsis; }
+  .meta .s { color: var(--muted); font-size: 13px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin-top: 1px; }
+  .tag { display: inline-block; font-size: 11px; font-weight: 700; padding: 2px 7px; border-radius: 6px; background: var(--surface2); color: var(--muted); }
   .acts { display: flex; gap: 2px; flex: none; }
-  .icon { width: 36px; height: 36px; border-radius: 10px; display: grid; place-items: center; font-size: 17px; color: var(--link); }
-  .icon:active { background: var(--sep); }
-  .icon.danger { color: var(--danger); }
-  .search { display: flex; gap: 8px; margin: 10px 12px; }
-  input[type=search], select, input[type=text] { width: 100%; padding: 11px 12px; font: inherit; border-radius: 12px; border: 1px solid var(--sep); background: var(--card); color: var(--text); outline: none; }
-  select { appearance: auto; }
-  .player { display: flex; gap: 12px; align-items: center; }
-  .player .controls { display: flex; gap: 4px; direction: ltr; }
-  .player .controls button { width: 42px; height: 42px; border-radius: 50%; background: var(--bg); font-size: 18px; }
-  .pill { display: inline-block; font-size: 12px; padding: 2px 8px; border-radius: 999px; background: var(--bg); color: var(--hint); margin-top: 4px; }
-  .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(84px, 1fr)); gap: 8px; margin: 10px 12px; }
-  .grid button { padding: 14px 4px; border-radius: 12px; background: var(--card); font-weight: 600; }
-  .grid button:active { background: var(--sep); }
-  .clock { font-size: 48px; font-weight: 700; text-align: center; font-variant-numeric: tabular-nums; margin: 8px 0 0; }
-  .center { text-align: center; }
-  .empty { padding: 22px 16px; text-align: center; color: var(--hint); }
-  .choice { display: flex; align-items: center; gap: 10px; padding: 10px; }
-  .choice + .choice { border-top: 1px solid var(--sep); }
-  .choice input { width: 18px; height: 18px; flex: none; accent-color: var(--btn); }
-  label.check { display: flex; gap: 10px; align-items: center; margin: 10px 16px; }
-  label.check input { width: 18px; height: 18px; accent-color: var(--btn); }
-  .toast { position: fixed; left: 50%; bottom: calc(86px + env(safe-area-inset-bottom)); transform: translateX(-50%); background: rgba(20,20,20,.92); color: #fff; padding: 9px 14px; border-radius: 12px; font-size: 14px; max-width: calc(100% - 32px); z-index: 20; text-align: center; }
-  .preview { position: fixed; left: 0; right: 0; bottom: 0; z-index: 10; display: flex; align-items: center; gap: 10px; padding: 10px 12px calc(10px + env(safe-area-inset-bottom)); background: var(--head); border-top: 1px solid var(--sep); }
-  .preview .bar { height: 3px; background: var(--sep); border-radius: 2px; overflow: hidden; margin-top: 4px; }
-  .preview .bar i { display: block; height: 100%; width: 0; background: var(--btn); }
-  .spin { display: inline-block; width: 18px; height: 18px; border: 2px solid var(--sep); border-top-color: var(--btn); border-radius: 50%; animation: s 0.8s linear infinite; vertical-align: middle; }
-  @keyframes s { to { transform: rotate(360deg); } }
+  .ib { width: 34px; height: 34px; border-radius: 11px; display: grid; place-items: center; color: var(--muted); }
+  .ib:active { background: var(--surface2); color: var(--text); }
+  .ib.add { background: var(--grad); color: #fff; border-radius: 50%; width: 32px; height: 32px; box-shadow: 0 6px 16px rgba(255,79,154,.3); }
+  .ib.add svg { width: 16px; height: 16px; }
+  .ib.del:active { color: var(--danger); }
+  .ib svg { width: 18px; height: 18px; }
+
+  /* Up next: the queue's first song, bigger. */
+  .hero { position: relative; display: flex; gap: 14px; align-items: center; padding: 14px; border-radius: 24px; background: var(--surface); border: 1px solid var(--line); overflow: hidden; }
+  .hero::before { content: ""; position: absolute; inset: 0; background: var(--cv) center/cover; filter: blur(40px) saturate(1.4); opacity: .3; z-index: -1; transform: scale(1.4); }
+  .hero { isolation: isolate; }
+  .hero .cover { width: 84px; height: 84px; border-radius: 18px; font-size: 28px; }
+  .hero .k { font: 700 10px var(--body); letter-spacing: .16em; text-transform: uppercase; color: var(--amber); }
+  .hero .t { font: 700 18px/1.2 var(--display); white-space: normal; margin: 6px 0 3px; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+
+  /* Buttons */
+  .btn { display: flex; align-items: center; justify-content: center; gap: 8px; width: 100%; padding: 15px 18px; border-radius: 18px; font-weight: 800; font-size: 15px; position: relative; overflow: hidden; transition: transform .15s; }
+  .btn:active { transform: scale(.98); }
+  .btn.go { background: var(--grad); color: #fff; box-shadow: 0 10px 30px rgba(255,79,154,.28), inset 0 1px 0 rgba(255,255,255,.25); }
+  .btn.go::after { content: ""; position: absolute; inset: 0; background: linear-gradient(100deg, transparent 30%, rgba(255,255,255,.25) 50%, transparent 70%); transform: translateX(-120%); animation: shine 3.5s ease-in-out infinite; }
+  @keyframes shine { 60%, 100% { transform: translateX(120%); } }
+  .btn.glass { background: var(--surface); border: 1px solid var(--line); color: var(--text); }
+  .btn.quiet { background: none; color: var(--muted); font-weight: 700; padding: 12px; }
+  .btn.quiet.bad { color: var(--danger); }
+  .pair { display: grid; grid-template-columns: 1.2fr 1fr; gap: 10px; margin-top: 16px; }
+
+  /* Search */
+  .search { position: relative; margin-top: 18px; }
+  .search svg.i { position: absolute; inset-inline-start: 16px; top: 50%; transform: translateY(-50%); color: var(--muted); pointer-events: none; }
+  .search input { width: 100%; padding: 16px 18px; padding-inline-start: 48px; font: 600 15px var(--body); color: var(--text); background: var(--surface); border: 1px solid var(--line); border-radius: 18px; outline: none; transition: border-color .2s, box-shadow .2s, background .2s; -webkit-appearance: none; appearance: none; }
+  .search input::placeholder { color: var(--dim); }
+  .search input:focus { border-color: rgba(139,108,255,.7); background: rgba(139,108,255,.08); box-shadow: 0 0 0 4px rgba(139,108,255,.15); }
+  .search input::-webkit-search-cancel-button { -webkit-appearance: none; }
+
+  /* Playlists */
+  .pl { position: relative; padding: 16px; border-radius: 22px; background: var(--surface); border: 1px solid var(--line); overflow: hidden; margin-bottom: 10px; }
+  .pl::before { content: ""; position: absolute; width: 140px; height: 140px; inset-inline-end: -40px; top: -60px; border-radius: 50%; background: var(--sc); filter: blur(50px); opacity: .45; }
+  .pl .top { display: flex; align-items: flex-start; gap: 12px; position: relative; }
+  .pl .name { font: 700 17px/1.25 var(--display); overflow-wrap: anywhere; }
+  .pl .sv { font-size: 12px; color: var(--muted); display: flex; align-items: center; gap: 6px; margin-top: 4px; }
+  .pl .stats { display: flex; gap: 8px; margin-top: 14px; position: relative; flex-wrap: wrap; }
+  .stat { padding: 8px 12px; border-radius: 12px; background: rgba(0,0,0,.25); font-size: 12px; color: var(--muted); }
+  .stat b { display: block; font: 700 16px var(--display); color: var(--text); }
+  .pl .tracks { margin-top: 14px; position: relative; }
+  .pl .tracks .row { background: rgba(0,0,0,.2); }
+  .chev { transition: transform .25s; }
+  .chev.open { transform: rotate(180deg); }
+
+  /* The "link a playlist" sheet, with its own pickers. */
+  .sheet { padding: 18px; border-radius: 24px; background: linear-gradient(180deg, rgba(139,108,255,.14), rgba(255,255,255,.03)); border: 1px solid rgba(139,108,255,.3); margin-top: 10px; }
+  .sheet h3 { font: 700 18px var(--display); margin: 0 0 4px; }
+  .step { font: 700 11px var(--body); letter-spacing: .14em; text-transform: uppercase; color: var(--muted); margin: 20px 0 10px; display: flex; gap: 8px; align-items: center; }
+  .step i { font-style: normal; width: 20px; height: 20px; border-radius: 50%; display: grid; place-items: center; background: var(--grad); color: #fff; font-size: 11px; letter-spacing: 0; }
+  .scroller { display: flex; gap: 8px; overflow-x: auto; scrollbar-width: none; margin: 0 -18px; padding: 0 18px; }
+  .scroller::-webkit-scrollbar { display: none; }
+  .pick { flex: none; display: flex; align-items: center; gap: 8px; padding: 10px 14px; border-radius: 14px; background: var(--surface); border: 1px solid var(--line); font-weight: 700; font-size: 14px; }
+  .pick[aria-pressed="true"] { border-color: transparent; background: var(--text); color: var(--bg); }
+  .opts { display: flex; flex-direction: column; gap: 6px; max-height: 300px; overflow-y: auto; }
+  .opt { display: flex; align-items: center; gap: 12px; padding: 12px; border-radius: 14px; background: var(--surface); border: 1px solid transparent; text-align: start; width: 100%; }
+  .opt[aria-checked="true"] { border-color: rgba(255,79,154,.55); background: rgba(255,79,154,.08); }
+  .ring { width: 22px; height: 22px; border-radius: 50%; border: 2px solid var(--dim); flex: none; display: grid; place-items: center; }
+  .opt[aria-checked="true"] .ring { border-color: transparent; background: var(--grad); }
+  .opt[aria-checked="true"] .ring::after { content: ""; width: 8px; height: 8px; border-radius: 50%; background: #fff; }
+  .seg { display: grid; grid-template-columns: repeat(var(--n), 1fr); gap: 4px; padding: 4px; border-radius: 16px; background: rgba(0,0,0,.3); }
+  .seg button { padding: 10px 4px; border-radius: 12px; font-weight: 800; font-size: 14px; color: var(--muted); }
+  .seg button[aria-pressed="true"] { background: var(--surface2); color: var(--text); box-shadow: 0 4px 12px rgba(0,0,0,.3); }
+  .switch { display: flex; align-items: center; gap: 12px; width: 100%; text-align: start; margin-top: 16px; font-size: 14px; color: var(--muted); }
+  .switch .knob { width: 46px; height: 28px; border-radius: 999px; background: var(--surface2); flex: none; position: relative; transition: background .2s; }
+  .switch .knob::after { content: ""; position: absolute; top: 3px; inset-inline-start: 3px; width: 22px; height: 22px; border-radius: 50%; background: #fff; transition: inset-inline-start .2s; box-shadow: 0 2px 6px rgba(0,0,0,.4); }
+  .switch[aria-checked="true"] .knob { background: var(--pink); }
+  .switch[aria-checked="true"] .knob::after { inset-inline-start: 21px; }
+
+  /* Picks */
+  .feature { position: relative; border-radius: 26px; overflow: hidden; isolation: isolate; padding: 18px; min-height: 200px; display: flex; flex-direction: column; justify-content: flex-end; border: 1px solid var(--line); }
+  .feature::before { content: ""; position: absolute; inset: 0; background: var(--cv) center/cover; z-index: -2; }
+  .feature::after { content: ""; position: absolute; inset: 0; background: linear-gradient(180deg, rgba(12,10,22,.1) 0%, rgba(12,10,22,.55) 45%, rgba(12,10,22,.95)); z-index: -1; }
+  .feature .k { font: 700 10px var(--body); letter-spacing: .18em; text-transform: uppercase; color: var(--amber); display: flex; gap: 6px; align-items: center; }
+  .feature .t { font: 800 24px/1.12 var(--display); margin: 8px 0 4px; }
+  .feature .a { color: rgba(245,242,255,.8); }
+  .feature .bar { display: flex; gap: 8px; margin-top: 14px; }
+  .feature .bar .btn { width: auto; padding: 11px 16px; font-size: 14px; }
+  .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-top: 12px; }
+  .card { min-width: 0; }
+  .card .cover { width: 100%; height: auto; aspect-ratio: 1; border-radius: 18px; font-size: 34px; }
+  .card .cover .pi { inset-block-end: 8px; inset-inline-start: 8px; width: 30px; height: 30px; }
+  .card .cover .pi svg { width: 14px; height: 14px; }
+  .card .ib.add { position: absolute; inset-block-end: 8px; inset-inline-end: 8px; z-index: 2; }
+  .card .t { font-weight: 800; font-size: 14px; margin-top: 8px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .card .s { font-size: 12px; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .card .why { margin-top: 6px; }
+  .why { display: inline-flex; align-items: center; gap: 4px; font-size: 11px; font-weight: 700; padding: 3px 8px; border-radius: 999px; background: rgba(139,108,255,.16); color: #c6b8ff; max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .why.more { background: rgba(255,184,77,.14); color: #ffd28e; }
+  .why.hot { background: rgba(255,79,154,.15); color: #ff9cc6; }
+
+  /* Sleep: a dial that empties as the night goes on. */
+  .night { position: relative; margin-top: 18px; padding: 26px 16px 22px; border-radius: 28px; background: radial-gradient(120% 90% at 50% 0%, #241c4a 0%, #120f24 60%); border: 1px solid rgba(139,108,255,.25); overflow: hidden; text-align: center; }
+  .star { position: absolute; width: 2px; height: 2px; border-radius: 50%; background: #fff; animation: twinkle 3s ease-in-out infinite; }
+  @keyframes twinkle { 50% { opacity: .2; } }
+  .dial { position: relative; width: 220px; height: 220px; margin: 0 auto; }
+  .dial svg { width: 100%; height: 100%; transform: rotate(-90deg); }
+  .dial .in { position: absolute; inset: 0; display: grid; place-content: center; gap: 6px; }
+  .dial .moon { width: 34px; height: 34px; margin: 0 auto; color: var(--amber); filter: drop-shadow(0 0 12px rgba(255,184,77,.6)); }
+  .dial .clock { font: 800 40px/1 var(--display); letter-spacing: -.02em; }
+  .dial .cap { font-size: 12px; color: var(--muted); }
+  .times { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin-top: 20px; }
+  .time { aspect-ratio: 1; border-radius: 50%; background: var(--surface); border: 1px solid var(--line); display: grid; place-content: center; line-height: 1; transition: transform .15s, background .2s; }
+  .time b { font: 800 20px var(--display); display: block; }
+  .time small { font-size: 11px; color: var(--muted); margin-top: 4px; display: block; }
+  .time:active { transform: scale(.94); background: rgba(139,108,255,.2); }
+
+  /* Empty states and skeletons */
+  .empty { text-align: center; padding: 30px 20px; color: var(--muted); }
+  .empty .art { width: 92px; height: 92px; margin: 0 auto 14px; position: relative; }
+  .empty .art .vinyl { width: 92px; height: 92px; animation-play-state: running; animation-duration: 9s; opacity: .8; }
+  .sk { height: 68px; border-radius: var(--r); background: linear-gradient(90deg, var(--surface) 0%, var(--surface2) 50%, var(--surface) 100%) 0 0/200% 100%; animation: sk 1.3s linear infinite; }
+  .sk + .sk { margin-top: 6px; }
+  @keyframes sk { to { background-position: -200% 0; } }
+
+  /* Dock and the preview player above it */
+  .dock { position: fixed; z-index: 30; left: 12px; right: 12px; bottom: calc(10px + env(safe-area-inset-bottom)); height: var(--dock); border-radius: 26px; background: rgba(22,18,36,.82); backdrop-filter: blur(22px) saturate(1.6); -webkit-backdrop-filter: blur(22px) saturate(1.6); border: 1px solid var(--line); display: grid; grid-template-columns: repeat(4, 1fr); padding: 7px; box-shadow: 0 18px 40px rgba(0,0,0,.5); }
+  .dock button { border-radius: 19px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px; color: var(--dim); font-size: 11px; font-weight: 800; position: relative; transition: color .2s; min-width: 0; }
+  .dock button span { max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; padding: 0 4px; }
+  .dock button[aria-selected="true"] { color: var(--text); background: var(--surface2); }
+  .dock button[aria-selected="true"] svg { color: var(--pink); filter: drop-shadow(0 0 8px rgba(255,79,154,.6)); }
+  .dock .badge { position: absolute; top: 6px; inset-inline-end: calc(50% - 22px); min-width: 17px; height: 17px; padding: 0 4px; border-radius: 9px; background: var(--grad); color: #fff; font: 800 10px/17px var(--body); }
+  .dock .badge.pip { min-width: 0; width: 9px; height: 9px; padding: 0; top: 12px; inset-inline-end: calc(50% - 16px); box-shadow: 0 0 10px rgba(255,79,154,.9); }
+  .mini { position: fixed; z-index: 29; left: 18px; right: 18px; bottom: calc(var(--dock) + 18px + env(safe-area-inset-bottom)); display: flex; align-items: center; gap: 12px; padding: 8px; padding-inline-end: 6px; border-radius: 20px; background: rgba(36,28,64,.92); backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px); border: 1px solid rgba(139,108,255,.35); box-shadow: 0 12px 30px rgba(0,0,0,.45); animation: up .3s ease-out; }
+  @keyframes up { from { transform: translateY(20px); opacity: 0; } }
+  .mini .cover { width: 44px; height: 44px; border-radius: 12px; }
+  .mini .prog { height: 3px; border-radius: 2px; background: rgba(255,255,255,.12); overflow: hidden; margin-top: 6px; }
+  .mini .prog i { display: block; height: 100%; width: 0; background: var(--grad); }
+  .mini .k { font-size: 10px; letter-spacing: .14em; text-transform: uppercase; color: var(--mint); font-weight: 800; display: flex; gap: 6px; align-items: center; }
+
+  .toast { position: fixed; z-index: 40; left: 50%; top: calc(14px + env(safe-area-inset-top)); transform: translateX(-50%); max-width: calc(100% - 32px); padding: 11px 16px; border-radius: 16px; background: rgba(20,16,34,.95); border: 1px solid rgba(255,79,154,.4); box-shadow: 0 12px 30px rgba(0,0,0,.5); font-weight: 700; font-size: 14px; text-align: center; animation: drop .25s ease-out; }
+  .toast.bad { border-color: rgba(255,92,122,.6); color: #ffc2cd; }
+  @keyframes drop { from { transform: translate(-50%, -12px); opacity: 0; } }
+
+  .homecard { display: flex; align-items: center; gap: 14px; width: 100%; padding: 12px; border-radius: 20px; background: var(--surface); border: 1px solid var(--line); text-align: start; margin-bottom: 8px; }
+  .homecard .cover { width: 48px; height: 48px; border-radius: 50%; }
+  .fade { animation: fade .35s ease-out; }
+  @keyframes fade { from { opacity: 0; transform: translateY(6px); } }
+  @media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation: none !important; transition: none !important; } }
 </style>
 </head>
 <body>
-<div id="app"><div class="empty"><span class="spin"></span></div></div>
-<div class="preview" id="preview" hidden>
-  <div class="art" id="pvArt"></div>
-  <div class="meta"><div class="title" id="pvTitle"></div><div class="bar"><i id="pvBar"></i></div></div>
-  <div class="acts"><button class="icon" id="pvAdd" title="+">＋</button><button class="icon" id="pvStop">■</button></div>
-</div>
+<div class="aura" id="aura"><i></i><i></i></div>
+<div id="app"></div>
+<nav class="dock" id="dock" role="tablist" hidden></nav>
+<div class="mini" id="mini" hidden></div>
 <div class="toast" id="toast" hidden></div>
 <script>
 const tg = window.Telegram?.WebApp;
 tg?.ready(); tg?.expand();
+try { tg.setHeaderColor('#0c0a16'); tg.setBackgroundColor('#0c0a16'); tg.setBottomBarColor?.('#0c0a16'); } catch {}
 
 // --- strings ----------------------------------------------------------------------
 const L = {
@@ -221,6 +387,42 @@ if (lang === 'fa' || lang === 'ar') document.documentElement.dir = 'rtl';
 document.documentElement.lang = L[lang] ? lang : 'en';
 const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
 const tr = (k, v = {}) => String(S[k] ?? L.en[k] ?? k).replace(/\{(\w+)\}/g, (_, x) => esc(v[x] ?? ''));
+// A label without its leading emoji, where an icon stands in for it.
+const bare = (k, v) => tr(k, v).replace(/^[^\p{L}\p{N}]+/u, '').replace(/[:：\s]+$/u, '');
+
+// --- icons ------------------------------------------------------------------------
+const P = {
+  play: '<path d="M8 5.5v13a1 1 0 0 0 1.5.86l10.4-6.5a1 1 0 0 0 0-1.72L9.5 4.64A1 1 0 0 0 8 5.5z" fill="currentColor"/>',
+  pause: '<rect x="6.5" y="5" width="4" height="14" rx="1.2" fill="currentColor"/><rect x="13.5" y="5" width="4" height="14" rx="1.2" fill="currentColor"/>',
+  prev: '<rect x="5" y="5" width="2.6" height="14" rx="1" fill="currentColor"/><path d="M19 6.2v11.6a1 1 0 0 1-1.55.83L9.6 13.3a1.5 1.5 0 0 1 0-2.6l7.85-5.33A1 1 0 0 1 19 6.2z" fill="currentColor"/>',
+  next: '<rect x="16.4" y="5" width="2.6" height="14" rx="1" fill="currentColor"/><path d="M5 6.2v11.6a1 1 0 0 0 1.55.83l7.85-5.33a1.5 1.5 0 0 0 0-2.6L6.55 5.37A1 1 0 0 0 5 6.2z" fill="currentColor"/>',
+  plus: '<path d="M12 5v14M5 12h14" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"/>',
+  x: '<path d="M7 7l10 10M17 7L7 17" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/>',
+  up: '<path d="M12 18V6M7 11l5-5 5 5" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" fill="none"/>',
+  down: '<path d="M12 6v12M7 13l5 5 5-5" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" fill="none"/>',
+  search: '<circle cx="11" cy="11" r="6.5" stroke="currentColor" stroke-width="2.2" fill="none"/><path d="M20 20l-4.2-4.2" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/>',
+  queue: '<path d="M4 6h11M4 11h11M4 16h6" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/><circle cx="17" cy="17" r="2.6" fill="currentColor"/><path d="M19.6 17V7.5l2 .8" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" fill="none"/>',
+  library: '<rect x="3.5" y="4" width="4" height="16" rx="1.4" fill="currentColor"/><rect x="9.5" y="4" width="4" height="16" rx="1.4" fill="currentColor" opacity=".55"/><path d="M15.6 5.3l3.4-.9 3 14.9-3.5.9z" fill="currentColor"/>',
+  spark: '<path d="M12 2.8l2.1 6.1 6.1 2.1-6.1 2.1L12 19.2l-2.1-6.1L3.8 11l6.1-2.1z" fill="currentColor"/><path d="M19 15.5l.8 2.2 2.2.8-2.2.8-.8 2.2-.8-2.2-2.2-.8 2.2-.8z" fill="currentColor" opacity=".7"/>',
+  moon: '<path d="M20.5 14.6A8.6 8.6 0 0 1 9.4 3.5a8.6 8.6 0 1 0 11.1 11.1z" fill="currentColor"/>',
+  out: '<path d="M14 4h6v6M20 4l-8.5 8.5M18 14.5V19a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1h4.5" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" fill="none"/>',
+  chev: '<path d="M6 9.5l6 6 6-6" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" fill="none"/>',
+  refresh: '<path d="M19.5 12a7.5 7.5 0 1 1-2.2-5.3M19.5 4.5v4.2h-4.2" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" fill="none"/>',
+  ff: '<path d="M3.5 6.2v11.6a1 1 0 0 0 1.6.8l7.4-5.8a1 1 0 0 0 0-1.6L5.1 5.4a1 1 0 0 0-1.6.8zM12 6.2v11.6a1 1 0 0 0 1.6.8l7.4-5.8a1 1 0 0 0 0-1.6l-7.4-5.8a1 1 0 0 0-1.6.8z" fill="currentColor"/>',
+  trash: '<path d="M5 7h14M10 7V5h4v2M7 7l1 12h8l1-12" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" fill="none"/>',
+  link: '<path d="M10 14a4 4 0 0 0 5.7 0l3-3a4 4 0 0 0-5.7-5.7l-1 1M14 10a4 4 0 0 0-5.7 0l-3 3a4 4 0 0 0 5.7 5.7l1-1" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" fill="none"/>',
+  user: '<circle cx="12" cy="8" r="4" fill="currentColor"/><path d="M4 20c1.5-4 4.5-6 8-6s6.5 2 8 6" fill="currentColor"/>',
+};
+const ic = (name, cls = 'i') => `<svg class="${cls}" viewBox="0 0 24 24" aria-hidden="true">${P[name]}</svg>`;
+const EQ = '<span class="eq"><i></i><i></i><i></i></span>';
+const SVC_COLOR = { spotify: '#1ed760', youtube: '#ff3b3b', apple: '#fa57c1' };
+
+// Colors from a name: every song and chat gets its own.
+function hue(s) { let h = 0; for (const c of String(s ?? '')) h = (h * 31 + c.codePointAt(0)) % 360; return h; }
+const gradOf = (s) => { const h = hue(s); return `linear-gradient(135deg, hsl(${h} 80% 60%), hsl(${(h + 50) % 360} 75% 38%))`; };
+const cssUrl = (u) => String(u).replace(/["'()\\\s]/g, (c) => encodeURIComponent(c));
+const initial = (s) => esc([...String(s ?? '♪').trim()][0] ?? '♪').toUpperCase();
+const coverBg = (song) => (song.artwork ? `url(&quot;${esc(cssUrl(song.artwork))}&quot;)` : gradOf(`${song.title}${song.artist}`));
 
 // --- calls -------------------------------------------------------------------------
 function call(op, input = {}) {
@@ -229,14 +431,14 @@ function call(op, input = {}) {
 const errText = (e) => (e?.parameters?.code && (S[`err_${e.parameters.code}`] || L.en[`err_${e.parameters.code}`])) || e?.message || String(e);
 
 let toastTimer;
-function toast(text, haptic = 'success') {
+function toast(text, kind = 'success') {
   const el = document.getElementById('toast');
-  el.textContent = text; el.hidden = false;
+  el.textContent = text; el.className = `toast${kind === 'error' ? ' bad' : ''}`; el.hidden = false;
+  el.style.animation = 'none'; void el.offsetWidth; el.style.animation = '';
   clearTimeout(toastTimer); toastTimer = setTimeout(() => { el.hidden = true; }, 2600);
-  try { if (haptic === 'error') tg.HapticFeedback.notificationOccurred('error'); else tg.HapticFeedback.notificationOccurred(haptic); } catch {}
+  try { tg.HapticFeedback.notificationOccurred(kind); } catch {}
 }
 
-/** Run a call from a button: disabled meanwhile, errors toasted, state replaced. */
 async function act(btn, op, input, { ok } = {}) {
   if (btn) btn.disabled = true;
   try {
@@ -256,127 +458,145 @@ async function act(btn, op, input, { ok } = {}) {
 
 // --- state ------------------------------------------------------------------------
 const app = document.getElementById('app');
+const dock = document.getElementById('dock');
 let chatParam = null;
 let state = null;
 let tab = 'queue';
-let clockSkew = 0;           // server seconds - local seconds
-let results = null;          // search results
-let picks = null;            // { items, seeds } | 'loading'
-let openTracks = {};         // linkId → tracks | 'loading'
-let linking = null;          // the "link a playlist" form, or null
+let clockSkew = 0;
+let results = null;
+let picks = null;
+let openTracks = {};
+let linking = null;
 try { tab = localStorage.getItem('chat_tab') || 'queue'; } catch {}
 
 const serverNow = () => Date.now() / 1000 + clockSkew;
 const svc = (p) => state?.services?.[p] ?? { name: p, icon: '🎵' };
 
-// --- preview (30 s clips from iTunes / Deezer, played here) -------------------------
+function setAura(seed) {
+  const h = hue(seed);
+  const a = document.getElementById('aura');
+  a.style.setProperty('--c1', `hsl(${h} 85% 55%)`);
+  a.style.setProperty('--c2', `hsl(${(h + 70) % 360} 85% 55%)`);
+}
+
+// --- preview player (30-second clips) -------------------------------------------------
 const audio = new Audio();
 let previewing = null;
 function setPreview(song) {
-  const bar = document.getElementById('preview');
-  if (!song) { audio.pause(); previewing = null; bar.hidden = true; markPlaying(); return; }
+  const mini = document.getElementById('mini');
+  if (!song) { audio.pause(); previewing = null; mini.hidden = true; markPlaying(); return; }
   previewing = song;
   audio.src = song.preview; audio.play().catch(() => toast('▶︎ ✕', 'error'));
-  document.getElementById('pvTitle').textContent = [song.title, song.artist].filter(Boolean).join(' — ');
-  document.getElementById('pvArt').style.backgroundImage = song.artwork ? `url("${cssUrl(song.artwork)}")` : '';
-  bar.hidden = false;
+  mini.innerHTML = `<div class="cover" style="--cv:${coverBg(song)}">${song.artwork ? '' : initial(song.title)}</div>
+    <div class="meta"><div class="k">${EQ} 30s</div><div class="t"><span>${esc(song.title)}</span></div><div class="s">${esc(song.artist ?? '')}</div><div class="prog"><i id="prog"></i></div></div>
+    <button class="ib add" id="miniAdd" aria-label="+">${ic('plus')}</button><button class="ib" id="miniStop" aria-label="stop">${ic('x')}</button>`;
+  mini.hidden = false;
+  document.getElementById('miniStop').onclick = () => setPreview(null);
+  document.getElementById('miniAdd').onclick = (e) => act(e.currentTarget, 'queueAdd', { song }, { ok: tr('added') });
   markPlaying();
 }
-audio.addEventListener('timeupdate', () => { document.getElementById('pvBar').style.width = `${(audio.currentTime / (audio.duration || 30)) * 100}%`; });
+audio.addEventListener('timeupdate', () => { const p = document.getElementById('prog'); if (p) p.style.width = `${(audio.currentTime / (audio.duration || 30)) * 100}%`; });
 audio.addEventListener('ended', () => setPreview(null));
-document.getElementById('pvStop').onclick = () => setPreview(null);
-document.getElementById('pvAdd').onclick = (e) => previewing && act(e.currentTarget, 'queueAdd', { song: previewing }, { ok: tr('added') });
 function markPlaying() {
-  document.querySelectorAll('[data-preview]').forEach((el) => el.classList.toggle('playing', Boolean(previewing) && el.dataset.preview === previewing.preview));
+  document.querySelectorAll('[data-preview]').forEach((el) => {
+    const on = Boolean(previewing) && el.dataset.preview === previewing.preview;
+    el.classList.toggle('playing', on);
+    const pi = el.querySelector('.pi');
+    if (pi) pi.innerHTML = ic(on ? 'pause' : 'play');
+    el.closest('.row')?.classList.toggle('on', on);
+  });
 }
 
-// --- views ------------------------------------------------------------------------
-const songs = new Map(); // data-song keys → song objects, rebuilt per render
+// --- pieces -------------------------------------------------------------------------
+const songs = new Map();
 let songSeq = 0;
 function keep(song) { const k = `s${++songSeq}`; songs.set(k, song); return k; }
 
-// A URL for CSS url("…"): quotes, brackets, backslashes and spaces percent-encoded.
-const cssUrl = (u) => String(u).replace(/["'()\\\s]/g, (c) => encodeURIComponent(c));
+/** A cover that previews the song when it has a clip. */
+function cover(song, k) {
+  const pv = song.preview ? ` pv" data-act="preview" data-song="${k}" data-preview="${esc(song.preview)}` : '';
+  return `<button class="cover${pv}" style="--cv:${coverBg(song)}"${song.preview ? '' : ' disabled'}>${song.artwork ? '' : initial(song.title)}${song.preview ? `<span class="pi">${ic('play')}</span>` : ''}</button>`;
+}
+const addBtn = (k) => `<button class="ib add" data-act="add" data-song="${k}" aria-label="+">${ic('plus')}</button>`;
 
-function songRow(song, { note = '', actions = '' } = {}) {
+function row(song, { n = null, sub = '', actions = '' } = {}) {
   const k = keep(song);
-  const attrs = [
-    `class="art${song.preview ? ' play' : ''}"`,
-    song.artwork ? `style="background-image:url(&quot;${esc(cssUrl(song.artwork))}&quot;)"` : '',
-    song.preview ? `data-act="preview" data-song="${k}" data-preview="${esc(song.preview)}"` : 'disabled',
-  ].filter(Boolean).join(' ');
-  return `<div class="item"><button ${attrs}>${song.artwork ? '' : '🎵'}</button>
-    <div class="meta"><div class="title">${esc(song.title)}</div><div class="artist">${esc(song.artist ?? '')}${note ? ` · ${note}` : ''}</div></div>
+  return `<div class="row">${n != null ? `<span class="n">${String(n).padStart(2, '0')}</span>` : ''}${cover(song, k)}
+    <div class="meta"><div class="t"><span>${esc(song.title)}</span></div><div class="s">${esc(song.artist ?? '')}${sub ? ` · ${sub}` : ''}</div></div>
     <div class="acts">${actions.replace(/\{k\}/g, k)}</div></div>`;
 }
-const addBtn = '<button class="icon" data-act="add" data-song="{k}" aria-label="+">＋</button>';
+const skeleton = (n = 3) => `<div>${'<div class="sk"></div>'.repeat(n)}</div>`;
+const emptyState = (text, extra = '') => `<div class="empty fade"><div class="art"><div class="vinyl"><span class="shine"></span></div></div>${text}${extra}</div>`;
 
-function playerCard() {
+function nowPlaying() {
   const p = state.player;
   if (!p) return '';
   const ctl = state.me.control;
-  const now = p.track
-    ? `<div class="title">${p.playing ? '▶️' : '⏸'} ${esc(p.track.title)}</div><div class="artist">${esc(p.track.artist ?? '')}</div>`
-    : `<div class="artist">${p.error ? `<span class="err">${esc(p.error)}</span>` : tr('nothing_playing')}</div>`;
-  return `<div class="card"><div class="player"><div class="meta">
-      <div class="note">🟢 ${tr('host', { name: p.host ?? '' })}${p.device ? ` · ${tr('on_device', { device: p.device })}` : ''}</div>${now}</div>
-      ${ctl ? `<div class="controls"><button data-act="ctl" data-a="prev">⏮</button><button data-act="ctl" data-a="play">⏯</button><button data-act="ctl" data-a="next">⏭</button></div>` : ''}
+  const t = p.track;
+  return `<div class="np fade">
+    <div class="vinyl${p.playing ? ' on' : ''}" style="--label:${gradOf(t ? t.title + t.artist : 'x')}"><span class="shine"></span></div>
+    <div class="meta">
+      <div class="who">${p.playing ? EQ : ''}<span>${tr('host', { name: p.host ?? '' })}${p.device ? ` · ${tr('on_device', { device: p.device })}` : ''}</span></div>
+      ${t ? `<div class="t">${esc(t.title)}</div><div class="a">${esc(t.artist ?? '')}</div>` : `<div class="a" style="margin-top:6px">${p.error ? `<span class="err">${esc(p.error)}</span>` : tr('nothing_playing')}</div>`}
     </div>
-    ${p.next?.length ? `<div class="note" style="margin-top:8px">${tr('up_next')}: ${p.next.slice(0, 3).map((x) => esc(x.label)).join(' · ')}</div>` : ''}</div>`;
+    ${ctl ? `<div class="ctl"><button data-act="ctl" data-a="prev" aria-label="prev">${ic('prev')}</button><button class="big" data-act="ctl" data-a="play" aria-label="play">${ic(p.playing ? 'pause' : 'play')}</button><button data-act="ctl" data-a="next" aria-label="next">${ic('next')}</button></div>` : ''}
+    ${p.next?.length ? `<div class="next">${esc(tr('up_next'))} · <b>${p.next.slice(0, 3).map((x) => esc(x.label)).join('</b> · <b>')}</b></div>` : ''}
+  </div>`;
 }
 
+// --- tabs ---------------------------------------------------------------------------
 function queueView() {
   const ctl = state.me.control;
   const q = state.queue;
-  let html = `<form class="search" id="searchForm"><input type="search" id="q" placeholder="${tr('search_ph')}" autocomplete="off" enterkeyhint="search"></form>`;
+  let html = `<form class="search" id="searchForm">${ic('search')}<input type="search" id="q" placeholder="${tr('search_ph')}" autocomplete="off" enterkeyhint="search"></form>`;
   if (results) {
-    html += `<h2>${tr('results')}</h2>`;
-    html += results === 'loading' ? '<div class="empty"><span class="spin"></span></div>'
-      : results.length ? `<div class="list">${results.map((s) => songRow(s, { actions: addBtn })).join('')}</div>` : `<div class="empty">${tr('no_results')}</div>`;
+    html += `<div class="label"><span>${tr('results')}</span></div>`;
+    html += results === 'loading' ? skeleton(2)
+      : results.length ? `<div class="rows fade">${results.map((s) => row(s, { actions: addBtn('{k}') })).join('')}</div>` : `<p class="note">${tr('no_results')}</p>`;
   }
-  html += `<h2>${tr('queue')}${q.length ? ` · ${q.length}` : ''}</h2>`;
-  if (!q.length) html += `<div class="empty">${tr('queue_empty')}</div>`;
-  else {
-    html += `<div class="list">${q.map((s, i) => songRow(s, {
-      note: tr('by', { name: s.by ?? '—' }),
-      actions: `${ctl && i > 0 ? `<button class="icon" data-act="up" data-id="${s.id}" aria-label="up">↑</button>` : ''}${ctl && i < q.length - 1 ? `<button class="icon" data-act="down" data-id="${s.id}" aria-label="down">↓</button>` : ''}${ctl || s.mine ? `<button class="icon danger" data-act="rm" data-id="${s.id}" aria-label="remove">✕</button>` : ''}`,
-    })).join('')}</div>`;
-  }
-  if (ctl && q.length) {
+  if (!q.length) return html + emptyState(`<p>${tr('queue_empty')}</p>`);
+  const [first, ...rest] = q;
+  const k = keep(first);
+  const tools = (s, i) => `${ctl && i > 0 ? `<button class="ib" data-act="up" data-id="${s.id}" aria-label="up">${ic('up')}</button>` : ''}${ctl && i < q.length - 1 ? `<button class="ib" data-act="down" data-id="${s.id}" aria-label="down">${ic('down')}</button>` : ''}${ctl || s.mine ? `<button class="ib del" data-act="rm" data-id="${s.id}" aria-label="remove">${ic('x')}</button>` : ''}`;
+  html += `<div class="label"><span>${tr('queue')}</span><span class="count">${q.length}</span></div>
+    <div class="hero fade" style="--cv:${coverBg(first)}">${cover(first, k)}
+      <div class="meta"><div class="k">${bare('play_next')}</div><div class="t">${esc(first.title)}</div><div class="s">${esc(first.artist ?? '')}</div><div class="s">${tr('by', { name: first.by ?? '—' })}</div></div>
+      <div class="acts" style="flex-direction:column">${tools(first, 0)}</div></div>`;
+  if (rest.length) html += `<div class="rows fade" style="margin-top:8px">${rest.map((s, i) => row(s, { n: i + 2, sub: tr('by', { name: s.by ?? '—' }), actions: tools(s, i + 1) })).join('')}</div>`;
+  if (ctl) {
     html += state.player
-      ? `<div class="row2"><button class="primary" data-act="play">${tr('play_next')}</button><button class="secondary" data-act="playall">${tr('all_spotify')}</button></div>`
-      : `<button class="primary" data-act="play">${tr('play_next')}</button>`;
-    html += `<p class="hint">${state.player ? tr('queue_where_player', { name: state.player.host ?? '' }) : tr('queue_where_chat')}</p>`;
-    html += `<button class="secondary" style="color:var(--danger)" data-act="clear">${tr('clear')}</button>`;
-  } else if (q.length) html += `<p class="hint">${tr('control_hint')}</p>`;
+      ? `<div class="pair"><button class="btn go" data-act="play">${ic('play')}${bare('play_next')}</button><button class="btn glass" data-act="playall">${ic('ff')}${bare('all_spotify')}</button></div>`
+      : `<div style="margin-top:16px"><button class="btn go" data-act="play">${ic('play')}${bare('play_next')}</button></div>`;
+    html += `<p class="note">${state.player ? tr('queue_where_player', { name: state.player.host ?? '' }) : tr('queue_where_chat')}</p>`;
+    html += `<button class="btn quiet bad" data-act="clear">${ic('trash')}${tr('clear')}</button>`;
+  } else html += `<p class="note">${tr('control_hint')}</p>`;
   return html;
 }
 
-const DIRS = { both: '⇄', in: '💬→🎧', out: '🎧→💬' };
+const DIRS = { both: '⇄', in: '💬 → 🎧', out: '🎧 → 💬' };
 function playlistsView() {
-  let html = '';
-  if (!state.playlists.length) html += `<div class="empty">${tr('pl_empty')}</div>`;
+  let html = '<div class="label"><span>' + bare('tab_playlists') + `</span><span class="count">${state.playlists.length}</span></div>`;
+  if (!state.playlists.length) html += emptyState(`<p>${tr('pl_empty')}</p>`);
   for (const pl of state.playlists) {
     const s = svc(pl.provider);
     const tracks = openTracks[pl.id];
-    html += `<div class="card"><div class="player"><div class="meta"><div class="title">${s.icon} ${esc(pl.name ?? '—')}</div>
-      <div class="note">${s.name} · ${tr('tracks', { n: pl.tracks })} · ${DIRS[pl.direction] ?? ''}</div></div>
-      <div class="acts">${pl.url ? `<button class="icon" data-act="openurl" data-url="${esc(pl.url)}" aria-label="${tr('open')}">↗</button>` : ''}
-      <button class="icon" data-act="tracks" data-id="${pl.id}">${tracks ? '▴' : '▾'}</button></div></div></div>`;
-    if (tracks === 'loading') html += '<div class="empty"><span class="spin"></span></div>';
-    else if (Array.isArray(tracks)) html += `<div class="list">${tracks.slice(0, 100).map((x) => songRow(x, { actions: addBtn })).join('') || `<div class="empty">—</div>`}</div>`;
+    html += `<div class="pl fade" style="--sc:${SVC_COLOR[pl.provider] ?? '#8b6cff'}">
+      <div class="top"><div class="meta"><div class="name">${esc(pl.name ?? '—')}</div><div class="sv"><span class="svc" style="background:${SVC_COLOR[pl.provider] ?? '#8b6cff'}"></span>${esc(s.name)}</div></div>
+        <div class="acts">${pl.url ? `<button class="ib" data-act="openurl" data-url="${esc(pl.url)}" aria-label="${tr('open')}">${ic('out')}</button>` : ''}</div></div>
+      <div class="stats"><div class="stat"><b class="tnum">${pl.tracks}</b>${bare('tracks', { n: '' }) || '♪'}</div><div class="stat"><b>${DIRS[pl.direction] ?? ''}</b>${bare(`dir_${pl.direction}`)}</div>
+        <button class="stat" data-act="tracks" data-id="${pl.id}" style="margin-inline-start:auto;display:flex;align-items:center;gap:6px;color:var(--text);font-weight:800">${tracks ? tr('hide_tracks') : tr('show_tracks')}${ic('chev', `i chev${tracks ? ' open' : ''}`)}</button></div>
+      ${tracks === 'loading' ? `<div class="tracks">${skeleton(3)}</div>` : Array.isArray(tracks) ? `<div class="tracks rows">${tracks.slice(0, 100).map((x) => row(x, { actions: addBtn('{k}') })).join('') || '<p class="note">—</p>'}</div>` : ''}
+    </div>`;
   }
-  html += `<p class="hint">${tr('sync_hint')}</p>`;
-  if (!state.me.admin) return html + `<p class="hint">${tr('admins_link')}</p>`;
-  if (!state.me.accounts.length) {
-    return html + `<p class="hint">${tr('connect_first')}</p><button class="secondary" data-act="bot">${tr('open_bot')}</button>`;
-  }
-  if (!linking) return html + `<button class="primary" data-act="linkstart">${tr('link_pl')}</button>`;
-  return html + linkForm();
+  html += `<p class="note">${tr('sync_hint')}</p>`;
+  if (!state.me.admin) return html + `<p class="note">${tr('admins_link')}</p>`;
+  if (!state.me.accounts.length) return html + `<p class="note">${tr('connect_first')}</p><button class="btn glass" data-act="bot">${tr('open_bot')}</button>`;
+  if (!linking) return html + `<button class="btn go" data-act="linkstart">${ic('link')}${bare('link_pl')}</button>`;
+  return html + linkSheet();
 }
 
-function linkForm() {
-  if (linking === 'loading') return '<div class="empty"><span class="spin"></span></div>';
+function linkSheet() {
+  if (linking === 'loading') return `<div class="sheet">${skeleton(3)}</div>`;
   const accts = linking.accounts;
   const acct = accts.find((a) => a.provider === linking.provider) ?? accts[0];
   const chosen = acct.playlists.find((p) => p.id === linking.playlistId);
@@ -384,61 +604,93 @@ function linkForm() {
   const dirs = readOnly ? ['out'] : ['both', 'in', 'out'];
   const dir = dirs.includes(linking.direction) ? linking.direction : dirs[0];
   const name = state.chat.topic || state.chat.title || '';
-  return `<h2>${tr('pick_account')}</h2><div style="margin:0 12px"><select id="lkAcct">${accts.map((a) => `<option value="${a.provider}"${a.provider === acct.provider ? ' selected' : ''}>${svc(a.provider).icon} ${esc(svc(a.provider).name)} · ${esc(a.account ?? '')}</option>`).join('')}</select></div>
-    ${acct.error ? `<p class="hint err">${esc(acct.error)}</p>` : ''}
-    <h2>${tr('pick_playlist')}</h2><div class="list" style="max-height:300px;overflow:auto">
-      <label class="choice"><input type="radio" name="lkPl" value="" ${!linking.playlistId ? 'checked' : ''}><span class="meta"><span class="title">${tr('new_named', { name })}</span></span></label>
-      ${acct.playlists.map((p) => `<label class="choice"><input type="radio" name="lkPl" value="${esc(p.id)}" ${p.id === linking.playlistId ? 'checked' : ''}><span class="meta"><span class="title">${esc(p.name)}</span><span class="note">${p.total != null ? tr('tracks', { n: p.total }) : ''}${p.editable ? '' : ` · 👁 ${tr('read_only')}`}</span></span></label>`).join('')}
-    </div>
-    <h2>${tr('direction')}</h2><div class="list">${dirs.map((d) => `<label class="choice"><input type="radio" name="lkDir" value="${d}" ${d === dir ? 'checked' : ''}><span>${tr(`dir_${d}`)}</span></label>`).join('')}</div>
-    ${dir !== 'in' && linking.playlistId ? `<label class="check"><input type="checkbox" id="lkPost" ${linking.postExisting ? 'checked' : ''}><span>${tr('post_existing')}</span></label>` : ''}
-    <button class="primary" data-act="link">${tr('link')}</button><button class="secondary" data-act="linkcancel">${tr('cancel')}</button>`;
+  const opt = (id, title, sub) => `<button class="opt" role="radio" aria-checked="${(linking.playlistId ?? '') === id}" data-act="lkpl" data-id="${esc(id)}"><span class="ring"></span><span class="meta"><span class="t" style="display:block">${title}</span>${sub ? `<span class="s" style="display:block">${sub}</span>` : ''}</span></button>`;
+  return `<div class="sheet fade"><h3>${bare('link_pl')}</h3>
+    <div class="step"><i>1</i>${tr('pick_account')}</div>
+    <div class="scroller">${accts.map((a) => `<button class="pick" aria-pressed="${a.provider === acct.provider}" data-act="lkacct" data-p="${a.provider}"><span class="svc" style="background:${SVC_COLOR[a.provider]}"></span>${esc(svc(a.provider).name)}<span style="opacity:.6;font-weight:600">${esc(a.account ?? '')}</span></button>`).join('')}</div>
+    ${acct.error ? `<p class="note err">${esc(acct.error)}</p>` : ''}
+    <div class="step"><i>2</i>${tr('pick_playlist')}</div>
+    <div class="opts">${opt('', `${ic('spark', 'i" style="display:inline;width:14px;height:14px;color:var(--amber);vertical-align:-2px')} ${bare('new_named', { name })}`, '')}
+      ${acct.playlists.map((p) => opt(p.id, esc(p.name), `${p.total != null ? tr('tracks', { n: p.total }) : ''}${p.editable ? '' : ` · ${tr('read_only')}`}`)).join('')}</div>
+    <div class="step"><i>3</i>${tr('direction')}</div>
+    <div class="seg" style="--n:${dirs.length}">${dirs.map((d) => `<button aria-pressed="${d === dir}" data-act="lkdir" data-d="${d}">${DIRS[d]}</button>`).join('')}</div>
+    <p class="note" style="margin:10px 2px 0">${tr(`dir_${dir}`)}</p>
+    ${dir !== 'in' && linking.playlistId ? `<button class="switch" role="switch" aria-checked="${Boolean(linking.postExisting)}" data-act="lkpost"><span class="knob"></span><span>${tr('post_existing')}</span></button>` : ''}
+    <div class="pair" style="grid-template-columns:1fr auto"><button class="btn go" data-act="link">${ic('link')}${tr('link')}</button><button class="btn quiet" data-act="linkcancel">${tr('cancel')}</button></div>
+  </div>`;
 }
 
 function picksView() {
-  let html = `<p class="hint">${tr('picks_hint')}</p>`;
-  if (!picks || picks === 'loading') return html + `<div class="empty"><span class="spin"></span><br><br>${tr('picks_wait')}</div>`;
-  if (picks.error) return html + `<div class="empty err">${esc(picks.error)}</div><button class="secondary" data-act="repick">${tr('refresh')}</button>`;
-  if (!picks.items.length) return html + `<div class="empty">${tr('picks_empty')}</div><button class="secondary" data-act="repick">${tr('refresh')}</button>`;
-  if (picks.items.every((x) => x.reason === 'trending')) html += `<p class="hint">${tr('picks_cold')}</p>`;
-  const reason = (x) => (x.reason === 'similar' ? tr('because', { name: x.because }) : x.reason === 'more' ? tr('more_from', { name: x.because }) : `🔥 ${tr('trending')}`);
-  html += `<div class="list">${picks.items.map((x) => songRow(x, { note: reason(x), actions: addBtn })).join('')}</div>`;
-  return html + `<button class="secondary" data-act="repick">${tr('refresh')}</button>`;
+  let html = `<p class="note" style="margin-top:20px">${tr('picks_hint')}</p>`;
+  if (!picks || picks === 'loading') return html + `<div class="sk" style="height:220px;border-radius:26px"></div><div class="grid"><div class="sk" style="height:190px"></div><div class="sk" style="height:190px"></div></div><p class="note" style="text-align:center">${tr('picks_wait')}</p>`;
+  if (picks.error) return html + emptyState(`<p class="err">${esc(picks.error)}</p>`) + `<button class="btn glass" data-act="repick">${ic('refresh')}${bare('refresh')}</button>`;
+  if (!picks.items.length) return html + emptyState(`<p>${tr('picks_empty')}</p>`) + `<button class="btn glass" data-act="repick">${ic('refresh')}${bare('refresh')}</button>`;
+  if (picks.items.every((x) => x.reason === 'trending')) html += `<p class="note">${tr('picks_cold')}</p>`;
+  const why = (x) => (x.reason === 'similar' ? `<span class="why">${ic('spark', 'i" style="width:11px;height:11px')} ${tr('because', { name: x.because })}</span>`
+    : x.reason === 'more' ? `<span class="why more">${tr('more_from', { name: x.because })}</span>` : `<span class="why hot">🔥 ${tr('trending')}</span>`);
+  const [top, ...rest] = picks.items;
+  const k = keep(top);
+  html += `<div class="feature fade" style="--cv:${coverBg(top)}">
+    <div class="k">${ic('spark', 'i" style="width:12px;height:12px')} ${bare('tab_picks')} · ${esc(state.chat.title ?? '')}</div>
+    <div class="t">${esc(top.title)}</div><div class="a">${esc(top.artist ?? '')}</div>
+    <div style="margin-top:8px">${why(top)}</div>
+    <div class="bar">${top.preview ? `<button class="btn glass" data-act="preview" data-song="${k}" data-preview="${esc(top.preview)}">${ic('play')}30s</button>` : ''}<button class="btn go" data-act="add" data-song="${k}">${ic('plus')}${bare('tab_queue')}</button></div>
+  </div>`;
+  html += `<div class="grid">${rest.map((x) => {
+    const kk = keep(x);
+    return `<div class="card fade"><div style="position:relative">${cover(x, kk)}${addBtn(kk)}</div><div class="t">${esc(x.title)}</div><div class="s">${esc(x.artist ?? '')}</div><div class="why-wrap" style="margin-top:6px">${why(x)}</div></div>`;
+  }).join('')}</div>`;
+  return html + `<div style="margin-top:18px"><button class="btn glass" data-act="repick">${ic('refresh')}${bare('refresh')}</button></div>`;
 }
 
+const STARS = Array.from({ length: 18 }, (_, i) => `<span class="star" style="left:${(i * 53) % 100}%;top:${(i * 37) % 70}%;animation-delay:${(i % 6) * 0.5}s;opacity:${0.3 + (i % 4) * 0.2}"></span>`).join('');
 function sleepView() {
   const s = state.sleep;
   const p = state.player;
   const canSet = p ? state.me.control : state.me.spotify;
-  let html = '';
-  if (s) {
-    const left = Math.max(0, Math.round(s.at - serverNow()));
-    const allowed = p ? state.me.control : (s.mine || state.me.admin);
-    html += `<div class="card center"><div class="note">${tr('sleep_left')}</div><div class="clock" id="clock">${fmt(left)}</div>
-      ${s.mine ? '' : `<div class="note">${tr('sleep_set_by_other')}</div>`}</div>`;
-    if (allowed) html += `<button class="secondary" style="color:var(--danger)" data-act="sleep" data-m="0">${tr('sleep_cancel')}</button>`;
-  }
-  html += `<p class="hint">${p ? tr('sleep_player', { name: p.host ?? '' }) : canSet ? tr('sleep_personal') : tr('sleep_need_spotify')}</p>`;
-  if (canSet) html += `<div class="grid">${state.sleepMinutes.map((m) => `<button data-act="sleep" data-m="${m}">${tr('min', { n: m })}</button>`).join('')}</div>`;
-  else if (p) html += `<p class="hint">${tr('control_hint')}</p>`;
-  else html += `<button class="secondary" data-act="bot">${tr('open_bot')}</button>`;
-  return html + `<p class="hint">${tr('sleep_late')}</p>`;
+  const R = 96;
+  const C = 2 * Math.PI * R;
+  const left = s ? Math.max(0, Math.round(s.at - serverNow())) : 0;
+  const total = s ? Math.max(1, s.at - (s.from ?? s.at - 3600)) : 1;
+  let html = `<div class="night fade">${STARS}
+    <div class="dial"><svg viewBox="0 0 220 220"><defs><linearGradient id="g" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#8b6cff"/><stop offset=".6" stop-color="#ff4f9a"/><stop offset="1" stop-color="#ffb84d"/></linearGradient></defs>
+      <circle cx="110" cy="110" r="${R}" stroke="rgba(255,255,255,.08)" stroke-width="10" fill="none"/>
+      <circle id="arc" cx="110" cy="110" r="${R}" stroke="url(#g)" stroke-width="10" fill="none" stroke-linecap="round" stroke-dasharray="${C}" stroke-dashoffset="${s ? C * (1 - left / total) : C}" style="transition:stroke-dashoffset 1s linear" data-c="${C}" data-total="${total}"/></svg>
+      <div class="in">${ic('moon', 'i moon')}${s ? `<div class="clock tnum" id="clock">${fmt(left)}</div><div class="cap">${tr('sleep_left')}</div>` : `<div class="cap" style="max-width:150px">${bare('tab_sleep')}</div>`}</div></div>
+    ${s && !s.mine ? `<p class="note">${tr('sleep_set_by_other')}</p>` : ''}
+  </div>`;
+  if (s && (p ? state.me.control : (s.mine || state.me.admin))) html += `<button class="btn quiet bad" style="margin-top:6px" data-act="sleep" data-m="0">${ic('x')}${tr('sleep_cancel')}</button>`;
+  html += `<p class="note">${p ? tr('sleep_player', { name: p.host ?? '' }) : canSet ? tr('sleep_personal') : tr('sleep_need_spotify')}</p>`;
+  if (canSet) html += `<div class="times">${state.sleepMinutes.map((m) => `<button class="time" data-act="sleep" data-m="${m}"><b class="tnum">${m}</b><small>${bare('min', { n: '' }) || 'min'}</small></button>`).join('')}</div>`;
+  else if (p) html += `<p class="note">${tr('control_hint')}</p>`;
+  else html += `<button class="btn glass" data-act="bot">${tr('open_bot')}</button>`;
+  return html + `<p class="note" style="opacity:.75">${tr('sleep_late')}</p>`;
 }
 
 const fmt = (sec) => { const h = Math.floor(sec / 3600); const m = Math.floor((sec % 3600) / 60); const s = sec % 60; return `${h ? `${h}:` : ''}${String(m).padStart(h ? 2 : 1, '0')}:${String(s).padStart(2, '0')}`; };
 
-const TABS = ['queue', 'playlists', 'picks', 'sleep'];
+const TABS = [['queue', 'queue'], ['playlists', 'library'], ['picks', 'spark'], ['sleep', 'moon']];
+function renderDock() {
+  dock.hidden = false;
+  dock.innerHTML = TABS.map(([x, icon]) => `<button role="tab" data-tab="${x}" aria-selected="${x === tab}">${ic(icon)}<span>${bare(`tab_${x}`)}</span>${x === 'queue' && state.queue.length ? `<span class="badge tnum">${state.queue.length}</span>` : ''}${x === 'sleep' && state.sleep ? '<span class="badge pip"></span>' : ''}</button>`).join('');
+}
+
 function render() {
   if (!state) return;
   songs.clear();
   const focused = document.activeElement?.id === 'q';
   const qv = document.getElementById('q')?.value ?? '';
-  const title = [state.chat.title, state.chat.topic].filter(Boolean).join(' › ');
   const view = { queue: queueView, playlists: playlistsView, picks: picksView, sleep: sleepView }[tab]();
-  app.innerHTML = `<header><h1>${esc(title)}</h1><div class="sub">${state.playlists.length ? state.playlists.map((p) => `${svc(p.provider).icon} ${esc(p.name ?? '')}`).slice(0, 3).join(' · ') : '🎛'}${state.sleep ? ` · 😴 ${fmt(Math.max(0, Math.round(state.sleep.at - serverNow())))}` : ''}</div></header>
-    ${playerCard()}
-    <nav class="tabs" role="tablist">${TABS.map((x) => `<button role="tab" data-tab="${x}" aria-selected="${x === tab}">${tr(`tab_${x}`)}</button>`).join('')}</nav>
-    <main>${view}</main>`;
+  const chips = [
+    ...state.playlists.slice(0, 2).map((p) => `<span class="chip"><span class="svc" style="background:${SVC_COLOR[p.provider]}"></span><b>${esc(p.name ?? '')}</b></span>`),
+    state.sleep ? `<span class="chip">${ic('moon')}<b class="tnum" id="chipClock">${fmt(Math.max(0, Math.round(state.sleep.at - serverNow())))}</b></span>` : '',
+  ].join('');
+  app.innerHTML = `<header><div class="eyebrow"><span class="dot"></span><bdi dir="ltr">@${esc(state.bot)}</bdi></div>
+      <h1>${esc(state.chat.title ?? '')}${state.chat.topic ? `<span class="topic"># ${esc(state.chat.topic)}</span>` : ''}</h1>
+      ${chips ? `<div class="chips">${chips}</div>` : ''}</header>
+    ${tab === 'queue' ? nowPlaying() : ''}
+    <section>${view}</section>`;
+  renderDock();
   const q = document.getElementById('q');
   if (q) { q.value = qv; if (focused) { q.focus(); q.setSelectionRange(qv.length, qv.length); } }
   markPlaying();
@@ -460,24 +712,17 @@ async function search(v) {
   try { const r = await call('search', { q: v }); if (document.getElementById('q')?.value.trim() === v) { results = r.results; render(); } } catch (e) { results = null; toast(errText(e), 'error'); render(); }
 }
 
-app.addEventListener('change', (e) => {
-  if (!linking || linking === 'loading') return;
-  if (e.target.id === 'lkAcct') { linking.provider = e.target.value; linking.playlistId = null; render(); }
-  if (e.target.name === 'lkPl') { linking.playlistId = e.target.value || null; render(); }
-  if (e.target.name === 'lkDir') { linking.direction = e.target.value; render(); }
-  if (e.target.id === 'lkPost') linking.postExisting = e.target.checked;
+dock.addEventListener('click', (e) => {
+  const b = e.target.closest('[data-tab]');
+  if (!b || b.dataset.tab === tab) return;
+  tab = b.dataset.tab;
+  try { localStorage.setItem('chat_tab', tab); } catch {}
+  try { tg.HapticFeedback.selectionChanged(); } catch {}
+  render(); window.scrollTo({ top: 0 });
+  if (tab === 'picks' && !picks) loadPicks(false);
 });
 
 app.addEventListener('click', async (e) => {
-  const tabBtn = e.target.closest('[data-tab]');
-  if (tabBtn) {
-    tab = tabBtn.dataset.tab;
-    try { localStorage.setItem('chat_tab', tab); } catch {}
-    try { tg.HapticFeedback.selectionChanged(); } catch {}
-    render(); window.scrollTo(0, 0);
-    if (tab === 'picks' && !picks) loadPicks(false);
-    return;
-  }
   const b = e.target.closest('[data-act]');
   if (!b) return;
   const a = b.dataset.act;
@@ -492,7 +737,7 @@ app.addEventListener('click', async (e) => {
       ok: (r) => (r.result.to === 'chat' ? tr('posted_chat') : [r.result.played ? tr('sent_spotify', { n: r.result.played }) : '', r.result.missed ? tr('missed', { n: r.result.missed }) : ''].filter(Boolean).join(' · ')),
     });
   }
-  if (a === 'ctl') return act(b, 'control', { action: b.dataset.a });
+  if (a === 'ctl') { try { tg.HapticFeedback.impactOccurred('light'); } catch {} return act(b, 'control', { action: b.dataset.a }); }
   if (a === 'openurl') return tg.openLink(b.dataset.url);
   if (a === 'bot') return tg.openTelegramLink(`https://t.me/${state?.bot ?? 'chthmusicbot'}?start=accounts`);
   if (a === 'tracks') {
@@ -515,6 +760,12 @@ app.addEventListener('click', async (e) => {
     } catch (err) { linking = null; toast(errText(err), 'error'); }
     return render();
   }
+  if (!linking || linking === 'loading') return;
+  try { tg.HapticFeedback.selectionChanged(); } catch {}
+  if (a === 'lkacct') { linking.provider = b.dataset.p; linking.playlistId = null; return render(); }
+  if (a === 'lkpl') { linking.playlistId = b.dataset.id || null; return render(); }
+  if (a === 'lkdir') { linking.direction = b.dataset.d; return render(); }
+  if (a === 'lkpost') { linking.postExisting = !linking.postExisting; return render(); }
   if (a === 'linkcancel') { linking = null; return render(); }
   if (a === 'link') {
     const acct = linking.accounts.find((x) => x.provider === linking.provider) ?? linking.accounts[0];
@@ -536,17 +787,19 @@ async function loadPicks(refreshing) {
   render();
 }
 
-// --- clocks: the sleep countdown, its timer firing, and a gentle poll -----------------
+// --- clocks -----------------------------------------------------------------------------
 let clockTimer = null;
 let fireTimer = null;
 function armSleepClock() {
   clearInterval(clockTimer); clearTimeout(fireTimer);
   if (!state?.sleep) return;
-  clockTimer = setInterval(() => {
-    const el = document.getElementById('clock');
+  const tickClock = () => {
     const left = Math.max(0, Math.round(state.sleep.at - serverNow()));
-    if (el) el.textContent = fmt(left);
-  }, 1000);
+    for (const id of ['clock', 'chipClock']) { const el = document.getElementById(id); if (el) el.textContent = fmt(left); }
+    const arc = document.getElementById('arc');
+    if (arc) arc.setAttribute('stroke-dashoffset', String(Number(arc.dataset.c) * (1 - left / Number(arc.dataset.total))));
+  };
+  clockTimer = setInterval(tickClock, 1000);
   // The server has no cron: when the time comes, this page asks it to fire the timer.
   const ms = Math.max(0, (state.sleep.at - serverNow()) * 1000) + 1500;
   if (ms < 2 ** 31) fireTimer = setTimeout(() => refresh(), ms);
@@ -557,7 +810,7 @@ async function refresh() {
     const res = await call('tick');
     clockSkew = res.now - Date.now() / 1000;
     state = res;
-    if (document.activeElement?.tagName !== 'INPUT' && document.activeElement?.tagName !== 'SELECT') render();
+    if (document.activeElement?.tagName !== 'INPUT') render();
   } catch (e) {
     console.warn(e);
   }
@@ -568,32 +821,34 @@ document.addEventListener('visibilitychange', () => { if (document.visibilitySta
 // --- start ----------------------------------------------------------------------------
 async function openChat(param) {
   chatParam = param;
-  app.innerHTML = '<div class="empty"><span class="spin"></span></div>';
+  app.innerHTML = `<header><div class="sk" style="height:14px;width:90px"></div><div class="sk" style="height:30px;width:70%;margin-top:14px"></div></header><section style="margin-top:20px">${skeleton(4)}</section>`;
   try {
     state = await call('state');
     clockSkew = state.now - Date.now() / 1000;
-    if (TABS.indexOf(tab) < 0) tab = 'queue';
+    setAura(state.chat.title);
+    if (!TABS.some(([x]) => x === tab)) tab = 'queue';
     render();
     if (tab === 'picks') loadPicks(false);
   } catch (e) {
-    app.innerHTML = `<div class="empty err">${esc(errText(e))}</div>`;
+    app.innerHTML = `<section style="padding-top:40px">${emptyState(`<p class="err">${esc(errText(e))}</p>`)}</section>`;
   }
 }
 
 async function home() {
+  setAura('home');
   try {
     const r = await new Promise((resolve, reject) => tg.Serverless.call('chatApp', { op: 'home' }, (err, res) => (err ? reject(err) : resolve(res))));
-    if (!r.chats.length) { app.innerHTML = `<header><h1>${tr('home_title')}</h1></header><div class="empty">${tr('home_empty')}</div>`; return; }
-    app.innerHTML = `<header><h1>${tr('home_title')}</h1></header><p class="hint">${tr('home_hint')}</p>
-      <div class="list">${r.chats.map((c) => `<button class="item" style="width:100%;text-align:start" data-chat="${esc(c.param)}"><span class="art">${c.type === 'channel' ? '📢' : '👥'}</span><span class="meta"><span class="title">${esc(c.title)}</span></span><span class="icon">›</span></button>`).join('')}</div>`;
+    const head = `<header><div class="eyebrow"><span class="dot"></span><bdi dir="ltr">@${esc(r.bot)}</bdi></div><h1>${bare('home_title')}</h1></header>`;
+    if (!r.chats.length) { app.innerHTML = `${head}<section>${emptyState(`<p>${tr('home_empty')}</p>`)}</section>`; return; }
+    app.innerHTML = `${head}<section><p class="note">${tr('home_hint')}</p>${r.chats.map((c) => `<button class="homecard fade" data-chat="${esc(c.param)}"><span class="cover" style="--cv:${gradOf(c.title)}">${initial(c.title)}</span><span class="meta"><span class="t" style="display:block;font-family:var(--display)">${esc(c.title)}</span><span class="s" style="display:block">${c.type === 'channel' ? '📢' : '👥'}</span></span>${ic('chev', 'i" style="transform:rotate(-90deg);color:var(--muted)')}</button>`).join('')}</section>`;
     app.querySelectorAll('[data-chat]').forEach((b) => { b.onclick = () => openChat(b.dataset.chat); });
   } catch (e) {
-    app.innerHTML = `<div class="empty err">${esc(errText(e))}</div>`;
+    app.innerHTML = `<section style="padding-top:40px">${emptyState(`<p class="err">${esc(errText(e))}</p>`)}</section>`;
   }
 }
 
 (() => {
-  if (!tg?.initData) { app.innerHTML = `<div class="empty">${tr('open_from_bot')}</div>`; return; }
+  if (!tg?.initData) { setAura('x'); app.innerHTML = `<section style="padding-top:60px">${emptyState(`<p>${tr('open_from_bot')}</p>`)}</section>`; return; }
   const param = tg.initDataUnsafe?.start_param || new URLSearchParams(location.search).get('chat');
   if (param && /^c\d+(t\d+)?$/.test(param)) openChat(param); else home();
 })();

@@ -105,7 +105,7 @@ async function playerOf(c) {
 async function sleepOf(c) {
   const timer = await getTimer(c.chatId);
   if (!timer) return null;
-  return { at: timer.at, mine: timer.setBy === c.user.id, forPlayer: Boolean(c.player) && timer.userId === c.player.hostId };
+  return { at: timer.at, from: timer.createdAt, mine: timer.setBy === c.user.id, forPlayer: Boolean(c.player) && timer.userId === c.player.hostId };
 }
 
 async function stateOf(c) {
