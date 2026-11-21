@@ -8,7 +8,8 @@
 import { api, db } from 'sdk';
 import { eq } from 'sdk/db';
 import { players } from '../schema.js';
-import { BOT_USERNAME, QUEUED_REACTION } from './config.js';
+import { BOT_USERNAME } from './config.js';
+import { react } from './reactions.js';
 import { providerOf } from './providers/index.js';
 import { getAccount } from './accounts.js';
 import { isChatAdmin, threadOf } from './chats.js';
@@ -144,6 +145,6 @@ export async function queueFromPost(message, refs) {
     }).catch(() => {});
   }
   if (!queued) return;
-  await api.setMessageReaction({ chat_id: message.chat.id, message_id: message.message_id, reaction: [{ type: 'emoji', emoji: QUEUED_REACTION }] }).catch(() => {});
+  await react(message, threadOf(message), 'queued');
   await refreshCard(row);
 }

@@ -165,8 +165,56 @@ s = await as(HOST, 'addPlaylist', { provider: 'spotify', create: true, direction
 assert.equal(s.playlists.length, 2);
 assert.equal(s.playlists[1].name, 'Music Club');
 
+// ⚙︎ Reactions: admins pick the emoji per chat, a topic can differ, a sync can opt out.
+const post = (id, url, thread = 0) => message({ message_id: id, from: FAN, chat: GROUP, date: 0, text: url, entities: [{ type: 'url', offset: 0, length: url.length }], ...(thread ? { is_topic_message: true, message_thread_id: thread } : {}) });
+const reactionOn = (id) => calls('setMessageReaction').filter((c) => c.params.message_id === id).map((c) => c.params.reaction[0].emoji);
+await assert.rejects(as(FAN, 'reactions'), code('ADMINS_ONLY'));
+let r = await as(HOST, 'reactions');
+assert.deepEqual(r.effective, { added: '👌', queued: '⚡', repost: '' });
+assert.ok(r.suggested.includes('🔥') && r.syncs.length >= 1);
+reset();
+await post(201, `https://open.spotify.com/track/${T('q')}`);
+assert.deepEqual(reactionOn(201).slice(0, 1), ['👌'], 'the default 👌 on an added track');
+r = await as(HOST, 'setReaction', { scope: 'chat', kind: 'added', emoji: '🔥' });
+assert.equal(r.effective.added, '🔥');
+await assert.rejects(as(HOST, 'setReaction', { scope: 'chat', kind: 'added', emoji: '🎸' }), code('BAD_INPUT'), 'only reactions bots may use');
+await assert.rejects(as(HOST, 'setReaction', { scope: 'chat', kind: 'added', emoji: null }), code('BAD_INPUT'), 'a chat has nothing to inherit from');
+await as(HOST, 'setReaction', { scope: 'chat', kind: 'repost', emoji: '🗿' });
+await as(HOST, 'setReaction', { scope: 'chat', kind: 'queued', emoji: '' });
+reset();
+await post(202, `https://open.spotify.com/track/${T('s')}`);
+assert.deepEqual(reactionOn(202), ['🔥'], 'the chat\'s emoji; queueing on the player reacts with nothing now');
+await post(203, `https://open.spotify.com/track/${T('s')}`);
+assert.deepEqual(reactionOn(203), ['🗿'], 'a repost gets the repost reaction');
+// A topic overrides the chat; null goes back to the chat's.
+const topicChat = appParam(GROUP.id, 5);
+const inTopic = (op, input = {}) => chatApp({ op, chat: topicChat, ...input }, { initData: { user: HOST } });
+await assert.rejects(as(HOST, 'setReaction', { scope: 'topic', kind: 'added', emoji: '' }), code('BAD_INPUT'), 'no topic outside one');
+r = await inTopic('setReaction', { scope: 'topic', kind: 'added', emoji: '' });
+assert.equal(r.effective.added, '');
+assert.equal(r.chat.added, '🔥');
+reset();
+await post(204, `https://open.spotify.com/track/${T('t')}`, 5);
+assert.deepEqual(reactionOn(204), [], 'off in topic 5');
+await post(205, `https://open.spotify.com/track/${T('u')}`);
+assert.deepEqual(reactionOn(205), ['🔥'], 'the rest of the chat keeps its emoji');
+r = await inTopic('setReaction', { scope: 'topic', kind: 'added', emoji: null });
+assert.equal(r.effective.added, '🔥');
+// A chat that allows only some reactions.
+state.allowedReactions = ['👍', '🔥'];
+r = await as(HOST, 'reactions');
+assert.ok(r.restricted && r.suggested.every((e) => ['👍', '🔥'].includes(e)));
+await assert.rejects(as(HOST, 'setReaction', { scope: 'chat', kind: 'added', emoji: '🎉' }), code('NOT_ALLOWED'));
+state.allowedReactions = undefined;
+// A sync's own switch.
+for (const sync of r.syncs) r = await as(HOST, 'syncReaction', { linkId: sync.id, on: false });
+assert.ok(r.syncs.length === 2 && r.syncs.every((x) => !x.reaction));
+reset();
+await post(206, `https://open.spotify.com/track/${T('v')}`);
+assert.deepEqual(reactionOn(206), [], 'no reactions from syncs with them off');
+
 // From the bot's profile (no chat): the chats the user has syncs in.
 const home = await chatApp({ op: 'home' }, { initData: { user: HOST } });
 assert.deepEqual(home.chats.map((c) => c.param), ['c100500']);
 
-console.log('ok: chat Mini App (/app, members, queue → chat and → Spotify, sleep timer, picks, linking)');
+console.log('ok: chat Mini App (/app, members, queue → chat and → Spotify, sleep timer, picks, linking, reactions)');

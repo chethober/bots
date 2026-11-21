@@ -202,3 +202,17 @@ export const sleepTimers = table('sleep_timers', {
 }, (t) => ({
   byAt: index('idx_sleep_timers_at').on(t.at),
 }));
+
+// A chat's reaction settings (the Mini App's ⚙︎ Reactions), for the whole chat
+// (threadId 0) or one forum topic. Per kind: null = inherit (a topic follows
+// its chat, a chat the defaults), '' = off, or a reaction emoji.
+export const chatSettings = table('chat_settings', {
+  id:             integer('id').primaryKey({ autoIncrement: true }),
+  chatId:         integer('chat_id').notNull(),
+  threadId:       integer('thread_id').notNull().default(0),
+  addedReaction:  text('added_reaction'),             // a post's track went into a playlist
+  queuedReaction: text('queued_reaction'),            // a post's song was queued on the group player
+  repostReaction: text('repost_reaction'),            // a post's songs were all in the playlist already
+}, (t) => ({
+  chatThread: uniqueIndex('idx_chat_settings_chat_thread').on(t.chatId, t.threadId),
+}));

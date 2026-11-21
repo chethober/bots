@@ -18,7 +18,8 @@ import { PROVIDERS, providerOf } from './providers/index.js';
 import { getAccount, listAccounts } from './accounts.js';
 import { getChat, topicName } from './chats.js';
 import { linksOfChat, publicPlaylistUrl } from './chatcmds.js';
-import { baseline, countTracks, createLink } from './sync.js';
+import { baseline, countTracks, createLink, updateLink } from './sync.js';
+import { DEFAULTS, KINDS, REACTIONS, SUGGESTED, allowedReactions, setReaction, settingsOf } from './reactions.js';
 import { getPlayer } from './player.js';
 import { addToQueue, clearQueue, getItem, moveInQueue, playNext, queueHistory, queueOf, setStatus } from './queue.js';
 import { SLEEP_MINUTES, clearTimer, fireDueTimers, getTimer, setTimer } from './sleep.js';
@@ -114,7 +115,7 @@ async function stateOf(c) {
   return {
     now: now(),
     bot: BOT_USERNAME,
-    chat: { param: appParam(c.chatId, c.threadId), title: c.chat.title, type: c.chat.type, topic },
+    chat: { param: appParam(c.chatId, c.threadId), title: c.chat.title, type: c.chat.type, topic, forum: Boolean(c.chat.isForum) },
     me: { id: c.user.id, admin: c.admin, control: c.control, accounts, spotify: accounts.some((a) => a.provider === 'spotify') },
     services: Object.fromEntries(Object.entries(PROVIDERS).map(([id, p]) => [id, { name: p.name, icon: p.icon }])),
     playlists: await playlistsOf(c),
@@ -278,6 +279,54 @@ const OPS = {
     return stateOf(c);
   },
 };
+
+/** ⚙︎ Reactions: the chat's and (in a topic) the topic's settings, what they resolve to, and the syncs' switches. */
+async function reactionsOf(c) {
+  const chat = await settingsOf(c.chatId, 0);
+  const topic = c.threadId ? await settingsOf(c.chatId, c.threadId) : null;
+  const effective = Object.fromEntries(KINDS.map((k) => [k, topic?.[k] ?? chat[k] ?? DEFAULTS[k]]));
+  const allowed = await allowedReactions(c.chatId);
+  const usable = (e) => !allowed || allowed.includes(e);
+  const syncs = (await linksOfChat(c.chatId, c.threadId)).map((l) => ({ id: l.id, provider: l.provider, name: l.playlistName, reaction: Boolean(l.reaction), direction: l.direction }));
+  return {
+    kinds: c.chat.type === 'channel' ? KINDS.filter((k) => k !== 'queued') : KINDS,
+    chat, topic, defaults: DEFAULTS, effective,
+    suggested: SUGGESTED.filter(usable), more: REACTIONS.filter((e) => !SUGGESTED.includes(e) && usable(e)),
+    restricted: Boolean(allowed), none: Array.isArray(allowed) && !allowed.length,
+    syncs: syncs.filter((l) => l.direction !== 'out'),
+  };
+}
+
+Object.assign(OPS, {
+  async reactions(c) {
+    needAdmin(c);
+    return reactionsOf(c);
+  },
+
+  // { scope: 'chat' | 'topic', kind, emoji }: an emoji, '' = off, null = same as the chat (topics only).
+  async setReaction(c, input) {
+    needAdmin(c);
+    if (!KINDS.includes(input.kind)) refuse('BAD_INPUT');
+    const topic = input.scope === 'topic';
+    if (topic && !c.threadId) refuse('BAD_INPUT');
+    const emoji = input.emoji === null ? null : String(input.emoji ?? '');
+    if (emoji === null && !topic) refuse('BAD_INPUT');
+    if (emoji) {
+      if (!REACTIONS.includes(emoji)) refuse('BAD_INPUT');
+      const allowed = await allowedReactions(c.chatId);
+      if (allowed && !allowed.includes(emoji)) refuse('NOT_ALLOWED');
+    }
+    await setReaction(c.chatId, topic ? c.threadId : 0, input.kind, emoji);
+    return reactionsOf(c);
+  },
+
+  async syncReaction(c, input) {
+    needAdmin(c);
+    const link = await ownLink(c, input.linkId);
+    await updateLink(link, { reaction: input.on ? 1 : 0 });
+    return reactionsOf(c);
+  },
+});
 
 /** The chats a user can open the Mini App for without a link: where they have syncs or queued songs. */
 async function homeOf(user) {

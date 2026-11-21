@@ -79,6 +79,13 @@ Anyone can use it with their own accounts: connect a music service, pick a chat,
     Picks are cached for an hour; 🔄 asks for new ones.
   - 😴 **Sleep timer:** 5 minutes to 2 hours, then the group player's Spotify is paused and the chat is told. In a chat
     without a player it pauses the Spotify of whoever set it instead.
+  - ⚙︎ **Reactions** (admins): the emoji the bot reacts with on a post whose song went into a playlist (default 👌),
+    was queued on the group player (default ⚡) or was already in the playlist (off by default), or none. Set for the
+    whole group, channel or forum, and a forum topic can differ. Only reactions Telegram lets bots use are offered,
+    and only those the chat allows. Each sync also has its own reactions switch.
+
+  The Mini App follows iOS: Apple's system font and type scale, system colors in light and dark (with Telegram's
+  theme), and Liquid Glass controls: a floating tab bar, a glass mini player for 30-second previews, grouped lists.
 - Five languages, buttons instead of commands, clean chat, ℹ️ About with ⭐ tips, like the other bots here.
 
 ### Limits
@@ -152,7 +159,7 @@ the optional `CHTHMUSICBOT_SPOTIFY_CLIENT_ID`, `CHTHMUSICBOT_GOOGLE_CLIENT_ID`, 
 
 ```
 tgcloud/
-├── schema.js                 accounts, logins, chats, topics, links, link_tracks, backfill_items, drafts, finds, songs, relays, players, queue_items, sleep_timers
+├── schema.js                 accounts, logins, chats, topics, links, link_tracks, backfill_items, drafts, finds, songs, relays, players, queue_items, sleep_timers, chat_settings
 ├── handlers/
 │   ├── message.js            private chat (buttons, wizard, find), group posts and commands, @chethoberbot replies
 │   ├── channel_post.js       channel posts feed the channel's syncs; channel commands
@@ -174,6 +181,7 @@ tgcloud/
     ├── chatapp.js · applink.js  the chat Mini App: who may do what, its ops, its t.me/…?startapp= links and /app
     ├── queue.js              the shared queue: ▶️ to the group player's Spotify, or posted in the chat
     ├── sleep.js              😴 sleep timers, fired by any update (there's no cron)
+    ├── reactions.js          ⚙︎ which emoji a post gets, per chat and forum topic
     ├── recs.js               ✨ picks from Deezer's related artists
     ├── wizard.js · views.js · find.js · player.js · relay.js · login.js
     └── accounts.js · chats.js · drafts.js · http.js · errors.js · strings.js · i18n.js · screen.js · tips.js

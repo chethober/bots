@@ -1,5 +1,6 @@
 {
   "name": "chthmusicbot",
+  "version": "1.1.0",
   "private": true,
   "devDependencies": {
     "@tgcloud/cli": "^0.2.0"
