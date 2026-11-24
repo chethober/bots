@@ -8,7 +8,7 @@ import message from '../tgcloud/handlers/message.js';
 import chatApp from '../tgcloud/endpoints/chatApp.js';
 import { saveAccount } from '../tgcloud/lib/accounts.js';
 import { upsertChat } from '../tgcloud/lib/chats.js';
-import { createLink } from '../tgcloud/lib/sync.js';
+import { baseline, createLink } from '../tgcloud/lib/sync.js';
 import { appLink, appParam, parseAppParam } from '../tgcloud/lib/applink.js';
 import { mainArtist, songKey, topArtists } from '../tgcloud/lib/recs.js';
 
@@ -56,7 +56,8 @@ const code = (re) => (e) => { assert.equal(e.parameters?.code, re); return true;
 
 await saveAccount(HOST.id, 'spotify', { accessToken: 'tok', refreshToken: 'ref', expiresAt: Date.now() + 3600e3, name: 'Omid', extra: { id: 'u1' } });
 await upsertChat(GROUP);
-await createLink({ ownerId: HOST.id, chatId: GROUP.id, threadId: 0, provider: 'spotify', playlistId: PL, playlistName: 'Club Hits', direction: 'both' });
+// Its tracks were there before the sync, so they aren't posted on their own.
+await baseline(await createLink({ ownerId: HOST.id, chatId: GROUP.id, threadId: 0, provider: 'spotify', playlistId: PL, playlistName: 'Club Hits', direction: 'both' }));
 state.members = { [FAN.id]: { status: 'member' }, [STRANGER.id]: { status: 'left' } };
 
 // The start param round-trips, and /app posts the button that opens it.

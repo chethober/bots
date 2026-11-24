@@ -1,18 +1,21 @@
 // Chat ↔ playlist syncs ("links").
 //
 //   chat → playlist  live: every music post in the chat is added (handlers).
-//   playlist → chat  on demand: 🔄 Sync now posts the playlist's tracks the chat
-//                    hasn't seen, SYNC_BATCH at a time, each with its audio
-//                    from @chethoberbot (🎵 Audio files). It also retries
+//   playlist → chat  automatic: tracks added to the playlist on Spotify,
+//                    YouTube Music or Apple Music are posted in the chat, each
+//                    with its audio from @chethoberbot (🎵 Audio files).
+//                    tgcloud has no cron, so autoSync runs after every update
+//                    the bot handles (see its comment). 🔄 Sync now does the
+//                    same on demand, SYNC_BATCH at a time, and also retries
 //                    posts whose tracks couldn't be added.
 //
 // link_tracks remembers every track a link has on both sides, so a track is
 // never added or posted twice, and a repost is recognized.
 
 import { api, db, BotApiError } from 'sdk';
-import { and, eq, inArray, isNull } from 'sdk/db';
+import { and, eq, inArray, isNull, ne } from 'sdk/db';
 import { links, linkTracks } from '../schema.js';
-import { SYNC_BATCH } from './config.js';
+import { AUTO_BATCH, AUTO_EVERY, AUTO_TICK, AUTO_TIME, SYNC_BATCH } from './config.js';
 import { react } from './reactions.js';
 import { providerOf } from './providers/index.js';
 import { getAccount } from './accounts.js';
@@ -250,7 +253,7 @@ async function postTrack(locale, provider, link, track) {
   return sent;
 }
 
-async function syncOne(link, budget, locale) {
+async function syncOne(link, budget, locale, deadline = 0) {
   const provider = providerOf(link.provider);
   const acct = await getAccount(link.ownerId, link.provider);
   if (!acct) throw new Error(t(locale, 'err_not_connected', { service: provider.name }));
@@ -272,14 +275,20 @@ async function syncOne(link, budget, locale) {
   const fresh = (await provider.playlistTracks(acct, link.playlistId))
     .filter((x) => !known.has(x.id) && !seen.has(x.id) && seen.add(x.id));
   for (const track of fresh.slice(0, budget)) {
+    if (deadline && Date.now() > deadline) break;
+    // Claim it first: Sync now and an automatic check at once mustn't both post it.
+    if (!(await remember(link.id, [track.id], { source: 'playlist' })).length) continue;
+    let sent;
     try {
-      const sent = await postTrack(locale, provider, link, track);
-      await remember(link.id, [track.id], { messageId: sent.message_id, source: 'playlist' });
-      result.posted++;
+      sent = await postTrack(locale, provider, link, track);
     } catch (e) {
-      if (e instanceof BotApiError && e.code === 429) break; // flood limit: the rest wait for the next tap
+      await db.delete(linkTracks).where(and(eq(linkTracks.linkId, link.id), eq(linkTracks.trackId, track.id))).run();
+      if (e instanceof BotApiError && e.code === 429) break; // flood limit: the rest wait for the next round
       throw e;
     }
+    await db.update(linkTracks).set({ messageId: sent.message_id })
+      .where(and(eq(linkTracks.linkId, link.id), eq(linkTracks.trackId, track.id))).run();
+    result.posted++;
   }
   result.remaining = fresh.length - result.posted;
   return result;
@@ -326,6 +335,64 @@ export async function syncNow(link) {
     total.retried += r.retried;
   }
   return total;
+}
+
+// --- playlist → chat, automatically -------------------------------------------
+
+/**
+ * Post what's new in synced playlists without anyone tapping 🔄 Sync now.
+ *
+ * tgcloud has no cron, so this runs at the end of every update the bot
+ * handles: messages, buttons, channel posts and inline queries (not Mini App
+ * calls, which would wait for it), @chethoberbot's audio replies included, so
+ * an active bot keeps itself going. At most once every AUTO_TICK seconds overall it checks the playlists
+ * whose turn has come (each every AUTO_EVERY seconds, YouTube less often for
+ * its API quota), posting up to AUTO_BATCH new tracks per playlist, for about
+ * AUTO_TIME seconds. Never throws.
+ */
+export async function autoSync() {
+  try {
+    const started = Date.now();
+    const last = Number(await getSetting('auto_at')) || 0;
+    if (now() - last < AUTO_TICK) return 0;
+    await saveSetting('auto_at', String(now()));
+
+    const rows = await db.select().from(links).where(ne(links.direction, 'in')).all();
+    const due = [];
+    for (const link of rows) {
+      if (!link.playlistId || link.threadId === -1) continue; // every-topic parents: their topics are checked
+      if ((await getChat(link.chatId))?.active === 0) continue; // the bot was removed from the chat
+      const checked = Number(await getSetting(`auto:${link.id}`)) || 0;
+      if (now() - checked >= (AUTO_EVERY[link.provider] ?? AUTO_EVERY.default)) due.push({ link, checked });
+    }
+    due.sort((a, b) => a.checked - b.checked);
+
+    const deadline = started + AUTO_TIME * 1000;
+    let posted = 0;
+    for (const { link } of due) {
+      if (Date.now() > deadline) break;
+      await saveSetting(`auto:${link.id}`, String(now()));
+      try {
+        const locale = await localeFor({ id: link.ownerId });
+        posted += (await syncOne({ ...link, direction: 'out' }, AUTO_BATCH, locale, deadline)).posted;
+      } catch (e) {
+        await reportError(link, e);
+      }
+    }
+    return posted;
+  } catch (e) {
+    console.warn('auto sync failed', e.message);
+    return 0;
+  }
+}
+
+/** Run an update's handler, then autoSync. */
+export async function thenAutoSync(work) {
+  try {
+    return await work();
+  } finally {
+    await autoSync();
+  }
 }
 
 // --- errors ------------------------------------------------------------------

@@ -251,6 +251,35 @@ await message({ message_id: 903, from: RELAY_BOT, chat: { id: 555, type: 'privat
 assert.equal(last('copyMessage').chat_id, GROUP.id);
 assert.equal(last('copyMessage').reply_parameters.message_id, state.tables.get('relays').rows.find((r) => /With Audio/.test(r.query) && r.chatId).replyTo);
 
+// Playlist → chat on its own: a track added on Spotify is posted with its audio
+// after the next update the bot gets (no cron), once, and not again until its turn.
+const setting = (key, value) => {
+  const rows = state.tables.get('settings').rows;
+  const row = rows.find((r) => r.key === key);
+  if (row) row.value = value; else rows.push({ key, value });
+};
+const autoTurn = () => { setting('auto_at', '0'); setting(`auto:${link.id}`, '0'); };
+playlist.push(track(T('u'), 'Auto Posted'));
+autoTurn();
+reset();
+await message({ message_id: 95, from: USER, chat: GROUP, date: 0, text: 'just chatting' });
+const autoPosts = calls('sendMessage').filter((c) => c.params.chat_id === GROUP.id);
+assert.equal(autoPosts.length, 1);
+assert.match(autoPosts[0].params.text, /Auto Posted/);
+const autoAsk = state.tables.get('relays').rows.at(-1);
+assert.equal(autoAsk.query, 'Artist - Auto Posted', 'its audio is asked from @chethoberbot');
+assert.equal(autoAsk.chatId, GROUP.id);
+assert.ok(calls('sendMessage').some((c) => c.params.chat_id === RELAY_BOT.id && c.params.text === 'Artist - Auto Posted'));
+playlist.push(track(T('v'), 'Too Soon'));
+setting('auto_at', '0');
+reset();
+await message({ message_id: 96, from: USER, chat: GROUP, date: 0, text: 'still chatting' });
+assert.equal(calls('sendMessage').filter((c) => c.params.chat_id === GROUP.id).length, 0, 'each playlist waits for its turn');
+autoTurn();
+reset();
+await cb(`ln:${link.id}:sync`);
+assert.equal(calls('sendMessage').filter((c) => c.params.chat_id === GROUP.id && /Too Soon/.test(c.params.text)).length, 1, 'posted once, by Sync now or the automatic check');
+
 // ⏮ Add old songs: forwarded posts are added as they come, known ones skipped.
 const bfRows = () => state.tables.get('backfill_items').rows;
 reset();
@@ -372,4 +401,4 @@ state.googleAllowed = true;
 await newCb(ok.callback_data);
 assert.equal((await getAccount(NEW.id, 'youtube')).name, 'Sara Music');
 
-console.log('ok: flows (wizard, chat → playlist, reposts, sync now, find, inline, player, group and channel commands, song buttons, audio relay, backfill, every-topic backfill, logins)');
+console.log('ok: flows (wizard, chat → playlist, reposts, sync now, auto-post, find, inline, player, group and channel commands, song buttons, audio relay, backfill, every-topic backfill, logins)');

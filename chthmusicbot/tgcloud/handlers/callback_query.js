@@ -17,7 +17,7 @@ import { fireDueTimers } from '../lib/sleep.js';
 import { onBackfillCallback, startBackfill } from '../lib/backfill.js';
 import { deleteAccount } from '../lib/accounts.js';
 import { youtubeStart, youtubePoll } from '../lib/login.js';
-import { getLink, updateLink, deleteLink, syncNow } from '../lib/sync.js';
+import { getLink, updateLink, deleteLink, syncNow, thenAutoSync } from '../lib/sync.js';
 import { PROVIDERS } from '../lib/providers/index.js';
 import { errorText } from '../lib/errors.js';
 import { t } from '../lib/strings.js';
@@ -133,6 +133,10 @@ async function onLinks(q, locale, arg) {
 
 export default async function (q) {
   await fireDueTimers(); // 😴 no cron: any update fires the sleep timers that are due
+  return thenAutoSync(() => onCallback(q)); // …and posts what's new in synced playlists
+}
+
+async function onCallback(q) {
   const data = q.data ?? '';
   const locale = await localeFor(q.from);
   const [head, ...rest] = data.split(':');

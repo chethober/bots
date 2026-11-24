@@ -28,10 +28,12 @@ Anyone can use it with their own accounts: connect a music service, pick a chat,
     Amazon Music and other music links; audio files (by their tags). A link from another service is found on the
     playlist's service by its title and artist (see *Matching songs across services*); YouTube videos that aren't
     music are ignored. Optionally, reposts of a track already in the playlist are deleted.
-  - 🎧 → 💬 **Playlist to chat, on demand:** 🔄 Sync now posts the playlist's tracks the chat hasn't seen yet,
-    20 at a time (Telegram's per-group flood limit), with a "Listen anywhere" song.link page, and its audio file
-    from **@chethoberbot** follows as a reply (🎵 Audio files, on by default). When the sync is created you choose
-    whether the tracks already there get posted too.
+  - 🎧 → 💬 **Playlist to chat, automatic:** a song added to the Spotify, YouTube Music or Apple Music playlist
+    is posted in the chat on its own, with a "Listen anywhere" song.link page, and its audio file from
+    **@chethoberbot** follows as a reply (🎵 Audio files, on by default). Playlists are checked every 2 minutes
+    (YouTube every 15, for its API quota), 5 new tracks per check; see *Limits* for why "every 2 minutes" needs
+    the bot to be in use. 🔄 Sync now does it right away, 20 at a time (Telegram's per-group flood limit). When
+    the sync is created you choose whether the tracks already there get posted too.
   - 🔄 **Both ways.**
 - **❤️ ➕ 🎵 under every song the bot posts**, in groups, topics, channels and the private chat. They act for whoever
   taps them, on their own accounts: ❤️ Like saves the song to their liked songs on every service they connected
@@ -97,6 +99,10 @@ Anyone can use it with their own accounts: connect a music service, pick a chat,
   added tracks a day across all users. A YouTube link is used by its id; a link from another service costs a search.
 - **Apple Music** lets apps add tracks to library playlists but not remove them. A user's sign-in lasts about six
   months. MusicKit's sign-in popup can be blocked inside Telegram: the page then offers to finish in the browser.
+- **🎧 → 💬 No cron on tgcloud** either, so new playlist tracks are found when the bot handles an update (any
+  message, button, channel post, inline query or @chethoberbot reply, at most one check round every 30 seconds,
+  about 12 seconds long). On an active bot that's every couple of minutes; on a quiet one the next post, tap or
+  🔄 Sync now brings them. Each audio reply from @chethoberbot is itself an update, so a busy sync keeps going.
 - **😴 No cron on tgcloud:** a sleep timer fires on time while someone has the Mini App open (its own clock calls in);
   otherwise with the next update the bot gets from anyone (a message, a button, a Mini App call), so on a quiet bot
   it can be late. Pausing needs Spotify Premium, like the rest of the player.
@@ -173,7 +179,7 @@ tgcloud/
 │   └── setup.js              one-off: descriptions and group commands
 └── lib/
     ├── providers/            spotify.js · youtube.js · apple.js: one shape (playlists, search, links, player)
-    ├── sync.js               links: chat → playlist on post, playlist → chat on Sync now
+    ├── sync.js               links: chat → playlist on post, playlist → chat after any update and on Sync now
     ├── chatcmds.js           /playlist, /top, /random and /song in groups, topics and channels
     ├── tracks.js · lookup.js · itunes.js   recognizing songs and matching them across services
     ├── songs.js              posted songs and their ❤️ ➕ 🎵 buttons (handled in find.js)
@@ -192,8 +198,9 @@ web/
 scripts/apple-token.mjs       makes the Apple Music developer token
 ```
 
-The platform has no cron, so nothing runs on a timer: chat → playlist reacts to posts, and playlist → chat runs
-when someone taps 🔄 Sync now. `link_tracks` remembers every track a sync has seen on either side, so nothing
+The platform has no cron, so nothing runs on a timer: chat → playlist reacts to posts, and playlist → chat
+(`autoSync` in `lib/sync.js`) runs after whatever update the bot handles next, at most every 30 seconds,
+checking each playlist whose turn has come (`AUTO_*` in `lib/config.js`); 🔄 Sync now runs it on demand. `link_tracks` remembers every track a sync has seen on either side, so nothing
 is added or posted twice.
 
 See [`AGENTS.md`](AGENTS.md) for the platform's module rules and [`docs/tgcloud-sdk.md`](docs/tgcloud-sdk.md) for the SDK reference.
