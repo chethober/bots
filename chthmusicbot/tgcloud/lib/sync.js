@@ -259,7 +259,7 @@ async function syncOne(link, budget, locale, deadline = 0) {
   const provider = providerOf(link.provider);
   const acct = await getAccount(link.ownerId, link.provider);
   if (!acct) throw new Error(t(locale, 'err_not_connected', { service: provider.name }));
-  const result = { posted: 0, remaining: 0, retried: 0 };
+  const result = { posted: 0, remaining: 0, retried: 0, coming: 0 };
 
   // Posts whose tracks couldn't be added before.
   if (link.direction !== 'out') {
@@ -291,6 +291,8 @@ async function syncOne(link, budget, locale, deadline = 0) {
     if (sent) {
       await db.update(linkTracks).set({ messageId: sent.message_id })
         .where(and(eq(linkTracks.linkId, link.id), eq(linkTracks.trackId, track.id))).run();
+    } else {
+      result.coming++; // its audio file is the post, still on its way from @chethoberbot
     }
     result.posted++;
   }
@@ -331,12 +333,13 @@ export async function addFromBot(link, track) {
 export async function syncNow(link) {
   const locale = await localeFor({ id: link.ownerId });
   const targets = link.threadId === -1 ? await childrenOf(link.id) : [link];
-  const total = { posted: 0, remaining: 0, retried: 0 };
+  const total = { posted: 0, remaining: 0, retried: 0, coming: 0 };
   for (const target of targets) {
     const r = await syncOne(target, Math.max(0, SYNC_BATCH - total.posted), locale);
     total.posted += r.posted;
     total.remaining += r.remaining;
     total.retried += r.retried;
+    total.coming += r.coming;
   }
   return total;
 }

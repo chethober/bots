@@ -111,8 +111,10 @@ Anyone can use it with their own accounts: connect a music service, pick a chat,
 - **@chethoberbot** gets plain "Artist - Title" messages and its replies are copied back: everything to a private
   chat, only the file to a group or channel. In a group or channel the file *is* the song's post (copied with the
   song's caption and ❤️ ➕), so it shows up once @chethoberbot answers, usually within seconds. When it answers
-  "not found", or not within 3 minutes, the song is posted as a text card with links instead (on the next update the
-  bot gets: no cron). A reply is matched to its request by `reply_to_message`, else by the file's title, else to
+  "not found", or not within 90 seconds, the song is posted as a text card with links instead (on the next update the
+  bot gets: no cron). While @chethoberbot isn't answering at all (a request over a minute old and nothing from it
+  since), songs are posted as text cards right away and their file is asked for as a reply; the first message from
+  it switches back to posting files. A reply is matched to its request by `reply_to_message`, else by the file's title, else to
   the oldest open request. If it answers with buttons, those can't
   be pressed by a bot. Both bots need bot-to-bot communication on in @BotFather: otherwise Telegram refuses with
   `USER_BOT_TO_BOT_DISABLED` and the bot says it can't reach @chethoberbot.

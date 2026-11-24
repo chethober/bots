@@ -6,7 +6,7 @@
 //   bf:<op>       ⏮ Add old songs (lib/backfill.js)
 
 import { api } from 'sdk';
-import { SOURCE_URL } from '../lib/config.js';
+import { CHETHOBERBOT_USERNAME, SOURCE_URL } from '../lib/config.js';
 import { setLocale, LOCALE_NAMES, localeFor } from '../lib/i18n.js';
 import { aboutKeyboard, isTipCallback, onTipCallback } from '../lib/tips.js';
 import { accountsView, linksView, linkView, sendHome } from '../lib/views.js';
@@ -92,6 +92,7 @@ async function onLinks(q, locale, arg) {
       note = r.remaining
         ? t(locale, 'synced_more', { posted: r.posted, remaining: r.remaining })
         : t(locale, 'synced', { posted: r.posted, retried: r.retried });
+      if (r.coming) note += `\n${t(locale, 'synced_coming', { n: r.coming, bot: CHETHOBERBOT_USERNAME })}`;
     } catch (e) {
       console.error(e);
       note = t(locale, 'failed', { error: errorText(locale, e) });
