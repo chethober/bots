@@ -61,7 +61,15 @@ state.routes.push(...routes);
 
 const calls = (method) => state.calls.filter((c) => c.method === method);
 const last = (method) => calls(method).at(-1)?.params;
-const reset = () => { state.calls.length = 0; };
+let relayMark = 0;
+const relayRows = () => state.tables.get('relays')?.rows ?? [];
+const reset = () => { state.calls.length = 0; relayMark = relayRows().length; };
+// Songs posted in a chat since the last reset: text posts, and song posts
+// waiting for their audio file from @chethoberbot (their text version).
+const songPosts = (chatId = GROUP.id) => [
+  ...calls('sendMessage').filter((c) => c.params.chat_id === chatId).map((c) => c.params),
+  ...relayRows().slice(relayMark).filter((row) => row.post && row.chatId === chatId).map((row) => row.post.fallback),
+];
 const buttons = (markup) => (markup?.inline_keyboard ?? []).flat();
 const cb = (data, msgChat = USER.id) => callback({ id: 'q', from: USER, data, message: { message_id: 7, chat: { id: msgChat, type: msgChat > 0 ? 'private' : 'supergroup' } } });
 const priv = (extra) => message({ message_id: 1, from: USER, chat: { id: USER.id, type: 'private' }, date: 0, ...extra });
@@ -137,13 +145,13 @@ assert.equal(last('sendMessage').reply_parameters.message_id, 50);
 playlist.push(track(T('d'), 'Fresh From Spotify'));
 reset();
 await cb(`ln:${link.id}:sync`);
-const posted = calls('sendMessage').filter((c) => c.params.chat_id === GROUP.id);
+const posted = songPosts();
 assert.equal(posted.length, 1);
-assert.match(posted[0].params.text, /Fresh From Spotify/);
+assert.match(posted[0].text, /Fresh From Spotify/);
 assert.match(last('editMessageText').text, /1 posted/);
 reset();
 await cb(`ln:${link.id}:sync`);
-assert.equal(calls('sendMessage').filter((c) => c.params.chat_id === GROUP.id).length, 0);
+assert.equal(songPosts().length, 0);
 
 // 🔎 Find music: search by name, open the card, add it to the synced playlist.
 reset();
@@ -160,7 +168,7 @@ const to = buttons(last('editMessageText').reply_markup).find((b) => b.callback_
 reset();
 await cb(to.callback_data);
 assert.ok(playlist.some((x) => x.id === T('r')), 'found song added to the playlist');
-assert.ok(calls('sendMessage').some((c) => c.params.chat_id === GROUP.id && /Never Gonna/.test(c.params.text)), 'and posted in the both-ways chat');
+assert.ok(songPosts().some((p) => /Never Gonna/.test(p.text)), 'and posted in the both-ways chat');
 
 // Inline mode returns songs as links.
 reset();
@@ -188,7 +196,7 @@ await groupCmd('/top@chthmusicbot', 71);
 assert.match(last('sendMessage').text, /🥇 Omid · 🎵 1/);
 reset();
 await groupCmd('/random', 72);
-assert.match(calls('sendMessage').find((c) => c.params.chat_id === GROUP.id).params.text, /random pick from <b>Club Hits/);
+assert.match(songPosts()[0].text, /random pick from <b>Club Hits/);
 assert.ok(calls('sendMessage').some((c) => c.params.chat_id === '@chethoberbot'), 'and its audio is asked for');
 reset();
 await groupCmd('/random', 73);
@@ -204,16 +212,34 @@ assert.equal(last('sendMessage').chat_id, CHANNEL.id);
 assert.match(last('sendMessage').text, /Playlists synced/);
 state.tables.get('links').rows.pop();
 
-// A synced post carries ❤️ ➕ 🎵 and its audio is asked from @chethoberbot.
-const relayed = () => calls('sendMessage').filter((c) => c.params.chat_id === '@chethoberbot');
+// A synced track is posted as its audio file: @chethoberbot is asked for it,
+// and its file is copied into the group as the post, with the song's links and ❤️ ➕.
+const RELAY_BOT = { id: 555, is_bot: true, first_name: 'Joozi', username: 'chethoberbot' };
+const fromRelay = (id, extra) => message({ message_id: id, from: RELAY_BOT, chat: { id: 555, type: 'private' }, date: 0, ...extra });
+const relayed = () => calls('sendMessage').filter((c) => c.params.chat_id === '@chethoberbot' || c.params.chat_id === RELAY_BOT.id);
+const groupTexts = () => calls('sendMessage').filter((c) => c.params.chat_id === GROUP.id);
 playlist.push(track(T('e'), 'With Audio'));
 reset();
 await cb(`ln:${link.id}:sync`);
-const syncPost = calls('sendMessage').find((c) => c.params.chat_id === GROUP.id);
-const songBtns = buttons(syncPost.params.reply_markup);
-assert.deepEqual(songBtns.slice(0, 3).map((b) => b.callback_data.split(':')[2]), ['like', 'add', 'aud']);
+assert.equal(groupTexts().length, 0, 'no text post while the file is on its way');
 assert.equal(relayed().at(-1).params.text, 'Artist - With Audio');
+const syncAsk = relayRows().at(-1);
+reset();
+await fromRelay(900, { audio: { title: 'With Audio', performer: 'Artist' }, reply_to_message: { message_id: syncAsk.sentMessageId } });
+const audioPost = last('copyMessage');
+assert.equal(audioPost.chat_id, GROUP.id);
+assert.equal(audioPost.message_id, 900);
+assert.equal(audioPost.reply_parameters, undefined, 'the file is the post itself');
+assert.match(audioPost.caption, /Spotify<\/a> · <a href="https:\/\/song\.link\//);
+assert.equal(audioPost.parse_mode, 'HTML');
+const songBtns = buttons(audioPost.reply_markup);
+assert.deepEqual(songBtns.slice(0, 2).map((b) => b.callback_data.split(':')[2]), ['like', 'add']);
+assert.ok(!songBtns.some((b) => b.callback_data?.endsWith(':aud')), 'no 🎵 under the audio itself');
+assert.equal(state.tables.get('link_tracks').rows.find((r) => r.trackId === T('e')).messageId, state.msgId, 'the post is remembered for repost replies');
 const songId = songBtns[0].callback_data.split(':')[1];
+reset();
+await fromRelay(901, { audio: { title: 'With Audio' }, reply_to_message: { message_id: syncAsk.sentMessageId } });
+assert.equal(calls('copyMessage').length, 0, 'posted once');
 
 // ❤️ in the group likes it on the tapper's own Spotify; ➕ sends them to the private chat.
 reset();
@@ -228,30 +254,30 @@ reset();
 await priv({ text: `/start sg${songId}` });
 assert.match(last('sendMessage').text, /With Audio/);
 
-// /song posts the song in the group; @chethoberbot's file arrives as a reply with ❤️ ➕.
+// /song asks for the file; when @chethoberbot has none, the song is posted as text with ❤️ ➕ 🎵.
 reset();
 await message({ message_id: 90, from: USER, chat: GROUP, date: 0, text: '/song never gonna' });
-const songPost = calls('sendMessage').find((c) => c.params.chat_id === GROUP.id);
-assert.match(songPost.params.text, /Never Gonna Give You Up/);
+assert.equal(groupTexts().length, 0);
 assert.equal(relayed().at(-1).params.text, 'Rick Astley - Never Gonna Give You Up');
-const request = state.tables.get('relays').rows.at(-1);
-const RELAY_BOT = { id: 555, is_bot: true, first_name: 'Joozi', username: 'chethoberbot' };
+const request = relayRows().at(-1);
 reset();
-await message({ message_id: 901, from: RELAY_BOT, chat: { id: 555, type: 'private' }, date: 0, text: 'Searching…', reply_to_message: { message_id: request.sentMessageId } });
-assert.equal(calls('copyMessage').length, 0, 'groups only get the file');
-await message({ message_id: 902, from: RELAY_BOT, chat: { id: 555, type: 'private' }, date: 0, audio: { title: 'Never Gonna Give You Up' }, reply_to_message: { message_id: request.sentMessageId } });
-const copied = last('copyMessage');
-assert.equal(copied.chat_id, GROUP.id);
-assert.equal(copied.reply_parameters.message_id, request.replyTo);
-assert.deepEqual(buttons(copied.reply_markup).map((b) => b.callback_data.split(':')[2]), ['like', 'add']);
+await fromRelay(902, { text: 'Searching…', reply_to_message: { message_id: request.sentMessageId } });
+assert.equal(calls('copyMessage').length + groupTexts().length, 0, 'a progress message changes nothing');
+await fromRelay(903, { text: 'Sorry, nothing found.', reply_to_message: { message_id: request.sentMessageId } });
+assert.equal(calls('copyMessage').length, 0);
+assert.match(groupTexts()[0].params.text, /Never Gonna Give You Up/);
+const textBtns = buttons(groupTexts()[0].params.reply_markup);
+assert.deepEqual(textBtns.map((b) => b.callback_data.split(':')[2]), ['like', 'add', 'aud']);
 
-// Without a reply_to, a file goes to the open request with its title.
+// 🎵 under a text post asks again; the file comes as a reply to it.
 reset();
-await message({ message_id: 903, from: RELAY_BOT, chat: { id: 555, type: 'private' }, date: 0, audio: { title: 'With Audio' } });
+await cb(textBtns[2].callback_data, GROUP.id);
+await fromRelay(904, { audio: { title: 'Never Gonna Give You Up' }, reply_to_message: { message_id: relayRows().at(-1).sentMessageId } });
 assert.equal(last('copyMessage').chat_id, GROUP.id);
-assert.equal(last('copyMessage').reply_parameters.message_id, state.tables.get('relays').rows.find((r) => /With Audio/.test(r.query) && r.chatId).replyTo);
+assert.equal(last('copyMessage').reply_parameters.message_id, 7);
+assert.deepEqual(buttons(last('copyMessage').reply_markup).map((b) => b.callback_data.split(':')[2]), ['like', 'add']);
 
-// Playlist → chat on its own: a track added on Spotify is posted with its audio
+// Playlist → chat on its own: a track added on Spotify is posted as its audio
 // after the next update the bot gets (no cron), once, and not again until its turn.
 const setting = (key, value) => {
   const rows = state.tables.get('settings').rows;
@@ -263,22 +289,27 @@ playlist.push(track(T('u'), 'Auto Posted'));
 autoTurn();
 reset();
 await message({ message_id: 95, from: USER, chat: GROUP, date: 0, text: 'just chatting' });
-const autoPosts = calls('sendMessage').filter((c) => c.params.chat_id === GROUP.id);
-assert.equal(autoPosts.length, 1);
-assert.match(autoPosts[0].params.text, /Auto Posted/);
-const autoAsk = state.tables.get('relays').rows.at(-1);
+assert.equal(songPosts().length, 1);
+const autoAsk = relayRows().at(-1);
 assert.equal(autoAsk.query, 'Artist - Auto Posted', 'its audio is asked from @chethoberbot');
 assert.equal(autoAsk.chatId, GROUP.id);
-assert.ok(calls('sendMessage').some((c) => c.params.chat_id === RELAY_BOT.id && c.params.text === 'Artist - Auto Posted'));
+assert.ok(relayed().some((c) => c.params.text === 'Artist - Auto Posted'));
 playlist.push(track(T('v'), 'Too Soon'));
 setting('auto_at', '0');
 reset();
 await message({ message_id: 96, from: USER, chat: GROUP, date: 0, text: 'still chatting' });
-assert.equal(calls('sendMessage').filter((c) => c.params.chat_id === GROUP.id).length, 0, 'each playlist waits for its turn');
+assert.equal(songPosts().length, 0, 'each playlist waits for its turn');
 autoTurn();
 reset();
 await cb(`ln:${link.id}:sync`);
-assert.equal(calls('sendMessage').filter((c) => c.params.chat_id === GROUP.id && /Too Soon/.test(c.params.text)).length, 1, 'posted once, by Sync now or the automatic check');
+assert.equal(songPosts().filter((p) => /Too Soon/.test(p.text)).length, 1, 'posted once, by Sync now or the automatic check');
+
+// No answer from @chethoberbot in time: the song is posted as text on the next update.
+for (const row of relayRows()) if (!row.done) row.createdAt -= 3600;
+reset();
+await message({ message_id: 97, from: USER, chat: GROUP, date: 0, text: 'anyone there?' });
+assert.ok(groupTexts().some((c) => /Auto Posted/.test(c.params.text)), 'the text version is posted');
+assert.ok(relayRows().every((row) => row.done), 'and the requests are closed');
 
 // ⏮ Add old songs: forwarded posts are added as they come, known ones skipped.
 const bfRows = () => state.tables.get('backfill_items').rows;

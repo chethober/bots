@@ -29,8 +29,8 @@ Anyone can use it with their own accounts: connect a music service, pick a chat,
     playlist's service by its title and artist (see *Matching songs across services*); YouTube videos that aren't
     music are ignored. Optionally, reposts of a track already in the playlist are deleted.
   - 🎧 → 💬 **Playlist to chat, automatic:** a song added to the Spotify, YouTube Music or Apple Music playlist
-    is posted in the chat on its own, with a "Listen anywhere" song.link page, and its audio file from
-    **@chethoberbot** follows as a reply (🎵 Audio files, on by default). Playlists are checked every 2 minutes
+    is posted in the chat on its own **as its MP3 from @chethoberbot**, captioned with the song's link and a
+    "Listen anywhere" song.link page (🎵 Audio files, on by default; off posts a text card instead). Playlists are checked every 2 minutes
     (YouTube every 15, for its API quota), 5 new tracks per check; see *Limits* for why "every 2 minutes" needs
     the bot to be in use. 🔄 Sync now does it right away, 20 at a time (Telegram's per-group flood limit). When
     the sync is created you choose whether the tracks already there get posted too.
@@ -57,8 +57,8 @@ Anyone can use it with their own accounts: connect a music service, pick a chat,
   - `/playlist` lists the playlists synced with the chat, with their track counts and 🎧 open buttons. In a forum's
     General topic it shows every topic's playlist.
   - `/top` ranks who posted the most tracks that made it into those playlists (a channel's signed posts count too).
-  - `/random` posts a random track from one of them (once every 30 seconds per chat), with its audio.
-  - `/song <name>` finds a song and posts it with its audio (once every 10 seconds per chat).
+  - `/random` posts a random track from one of them as its audio file (once every 30 seconds per chat).
+  - `/song <name>` finds a song and posts it as its audio file (once every 10 seconds per chat).
   - Tracks posted by 🔄 Sync now carry a 🎧 Open playlist button (except Apple Music library playlists, which
     only their owner can open).
 - **🔎 Find music.** Send a song name, a link or an audio file in the private chat: its audio arrives from
@@ -71,7 +71,7 @@ Anyone can use it with their own accounts: connect a music service, pick a chat,
   too) that opens the chat's own Mini App, for its members only:
   - 🎶 **Queue:** one shared queue per chat or topic. Anyone adds songs (search, the chat's playlists, ✨ Picks) and
     removes their own; admins and the player's host reorder, clear and play it. ▶️ Play next sends the first song to
-    the group player's Spotify (⏩ the whole queue at once), or, without a player, posts it in the chat with its audio
+    the group player's Spotify (⏩ the whole queue at once), or, without a player, posts it in the chat as its audio
     file from @chethoberbot, so Telegram's own player plays it. Every song has a 30-second preview to try first.
   - 📚 **Playlists:** the chat's synced playlists with their tracks (➕ to queue any of them). Admins link one of their
     own playlists, or a new one named after the chat, without leaving the group.
@@ -109,8 +109,11 @@ Anyone can use it with their own accounts: connect a music service, pick a chat,
 - **No live audio:** bots can't join Telegram voice chats, so the group player controls the host's Spotify
   instead of streaming into the chat.
 - **@chethoberbot** gets plain "Artist - Title" messages and its replies are copied back: everything to a private
-  chat, only the file to a group or channel. A reply is matched to its request by `reply_to_message`, else by the
-  file's title, else to the oldest open request (given up after 5 minutes). If it answers with buttons, those can't
+  chat, only the file to a group or channel. In a group or channel the file *is* the song's post (copied with the
+  song's caption and ❤️ ➕), so it shows up once @chethoberbot answers, usually within seconds. When it answers
+  "not found", or not within 3 minutes, the song is posted as a text card with links instead (on the next update the
+  bot gets: no cron). A reply is matched to its request by `reply_to_message`, else by the file's title, else to
+  the oldest open request. If it answers with buttons, those can't
   be pressed by a bot. Both bots need bot-to-bot communication on in @BotFather: otherwise Telegram refuses with
   `USER_BOT_TO_BOT_DISABLED` and the bot says it can't reach @chethoberbot.
 - **❤️ Like on Spotify** needs the `user-library-modify` permission: accounts connected before it was added must be
@@ -182,7 +185,7 @@ tgcloud/
     ├── sync.js               links: chat → playlist on post, playlist → chat after any update and on Sync now
     ├── chatcmds.js           /playlist, /top, /random and /song in groups, topics and channels
     ├── tracks.js · lookup.js · itunes.js   recognizing songs and matching them across services
-    ├── songs.js              posted songs and their ❤️ ➕ 🎵 buttons (handled in find.js)
+    ├── songs.js              posting songs as their audio file, and their ❤️ ➕ 🎵 buttons (handled in find.js)
     ├── backfill.js           ⏮ Add old songs: forwarded posts and chat exports
     ├── chatapp.js · applink.js  the chat Mini App: who may do what, its ops, its t.me/…?startapp= links and /app
     ├── queue.js              the shared queue: ▶️ to the group player's Spotify, or posted in the chat

@@ -1,19 +1,21 @@
 // Getting a song's audio from @chethoberbot over bot-to-bot messages: the bot
 // sends it "Artist - Title", and its reply is copied to whoever asked — the user
 // in the private chat (every reply, so its "not found" too), or a group or
-// channel (only the file, as a reply to the song's post, with ❤️ ➕ under it).
+// channel (only the file: as the song's post itself, with its caption and
+// ❤️ ➕, or as a reply to a post). A song post whose file doesn't come
+// ("not found", or no answer in WAIT) is sent as text instead (flushRelays).
 // Replies are matched by reply_to_message, else by the file's title, else to
 // the oldest open request. Bot-to-bot communication must be turned on for
 // both bots in @BotFather (otherwise Telegram answers USER_BOT_TO_BOT_DISABLED).
 
 import { api, db } from 'sdk';
-import { and, asc, eq, gt } from 'sdk/db';
-import { relays } from '../schema.js';
+import { and, asc, eq, gt, lt } from 'sdk/db';
+import { linkTracks, relays } from '../schema.js';
 import { CHETHOBERBOT_ID, CHETHOBERBOT_USERNAME } from './config.js';
 import { getSetting, saveSetting } from './settings.js';
 import { now } from './util.js';
 
-const WAIT = 5 * 60; // a request older than this is given up on
+const WAIT = 3 * 60; // a request older than this is given up on
 
 export const relayAvailable = () => Boolean(CHETHOBERBOT_USERNAME);
 
@@ -49,6 +51,7 @@ export async function requestAudio(userId, query, to = {}) {
     await db.insert(relays).values({
       userId, query, sentMessageId: sent.message_id, createdAt: now(),
       chatId: to.chatId ?? null, threadId: to.threadId || null, replyTo: to.replyTo ?? null, songId: to.songId ?? null,
+      post: to.post ?? null,
     }).run();
     return true;
   } catch (e) {
@@ -69,6 +72,39 @@ function byTitle(rows, message) {
   }) ?? null;
 }
 
+// @chethoberbot's answer when it has no file.
+const NOT_FOUND = /not found|no results?|nothing found|couldn['’]?t find|can['’]?t find|unable to find|پیدا نشد|یافت نشد|نتیجه‌ای|لم يتم العثور|не найден|ничего не найдено|no se encontr/i;
+
+/** The post's message id goes on its link_tracks row, for replies to the original. */
+async function notePosted(post, messageId) {
+  if (!post?.linkId || !post.trackId || !messageId) return;
+  await db.update(linkTracks).set({ messageId })
+    .where(and(eq(linkTracks.linkId, post.linkId), eq(linkTracks.trackId, post.trackId))).run();
+}
+
+/** No file for a song post: send its text version instead (once). */
+async function postFallback(row) {
+  const res = await db.update(relays).set({ done: 1 }).where(and(eq(relays.id, row.id), eq(relays.done, 0))).run();
+  if (res && res.rowsAffected === 0) return;
+  const sent = await api.sendMessage(row.post.fallback)
+    .catch((e) => console.warn('fallback post failed', row.chatId, e.description ?? e.message));
+  await notePosted(row.post, sent?.message_id);
+}
+
+/** Song posts whose file didn't come in time are sent as text. Never throws. */
+export async function flushRelays() {
+  try {
+    const stale = await db.select().from(relays)
+      .where(and(eq(relays.done, 0), lt(relays.createdAt, now() - WAIT))).orderBy(asc(relays.id)).limit(10).all();
+    for (const row of stale) {
+      if (row.post) await postFallback(row);
+      else await db.update(relays).set({ done: 1 }).where(eq(relays.id, row.id)).run();
+    }
+  } catch (e) {
+    console.warn('relay flush failed', e.message);
+  }
+}
+
 /** A message from @chethoberbot: pass it to whoever is waiting. `markup(request)` gives the file's buttons. */
 export async function onRelayMessage(message, markup = async () => undefined) {
   await saveSetting('relay_bot_id', String(message.from.id));
@@ -80,6 +116,22 @@ export async function onRelayMessage(message, markup = async () => undefined) {
     row = (media && byTitle(open, message)) || open.find((r) => media || !r.chatId) || null;
   }
   if (!row) return;
+  if (row.post) {
+    if (row.done) return; // already posted, or given up on
+    // The file is the song's post; "not found" gets the text post instead.
+    if (!media) return NOT_FOUND.test(message.text ?? message.caption ?? '') ? postFallback(row) : undefined;
+    await db.update(relays).set({ done: 1 }).where(eq(relays.id, row.id)).run();
+    const sent = await api.copyMessage({
+      chat_id: row.chatId,
+      from_chat_id: message.chat.id,
+      message_id: message.message_id,
+      message_thread_id: row.threadId || undefined,
+      caption: row.post.caption || undefined,
+      parse_mode: row.post.caption ? 'HTML' : undefined,
+      reply_markup: row.post.reply_markup,
+    }).catch((e) => console.warn('relay copy failed', e.description));
+    return notePosted(row.post, sent?.message_id);
+  }
   if (row.chatId && !media) return; // groups only get the file
   await api.copyMessage({
     chat_id: row.chatId ?? row.userId,

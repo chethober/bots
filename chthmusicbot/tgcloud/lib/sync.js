@@ -23,11 +23,12 @@ import { resolveRef } from './tracks.js';
 import { pageUrl } from './lookup.js';
 import { getChat, setTopicName, topicName } from './chats.js';
 import { getSetting, saveSetting } from './settings.js';
+import { flushRelays } from './relay.js';
 import { localeFor } from './i18n.js';
 import { errorText } from './errors.js';
 import { t } from './strings.js';
 import { publicPlaylistUrl } from './chatcmds.js';
-import { askSongAudio, saveSong, songKeyboard } from './songs.js';
+import { postSong, saveSong } from './songs.js';
 import { esc, now, unique } from './util.js';
 
 export const getLink = (id) => db.select().from(links).where(eq(links.id, id)).get();
@@ -226,31 +227,32 @@ export async function onChatPost(message, refs, threadId) {
 
 // --- playlist → chat ---------------------------------------------------------
 
-function postText(locale, provider, track) {
-  const head = `🎵 <b>${esc(track.title)}</b>${track.artist ? ` — ${esc(track.artist)}` : ''}`;
-  return `${head}\n<a href="${esc(track.url)}">${provider.name}</a> · <a href="${pageUrl(provider.id, track.id)}">${t(locale, 'listen_anywhere')}</a>`;
-}
+const trackLinks = (locale, provider, track) =>
+  `<a href="${esc(track.url)}">${provider.name}</a> · <a href="${pageUrl(provider.id, track.id)}">${t(locale, 'listen_anywhere')}</a>`;
 
 /**
- * Post a playlist track in the link's chat, with ❤️ ➕ 🎵 and a button to the
- * playlist when others can open it; with the link's 🎵 Audio on, its file
- * follows from @chethoberbot as a reply. Returns the sent message.
+ * Post a playlist track in the link's chat, with ❤️ ➕ and a button to the
+ * playlist when others can open it. With the link's 🎵 Audio on, the post is
+ * the song's audio file from @chethoberbot (songs.js postSong), captioned
+ * with its links; otherwise, or when there's no file, a text post. Returns
+ * the sent text message, or null while the file is on its way (its message id
+ * reaches link_tracks when it arrives).
  */
 async function postTrack(locale, provider, link, track) {
   const song = await saveSong(track);
   const url = publicPlaylistUrl(link);
-  const sent = await api.sendMessage({
-    chat_id: link.chatId,
-    message_thread_id: link.threadId > 0 ? link.threadId : undefined,
-    text: postText(locale, provider, track),
-    parse_mode: 'HTML',
-    link_preview_options: { url: track.url, prefer_small_media: true },
-    reply_markup: songKeyboard(locale, song, { extra: url ? [[{ text: t(locale, 'open_playlist'), url }]] : [] }),
+  return postSong(song, link.ownerId, {
+    chatId: link.chatId,
+    threadId: link.threadId > 0 ? link.threadId : 0,
+    locale,
+    text: `🎵 <b>${esc(track.title)}</b>${track.artist ? ` — ${esc(track.artist)}` : ''}\n${trackLinks(locale, provider, track)}`,
+    caption: trackLinks(locale, provider, track),
+    extra: url ? [[{ text: t(locale, 'open_playlist'), url }]] : [],
+    preview: { url: track.url, prefer_small_media: true },
+    audio: Boolean(link.audio),
+    linkId: link.id,
+    trackId: track.id,
   });
-  if (link.audio) {
-    await askSongAudio(song, link.ownerId, { chatId: link.chatId, threadId: link.threadId > 0 ? link.threadId : 0, replyTo: sent.message_id });
-  }
-  return sent;
 }
 
 async function syncOne(link, budget, locale, deadline = 0) {
@@ -286,8 +288,10 @@ async function syncOne(link, budget, locale, deadline = 0) {
       if (e instanceof BotApiError && e.code === 429) break; // flood limit: the rest wait for the next round
       throw e;
     }
-    await db.update(linkTracks).set({ messageId: sent.message_id })
-      .where(and(eq(linkTracks.linkId, link.id), eq(linkTracks.trackId, track.id))).run();
+    if (sent) {
+      await db.update(linkTracks).set({ messageId: sent.message_id })
+        .where(and(eq(linkTracks.linkId, link.id), eq(linkTracks.trackId, track.id))).run();
+    }
     result.posted++;
   }
   result.remaining = fresh.length - result.posted;
@@ -391,6 +395,7 @@ export async function thenAutoSync(work) {
   try {
     return await work();
   } finally {
+    await flushRelays(); // song posts whose audio never came are sent as text
     await autoSync();
   }
 }

@@ -6,14 +6,14 @@
 //                 file from @chethoberbot follows, so Telegram's player plays it.
 //   ⏩ All to Spotify  (group player only) the whole queue at once, up to MAX_SEND.
 
-import { api, db } from 'sdk';
+import { db } from 'sdk';
 import { and, asc, eq, inArray } from 'sdk/db';
 import { queueItems } from '../schema.js';
 import { providerOf } from './providers/index.js';
 import { getAccount } from './accounts.js';
 import { getPlayer, refreshCard } from './player.js';
 import { matchSong } from './tracks.js';
-import { askSongAudio, saveSong, songKeyboard } from './songs.js';
+import { postSong, saveSong } from './songs.js';
 import { localeFor } from './i18n.js';
 import { t } from './strings.js';
 import { esc, now } from './util.js';
@@ -87,18 +87,14 @@ export async function clearQueue(chatId, threadId) {
 
 const linkLabel = (locale, url) => (/song\.link\//.test(url ?? '') ? t(locale, 'listen_anywhere') : /deezer\.com/.test(url ?? '') ? 'Deezer' : '🔗');
 
-/** Post a queued song in the chat, its audio file following as a reply. */
+/** Post a queued song in the chat as its audio file (text when there's none). */
 async function postItem(item, by, locale) {
   const song = await saveSong(item);
-  const text = [
-    `🎵 <b>${esc(item.title)}</b>${item.artist ? ` — ${esc(item.artist)}` : ''}`,
-    [item.url ? `<a href="${esc(item.url)}">${linkLabel(locale, item.url)}</a>` : '', t(locale, 'queue_post', { name: esc(item.addedByName ?? '—') })].filter(Boolean).join(' · '),
-  ].join('\n');
-  const sent = await api.sendMessage({
-    chat_id: item.chatId, message_thread_id: item.threadId || undefined, text, parse_mode: 'HTML',
-    link_preview_options: { is_disabled: true }, reply_markup: songKeyboard(locale, song),
+  const caption = [item.url ? `<a href="${esc(item.url)}">${linkLabel(locale, item.url)}</a>` : '', t(locale, 'queue_post', { name: esc(item.addedByName ?? '—') })].filter(Boolean).join(' · ');
+  await postSong(song, by.id, {
+    chatId: item.chatId, threadId: item.threadId, locale, caption,
+    text: `🎵 <b>${esc(item.title)}</b>${item.artist ? ` — ${esc(item.artist)}` : ''}\n${caption}`,
   });
-  await askSongAudio(song, by.id, { chatId: item.chatId, threadId: item.threadId, replyTo: sent.message_id }).catch((e) => console.warn('audio request failed', e.message));
 }
 
 /**

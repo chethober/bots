@@ -97,16 +97,18 @@ assert.equal(s.queue[0].title, 'Bad link', 'moved to the top');
 s = await as(FAN, 'queueRemove', { id: s.queue[0].id });
 assert.equal(s.queue.length, 1, 'members remove their own songs');
 
-// Without a group player, ▶️ posts the song in the chat and asks for its audio.
+// Without a group player, ▶️ posts the song in the chat as its audio file from
+// @chethoberbot, captioned with who queued it (its text version if there's no file).
 reset();
 s = await as(HOST, 'play');
 assert.equal(s.result.to, 'chat');
 assert.equal(s.queue.length, 0);
-const posted = calls('sendMessage').find((c) => c.params.chat_id === GROUP.id).params;
-assert.match(posted.text, /Nude.*Radiohead/s);
-assert.match(posted.text, /queued by Nima/);
-assert.ok(posted.reply_markup.inline_keyboard[0].some((b) => b.callback_data?.endsWith(':like')));
-assert.ok(calls('sendMessage').some((c) => c.params.chat_id === '@chethoberbot' || c.params.text === 'Radiohead - Nude'), 'the audio is asked for');
+assert.ok(calls('sendMessage').some((c) => c.params.chat_id === '@chethoberbot' && c.params.text === 'Radiohead - Nude'), 'the audio is asked for');
+const { post: audioPost } = state.tables.get('relays').rows.at(-1);
+assert.match(audioPost.caption, /queued by Nima/);
+assert.ok(audioPost.reply_markup.inline_keyboard[0].some((b) => b.callback_data?.endsWith(':like')));
+assert.match(audioPost.fallback.text, /Nude.*Radiohead/s);
+assert.equal(audioPost.fallback.chat_id, GROUP.id);
 await assert.rejects(as(HOST, 'play'), code('EMPTY'));
 
 // With a group player, ▶️ queues on the host's Spotify; the card links the Mini App.
