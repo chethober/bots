@@ -4,6 +4,8 @@
 // channel (only the file: as the song's post itself, with its caption and
 // ❤️ ➕, or as a reply to a post). A song post whose file doesn't come
 // ("not found", or no answer in WAIT) is sent as text instead (flushRelays).
+// While @chethoberbot isn't answering at all (relayAnswering), songs are
+// posted as text right away and their file is asked for as a reply.
 // Replies are matched by reply_to_message, else by the file's title, else to
 // the oldest open request. Bot-to-bot communication must be turned on for
 // both bots in @BotFather (otherwise Telegram answers USER_BOT_TO_BOT_DISABLED).
@@ -15,7 +17,8 @@ import { CHETHOBERBOT_ID, CHETHOBERBOT_USERNAME } from './config.js';
 import { getSetting, saveSetting } from './settings.js';
 import { now } from './util.js';
 
-const WAIT = 3 * 60; // a request older than this is given up on
+const WAIT = 90; // a request older than this is given up on
+const SILENT = 60; // @chethoberbot is taken as not answering when a request this old got nothing
 
 export const relayAvailable = () => Boolean(CHETHOBERBOT_USERNAME);
 
@@ -33,6 +36,17 @@ async function relayBotId() {
 
 const openRelays = (where) => db.select().from(relays)
   .where(and(eq(relays.done, 0), gt(relays.createdAt, now() - WAIT), where)).orderBy(asc(relays.id)).all();
+
+/**
+ * False while @chethoberbot seems down: an open request older than SILENT
+ * and nothing from it since that request was sent. Any message from it
+ * (onRelayMessage) makes it true again.
+ */
+export async function relayAnswering() {
+  const [oldest] = await db.select().from(relays).where(eq(relays.done, 0)).orderBy(asc(relays.id)).limit(1).all();
+  if (!oldest || now() - oldest.createdAt < SILENT) return true;
+  return (Number(await getSetting('relay_seen_at')) || 0) >= oldest.createdAt;
+}
 
 /** True while a chat already waits for this song's audio. */
 export async function audioPending(chatId, songId) {
@@ -108,6 +122,7 @@ export async function flushRelays() {
 /** A message from @chethoberbot: pass it to whoever is waiting. `markup(request)` gives the file's buttons. */
 export async function onRelayMessage(message, markup = async () => undefined) {
   await saveSetting('relay_bot_id', String(message.from.id));
+  await saveSetting('relay_seen_at', String(now()));
   const media = Boolean(message.audio || message.voice || message.document || message.video);
   const replyTo = message.reply_to_message?.message_id;
   let row = replyTo ? await db.select().from(relays).where(eq(relays.sentMessageId, replyTo)).get() : null;

@@ -12,7 +12,7 @@ import { songs } from '../schema.js';
 import { providerOf } from './providers/index.js';
 import { listAccounts } from './accounts.js';
 import { matchSong } from './tracks.js';
-import { requestAudio, relayAvailable } from './relay.js';
+import { relayAnswering, requestAudio, relayAvailable } from './relay.js';
 import { localeFor } from './i18n.js';
 import { errorText } from './errors.js';
 import { t } from './strings.js';
@@ -52,7 +52,9 @@ export const songQuery = (song) => [song.artist, song.title].filter(Boolean).joi
  * ❤️ ➕ buttons (relay.js). When the file can't be had (no @chethoberbot,
  * "not found", no answer in time, or `audio` off) the song is posted as
  * `text` (HTML) with ❤️ ➕ 🎵 instead. `extra`: more button rows. `linkId` and
- * `trackId`: the link_tracks row that gets the post's message id.
+ * `trackId`: the link_tracks row that gets the post's message id. While
+ * @chethoberbot isn't answering, the text post goes out right away and the
+ * file is still asked for, as a reply to it.
  * Returns the sent text message, or null when the file is on its way.
  */
 export async function postSong(song, userId, { chatId, threadId = 0, locale, text, caption = '', extra = [], preview, audio = true, linkId = null, trackId = null }) {
@@ -64,11 +66,14 @@ export async function postSong(song, userId, { chatId, threadId = 0, locale, tex
     link_preview_options: preview ?? { is_disabled: true },
     reply_markup: songKeyboard(locale, song, { extra }),
   };
-  if (audio && relayAvailable()) {
+  const wantAudio = audio && relayAvailable();
+  if (wantAudio && await relayAnswering()) {
     const post = { caption, reply_markup: songKeyboard(locale, song, { audio: false, extra }), fallback, linkId, trackId };
     if (await requestAudio(userId ?? 0, songQuery(song), { chatId, threadId, songId: song.id, post })) return null;
   }
-  return api.sendMessage(fallback);
+  const sent = await api.sendMessage(fallback);
+  if (wantAudio) await requestAudio(userId ?? 0, songQuery(song), { chatId, threadId, songId: song.id, replyTo: sent.message_id });
+  return sent;
 }
 
 /** Ask @chethoberbot for the song's file; `to` as in requestAudio. */

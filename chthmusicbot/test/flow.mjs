@@ -311,6 +311,31 @@ await message({ message_id: 97, from: USER, chat: GROUP, date: 0, text: 'anyone 
 assert.ok(groupTexts().some((c) => /Auto Posted/.test(c.params.text)), 'the text version is posted');
 assert.ok(relayRows().every((row) => row.done), 'and the requests are closed');
 
+// @chethoberbot silent (a request over a minute old, nothing from it since):
+// songs are posted as text right away, their file asked for as a reply.
+playlist.push(track(T('w'), 'Silent Relay'));
+autoTurn();
+reset();
+await cb(`ln:${link.id}:sync`);
+assert.match(last('editMessageText').text, /1 of them are posted as their audio file/);
+for (const row of relayRows()) if (!row.done) row.createdAt -= 70;
+setting('relay_seen_at', String(Math.floor(Date.now() / 1000) - 200));
+playlist.push(track(T('x'), 'While Down'));
+autoTurn();
+reset();
+await cb(`ln:${link.id}:sync`);
+const downPost = groupTexts().find((c) => /While Down/.test(c.params.text));
+assert.ok(downPost, 'posted as text at once');
+assert.equal(relayRows().at(-1).replyTo, state.msgId - 1, 'and its file is asked for as a reply (to the post just sent)');
+assert.equal(relayRows().at(-1).post, null);
+// Once @chethoberbot answers again, songs are posted as their file again.
+await fromRelay(905, { text: 'hi' });
+setting('song:' + GROUP.id, '0');
+reset();
+await message({ message_id: 98, from: USER, chat: GROUP, date: 0, text: '/song never gonna' });
+assert.equal(groupTexts().length, 0);
+assert.ok(relayRows().at(-1).post, 'file-first again');
+
 // ⏮ Add old songs: forwarded posts are added as they come, known ones skipped.
 const bfRows = () => state.tables.get('backfill_items').rows;
 reset();

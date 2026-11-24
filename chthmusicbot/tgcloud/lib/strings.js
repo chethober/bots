@@ -208,6 +208,13 @@ const strings = {
     ar: '✅ تمت المزامنة: نُشر {posted}، وأُعيدت إضافة {retried}.', ru: '✅ Готово: опубликовано {posted}, добавлено повторно {retried}.',
     es: '✅ Sincronizado: {posted} publicadas, {retried} añadidas de nuevo.',
   },
+  synced_coming: {
+    en: '🎵 {n} of them are posted as their audio file once @{bot} sends it (or as a link after 90 seconds).',
+    fa: '🎵 {n} تاشون وقتی @{bot} فایلش رو بفرسته به‌صورت فایل صوتی پست می‌شن (وگرنه بعد از ۹۰ ثانیه به‌صورت لینک).',
+    ar: '🎵 سيُنشر {n} منها كملف صوتي عندما يرسله @{bot} (أو كرابط بعد 90 ثانية).',
+    ru: '🎵 {n} из них появятся аудиофайлом, когда @{bot} его пришлёт (или ссылкой через 90 секунд).',
+    es: '🎵 {n} se publicarán como archivo de audio cuando @{bot} lo envíe (o como enlace tras 90 segundos).',
+  },
   synced_more: {
     en: '✅ Posted {posted}. {remaining} more to go: tap 🔄 Sync now again in a minute.',
     fa: '✅ {posted} تا پست شد. {remaining} تای دیگه مونده: یه دقیقه دیگه دوباره 🔄 همگام‌سازی رو بزن.',
