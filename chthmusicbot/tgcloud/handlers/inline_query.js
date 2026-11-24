@@ -8,8 +8,13 @@ import { searchSongs } from '../lib/itunes.js';
 import { localeFor } from '../lib/i18n.js';
 import { t } from '../lib/strings.js';
 import { esc } from '../lib/util.js';
+import { thenAutoSync } from '../lib/sync.js';
 
-export default async function (q) {
+export default function (q) {
+  return thenAutoSync(() => answer(q)); // no cron: any update posts what's new in synced playlists
+}
+
+async function answer(q) {
   const locale = await localeFor(q.from);
   const query = (q.query ?? '').trim();
   const results = query.length < 2 ? [] : (await searchSongs(query, 10)).map((s, i) => ({

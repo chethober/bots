@@ -1,18 +1,21 @@
 // Chat ↔ playlist syncs ("links").
 //
 //   chat → playlist  live: every music post in the chat is added (handlers).
-//   playlist → chat  on demand: 🔄 Sync now posts the playlist's tracks the chat
-//                    hasn't seen, SYNC_BATCH at a time, each with its audio
-//                    from @chethoberbot (🎵 Audio files). It also retries
+//   playlist → chat  automatic: tracks added to the playlist on Spotify,
+//                    YouTube Music or Apple Music are posted in the chat, each
+//                    with its audio from @chethoberbot (🎵 Audio files).
+//                    tgcloud has no cron, so autoSync runs after every update
+//                    the bot handles (see its comment). 🔄 Sync now does the
+//                    same on demand, SYNC_BATCH at a time, and also retries
 //                    posts whose tracks couldn't be added.
 //
 // link_tracks remembers every track a link has on both sides, so a track is
 // never added or posted twice, and a repost is recognized.
 
 import { api, db, BotApiError } from 'sdk';
-import { and, eq, inArray, isNull } from 'sdk/db';
+import { and, eq, inArray, isNull, ne } from 'sdk/db';
 import { links, linkTracks } from '../schema.js';
-import { SYNC_BATCH } from './config.js';
+import { AUTO_BATCH, AUTO_EVERY, AUTO_TICK, AUTO_TIME, SYNC_BATCH } from './config.js';
 import { react } from './reactions.js';
 import { providerOf } from './providers/index.js';
 import { getAccount } from './accounts.js';
@@ -20,11 +23,12 @@ import { resolveRef } from './tracks.js';
 import { pageUrl } from './lookup.js';
 import { getChat, setTopicName, topicName } from './chats.js';
 import { getSetting, saveSetting } from './settings.js';
+import { flushRelays } from './relay.js';
 import { localeFor } from './i18n.js';
 import { errorText } from './errors.js';
 import { t } from './strings.js';
 import { publicPlaylistUrl } from './chatcmds.js';
-import { askSongAudio, saveSong, songKeyboard } from './songs.js';
+import { postSong, saveSong } from './songs.js';
 import { esc, now, unique } from './util.js';
 
 export const getLink = (id) => db.select().from(links).where(eq(links.id, id)).get();
@@ -223,34 +227,35 @@ export async function onChatPost(message, refs, threadId) {
 
 // --- playlist → chat ---------------------------------------------------------
 
-function postText(locale, provider, track) {
-  const head = `🎵 <b>${esc(track.title)}</b>${track.artist ? ` — ${esc(track.artist)}` : ''}`;
-  return `${head}\n<a href="${esc(track.url)}">${provider.name}</a> · <a href="${pageUrl(provider.id, track.id)}">${t(locale, 'listen_anywhere')}</a>`;
-}
+const trackLinks = (locale, provider, track) =>
+  `<a href="${esc(track.url)}">${provider.name}</a> · <a href="${pageUrl(provider.id, track.id)}">${t(locale, 'listen_anywhere')}</a>`;
 
 /**
- * Post a playlist track in the link's chat, with ❤️ ➕ 🎵 and a button to the
- * playlist when others can open it; with the link's 🎵 Audio on, its file
- * follows from @chethoberbot as a reply. Returns the sent message.
+ * Post a playlist track in the link's chat, with ❤️ ➕ and a button to the
+ * playlist when others can open it. With the link's 🎵 Audio on, the post is
+ * the song's audio file from @chethoberbot (songs.js postSong), captioned
+ * with its links; otherwise, or when there's no file, a text post. Returns
+ * the sent text message, or null while the file is on its way (its message id
+ * reaches link_tracks when it arrives).
  */
 async function postTrack(locale, provider, link, track) {
   const song = await saveSong(track);
   const url = publicPlaylistUrl(link);
-  const sent = await api.sendMessage({
-    chat_id: link.chatId,
-    message_thread_id: link.threadId > 0 ? link.threadId : undefined,
-    text: postText(locale, provider, track),
-    parse_mode: 'HTML',
-    link_preview_options: { url: track.url, prefer_small_media: true },
-    reply_markup: songKeyboard(locale, song, { extra: url ? [[{ text: t(locale, 'open_playlist'), url }]] : [] }),
+  return postSong(song, link.ownerId, {
+    chatId: link.chatId,
+    threadId: link.threadId > 0 ? link.threadId : 0,
+    locale,
+    text: `🎵 <b>${esc(track.title)}</b>${track.artist ? ` — ${esc(track.artist)}` : ''}\n${trackLinks(locale, provider, track)}`,
+    caption: trackLinks(locale, provider, track),
+    extra: url ? [[{ text: t(locale, 'open_playlist'), url }]] : [],
+    preview: { url: track.url, prefer_small_media: true },
+    audio: Boolean(link.audio),
+    linkId: link.id,
+    trackId: track.id,
   });
-  if (link.audio) {
-    await askSongAudio(song, link.ownerId, { chatId: link.chatId, threadId: link.threadId > 0 ? link.threadId : 0, replyTo: sent.message_id });
-  }
-  return sent;
 }
 
-async function syncOne(link, budget, locale) {
+async function syncOne(link, budget, locale, deadline = 0) {
   const provider = providerOf(link.provider);
   const acct = await getAccount(link.ownerId, link.provider);
   if (!acct) throw new Error(t(locale, 'err_not_connected', { service: provider.name }));
@@ -272,14 +277,22 @@ async function syncOne(link, budget, locale) {
   const fresh = (await provider.playlistTracks(acct, link.playlistId))
     .filter((x) => !known.has(x.id) && !seen.has(x.id) && seen.add(x.id));
   for (const track of fresh.slice(0, budget)) {
+    if (deadline && Date.now() > deadline) break;
+    // Claim it first: Sync now and an automatic check at once mustn't both post it.
+    if (!(await remember(link.id, [track.id], { source: 'playlist' })).length) continue;
+    let sent;
     try {
-      const sent = await postTrack(locale, provider, link, track);
-      await remember(link.id, [track.id], { messageId: sent.message_id, source: 'playlist' });
-      result.posted++;
+      sent = await postTrack(locale, provider, link, track);
     } catch (e) {
-      if (e instanceof BotApiError && e.code === 429) break; // flood limit: the rest wait for the next tap
+      await db.delete(linkTracks).where(and(eq(linkTracks.linkId, link.id), eq(linkTracks.trackId, track.id))).run();
+      if (e instanceof BotApiError && e.code === 429) break; // flood limit: the rest wait for the next round
       throw e;
     }
+    if (sent) {
+      await db.update(linkTracks).set({ messageId: sent.message_id })
+        .where(and(eq(linkTracks.linkId, link.id), eq(linkTracks.trackId, track.id))).run();
+    }
+    result.posted++;
   }
   result.remaining = fresh.length - result.posted;
   return result;
@@ -326,6 +339,65 @@ export async function syncNow(link) {
     total.retried += r.retried;
   }
   return total;
+}
+
+// --- playlist → chat, automatically -------------------------------------------
+
+/**
+ * Post what's new in synced playlists without anyone tapping 🔄 Sync now.
+ *
+ * tgcloud has no cron, so this runs at the end of every update the bot
+ * handles: messages, buttons, channel posts and inline queries (not Mini App
+ * calls, which would wait for it), @chethoberbot's audio replies included, so
+ * an active bot keeps itself going. At most once every AUTO_TICK seconds overall it checks the playlists
+ * whose turn has come (each every AUTO_EVERY seconds, YouTube less often for
+ * its API quota), posting up to AUTO_BATCH new tracks per playlist, for about
+ * AUTO_TIME seconds. Never throws.
+ */
+export async function autoSync() {
+  try {
+    const started = Date.now();
+    const last = Number(await getSetting('auto_at')) || 0;
+    if (now() - last < AUTO_TICK) return 0;
+    await saveSetting('auto_at', String(now()));
+
+    const rows = await db.select().from(links).where(ne(links.direction, 'in')).all();
+    const due = [];
+    for (const link of rows) {
+      if (!link.playlistId || link.threadId === -1) continue; // every-topic parents: their topics are checked
+      if ((await getChat(link.chatId))?.active === 0) continue; // the bot was removed from the chat
+      const checked = Number(await getSetting(`auto:${link.id}`)) || 0;
+      if (now() - checked >= (AUTO_EVERY[link.provider] ?? AUTO_EVERY.default)) due.push({ link, checked });
+    }
+    due.sort((a, b) => a.checked - b.checked);
+
+    const deadline = started + AUTO_TIME * 1000;
+    let posted = 0;
+    for (const { link } of due) {
+      if (Date.now() > deadline) break;
+      await saveSetting(`auto:${link.id}`, String(now()));
+      try {
+        const locale = await localeFor({ id: link.ownerId });
+        posted += (await syncOne({ ...link, direction: 'out' }, AUTO_BATCH, locale, deadline)).posted;
+      } catch (e) {
+        await reportError(link, e);
+      }
+    }
+    return posted;
+  } catch (e) {
+    console.warn('auto sync failed', e.message);
+    return 0;
+  }
+}
+
+/** Run an update's handler, then autoSync. */
+export async function thenAutoSync(work) {
+  try {
+    return await work();
+  } finally {
+    await flushRelays(); // song posts whose audio never came are sent as text
+    await autoSync();
+  }
 }
 
 // --- errors ------------------------------------------------------------------

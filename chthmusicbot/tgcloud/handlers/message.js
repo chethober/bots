@@ -16,7 +16,7 @@ import { getSong, relayMarkup } from '../lib/songs.js';
 import { connectFromChat } from '../lib/login.js';
 import { isRelayBot, onRelayMessage } from '../lib/relay.js';
 import { extractRefs } from '../lib/tracks.js';
-import { onChatPost } from '../lib/sync.js';
+import { onChatPost, thenAutoSync } from '../lib/sync.js';
 import { startPlayer, queueFromPost } from '../lib/player.js';
 import { postAppButton } from '../lib/applink.js';
 import { fireDueTimers } from '../lib/sleep.js';
@@ -115,8 +115,11 @@ export default async function (message) {
   // stripped here, so the rest of the bot sees a plain /start).
   await reportStart(message);
   await fireDueTimers(); // 😴 no cron: any update fires the sleep timers that are due
-  if (message.chat.type === 'private' && isRelayBot(message.from)) return onRelayMessage(message, relayMarkup);
-  if (message.chat.type === 'private') return onPrivate(message);
-  if (message.chat.type === 'group' || message.chat.type === 'supergroup') return onGroup(message);
-  return null;
+  // …and checks synced playlists for new tracks to post (sync.js autoSync).
+  return thenAutoSync(() => {
+    if (message.chat.type === 'private' && isRelayBot(message.from)) return onRelayMessage(message, relayMarkup);
+    if (message.chat.type === 'private') return onPrivate(message);
+    if (message.chat.type === 'group' || message.chat.type === 'supergroup') return onGroup(message);
+    return null;
+  });
 }

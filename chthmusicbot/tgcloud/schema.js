@@ -124,6 +124,10 @@ export const relays = table('relays', {
   threadId:      integer('thread_id'),
   replyTo:       integer('reply_to'),
   songId:        integer('song_id'),
+  // Set when the file *is* the song's post (songs.js postSong): the caption,
+  // buttons and link_tracks row it gets, and the text post sent instead when
+  // @chethoberbot has no file. JSON: { caption, reply_markup, fallback, linkId, trackId }.
+  post:          json('post'),
 });
 
 // Songs the bot posted in chats, so the ❤️ ➕ 🎵 buttons under them stay short.

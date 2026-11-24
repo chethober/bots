@@ -6,7 +6,7 @@
 //   sg:<id>:aud   🎵 ask @chethoberbot for the file and post it under the song
 // The callbacks are handled in find.js.
 
-import { db } from 'sdk';
+import { api, db } from 'sdk';
 import { and, eq } from 'sdk/db';
 import { songs } from '../schema.js';
 import { providerOf } from './providers/index.js';
@@ -45,6 +45,31 @@ export async function relayMarkup(row) {
 }
 
 export const songQuery = (song) => [song.artist, song.title].filter(Boolean).join(' - ');
+
+/**
+ * Post a song in a chat as its audio file: @chethoberbot is asked for it, and
+ * the file it sends is copied into the chat with `caption` (HTML) and the
+ * ❤️ ➕ buttons (relay.js). When the file can't be had (no @chethoberbot,
+ * "not found", no answer in time, or `audio` off) the song is posted as
+ * `text` (HTML) with ❤️ ➕ 🎵 instead. `extra`: more button rows. `linkId` and
+ * `trackId`: the link_tracks row that gets the post's message id.
+ * Returns the sent text message, or null when the file is on its way.
+ */
+export async function postSong(song, userId, { chatId, threadId = 0, locale, text, caption = '', extra = [], preview, audio = true, linkId = null, trackId = null }) {
+  const fallback = {
+    chat_id: chatId,
+    message_thread_id: threadId || undefined,
+    text,
+    parse_mode: 'HTML',
+    link_preview_options: preview ?? { is_disabled: true },
+    reply_markup: songKeyboard(locale, song, { extra }),
+  };
+  if (audio && relayAvailable()) {
+    const post = { caption, reply_markup: songKeyboard(locale, song, { audio: false, extra }), fallback, linkId, trackId };
+    if (await requestAudio(userId ?? 0, songQuery(song), { chatId, threadId, songId: song.id, post })) return null;
+  }
+  return api.sendMessage(fallback);
+}
 
 /** Ask @chethoberbot for the song's file; `to` as in requestAudio. */
 export function askSongAudio(song, userId, to = {}) {

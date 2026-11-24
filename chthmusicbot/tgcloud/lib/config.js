@@ -31,6 +31,16 @@ export const QUEUED_REACTION = '⚡';
 // messages a minute to one group; the rest wait for the next tap.
 export const SYNC_BATCH = 20;
 
+// Playlist → chat runs on its own (sync.js autoSync): after any update, at
+// most every AUTO_TICK seconds, it checks each synced playlist every
+// AUTO_EVERY seconds (YouTube less often: a check costs API quota) and posts
+// up to AUTO_BATCH new tracks per playlist, each with its audio, spending at
+// most AUTO_TIME seconds (tgcloud stops a handler after about 30).
+export const AUTO_TICK = 30;
+export const AUTO_EVERY = { default: 120, youtube: 900 };
+export const AUTO_BATCH = 5;
+export const AUTO_TIME = 12;
+
 // Playlists per page in the playlist picker.
 export const PAGE_SIZE = 8;
 
