@@ -2,7 +2,7 @@
 // checks who is asking; this only touches the bot's own data. Results are English, in HTML.
 
 import { api, db, BotApiError } from 'sdk';
-import { eq, desc, gt, lt, sql } from 'sdk/db';
+import { eq, desc, gt, sql } from 'sdk/db';
 import { players, sessions, purchases, hubCommands } from '../schema.js';
 import { refundPurchase } from './shop.js';
 import { playerLocale } from './i18n.js';
@@ -10,16 +10,9 @@ import { t } from './strings.js';
 import { sendHtml } from './engine.js';
 import { esc, chips } from './ui.js';
 import { ADMIN_IDS } from './config.js';
+import { makeClaim, numericOnly } from './hub_admin_kit.js';
 
-const CLAIM_KEEP_SEC = 600; // commands older than 5 minutes are refused before they get here
-
-// True the first time this command id is seen.
-export async function claim(id) {
-  const at = Math.floor(Date.now() / 1000);
-  await db.delete(hubCommands).where(lt(hubCommands.at, at - CLAIM_KEEP_SEC));
-  const [row] = await db.insert(hubCommands).values({ id, at }).onConflictDoNothing().returning();
-  return Boolean(row);
-}
+export const claim = makeClaim(db, hubCommands);
 
 const html = (text, extra = {}) => ({ text, html: true, ...extra });
 const words = (args) => String(args.input ?? '').trim().split(/\s+/).filter(Boolean);
@@ -57,6 +50,25 @@ async function setBanned(args, banned) {
 }
 
 export const handlers = {
+  async version() {
+    return { text: '<b>chthgamesbot</b>\nVersion <code>1.0.0</code>', html: true };
+  },
+  async health() {
+    const stuck = await db.get(sql`SELECT count(*) AS n FROM purchases WHERE credited = 0 AND refunded = 0`);
+    return { text: `<b>🩺 Health</b>\nstuckPayments: <b>${stuck?.n ?? 0}</b>`, html: true };
+  },
+  async metrics() {
+    const day = Math.floor(Date.now() / 1000) - 86400;
+    const p = await db.get(sql`SELECT count(*) AS n, coalesce(sum(chips),0) AS chips, coalesce(sum(wagered),0) AS wagered,
+      coalesce(sum(played),0) AS played, sum(banned) AS banned, sum(created_at > ${day}) AS fresh FROM players`);
+    const s = await db.get(sql`SELECT count(*) AS n, sum(updated_at > ${day}) AS active FROM sessions WHERE kind != 'room'`);
+    const pay = await db.get(sql`SELECT count(*) AS n, coalesce(sum(stars),0) AS stars, sum(credited = 0) AS stuck FROM purchases WHERE refunded = 0`);
+    const m = numericOnly({
+      players: p.n, newPlayers24h: p.fresh ?? 0, banned: p.banned ?? 0, chipsHeld: p.chips, wagered: p.wagered,
+      played: p.played, sessions: s.n, activeSessions24h: s.active ?? 0, stars: pay.stars, purchases: pay.n, stuckPayments: pay.stuck ?? 0,
+    });
+    return { text: JSON.stringify(m), metrics: m };
+  },
   async stats() {
     const day = Math.floor(Date.now() / 1000) - 86400;
     const p = await db.get(sql`SELECT count(*) AS n, coalesce(sum(chips),0) AS chips, coalesce(sum(wagered),0) AS wagered,

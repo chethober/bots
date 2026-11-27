@@ -4,8 +4,12 @@ export { NVD_API_KEY, GITHUB_TOKEN } from './secrets.js';
 
 export const BOT_USERNAME = 'chsbrbot';
 
-// Telegram user ids that get the admin commands and dashboard.
-export const ADMIN_IDS = [8028710032, 6330862227];
+// Telegram user ids that get the admin commands and dashboard. Prefer the shared
+// CHTH list from hub_secrets.js (CI writes CHTH_ADMIN_IDS).
+import { ADMIN_IDS as HUB_ADMINS } from './hub_secrets.js';
+export const ADMIN_IDS = Array.isArray(HUB_ADMINS) && HUB_ADMINS.length
+  ? HUB_ADMINS
+  : [6330862227, 8028710032];
 
 // A new CVE is alerted when its CVSS base score is above this.
 export const MIN_CVSS = 7.6;

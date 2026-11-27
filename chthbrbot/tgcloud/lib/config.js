@@ -22,11 +22,12 @@ export const KINDS = ['text', 'photo', 'video', 'animation', 'video_note', 'voic
 // Accepted until the owner changes it.
 export const DEFAULT_KINDS = ['text', 'photo', 'video', 'animation', 'video_note', 'voice', 'audio', 'sticker'];
 
-// Telegram user ids (numbers) of the bot's admins. Reported messages are copied
-// to each of them with Ban / Dismiss buttons, and they get the admin commands
-// (/admin, /reports, /bans, /ban, /unban, /broadcast). [] = reports are only
-// recorded. An admin must have pressed Start in the bot for anything to reach them.
-export const ADMIN_IDS = [6330862227];
+// Telegram user ids of the bot's admins. Prefer the shared CHTH list from
+// hub_secrets.js (CI writes CHTH_ADMIN_IDS); fall back to the merged defaults.
+import { ADMIN_IDS as HUB_ADMINS } from './hub_secrets.js';
+export const ADMIN_IDS = Array.isArray(HUB_ADMINS) && HUB_ADMINS.length
+  ? HUB_ADMINS
+  : [6330862227, 8028710032];
 
 // A sender is banned bot-wide automatically once this many different link owners
 // have reported them (dismissed reports don't count). Admins get the report with

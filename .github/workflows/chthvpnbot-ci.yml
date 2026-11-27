@@ -69,11 +69,13 @@ jobs:
           node -e 'const s = (k) => JSON.stringify(process.env[k] ?? "");
             require("fs").writeFileSync("tgcloud/lib/hub_secrets.js",
               `export const HUB_URL = ${s("HUB_URL")};\nexport const HUB_SECRET = ${s("HUB_SECRET")};\nexport const HUB_SOURCE = ${s("HUB_SOURCE")};\n` +
+              `export const ADMIN_IDS = ${process.env.ADMIN_IDS || "[6330862227,8028710032]"};\n` +
               `export const DIRECTORY_URL = ${s("DIRECTORY_URL")};\nexport const DIRECTORY_KEY = ${s("DIRECTORY_KEY")};\n`)'
         env:
           HUB_URL: ${{ secrets.CHTH_HUB_URL }}
           HUB_SECRET: ${{ secrets.CHTHVPNBOT_HUB_SECRET }}
           HUB_SOURCE: chthvpnbot
+          ADMIN_IDS: ${{ secrets.CHTH_ADMIN_IDS }}
           DIRECTORY_URL: ${{ secrets.XTUNE_DIRECTORY_URL }}
           DIRECTORY_KEY: ${{ secrets.CHTHVPNBOT_DIRECTORY_KEY }}
       # .tgcloud/ is git-ignored: fetch the cloud snapshot and revision into a

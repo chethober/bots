@@ -17,10 +17,14 @@ import { matchButton } from '../lib/keyboard.js';
 import { t, SOURCE_URL } from '../lib/strings.js';
 import { aboutKeyboard, thankTip } from '../lib/tips.js';
 import { reportStart, reportError } from '../lib/report.js';
+import { hubCommand } from '../lib/hub_command.js';
+import { claim, handlers } from '../lib/hub_admin.js';
 
 let botUsername = null;
 
 export default async function (msg) {
+  // Signed commands from the CHTH hub (bot-to-bot). Must run before the is_bot filter.
+  if (await hubCommand(msg, handlers, claim)) return;
   // A /start reaches the hub with the CHTH link that brought the user (src_ tags are
   // stripped here, so the rest of the bot sees a plain /start).
   await reportStart(msg);

@@ -5,27 +5,28 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>chth · panel</title>
 <script src="https://telegram.org/js/telegram-web-app.js"></script>
+<link rel="stylesheet" href="./miniapp.css">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
 <style>
-  /* Fixed dark identity, independent of the Telegram theme. */
+  /* Dark branded panel on top of CHTH kit tokens (miniapp.css). */
   :root {
     color-scheme: dark;
-    --bg: #070608;
-    --card: #0f0d10;
+    --bg: var(--chth-ink, #070608);
+    --card: var(--chth-ink-soft, #0f0d10);
     --card-edge: #241a1f;
     --field: #0a090b;
     --text: #e6dfda;
-    --hint: #7a7078;
-    --accent: #e0303f;
+    --hint: var(--chth-muted, #7a7078);
+    --accent: var(--chth-danger, #e0303f);
     --accent-dim: #7d1622;
     --accent-text: #fff3f3;
     --link: #ff6b78;
     --header: #9c8e95;
-    --danger: #ff5262;
-    --ok: #6fe3b8;
+    --danger: var(--chth-danger, #ff5262);
+    --ok: var(--chth-success, #6fe3b8);
     --sep: #1e181c;
-    --mono: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
+    --mono: "JetBrains Mono", var(--chth-font-mono);
   }
   * { box-sizing: border-box; }
   html { background: var(--bg); }
