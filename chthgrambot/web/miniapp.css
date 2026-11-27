@@ -1,0 +1,25 @@
+/* Generated from the CHTH kit (chth.hub/kit) by `npm run sync`. Do not edit here: edit the kit and sync. */
+/* CHTH Mini App tokens — generated into each bot's web/ from kit/brand/tokens.json.
+   Use alongside Telegram theme vars: --tg-theme-* for native feel, --chth-* for brand. */
+:root {
+  --chth-ink: #09090b;
+  --chth-ink-soft: #18181b;
+  --chth-paper: #fafafa;
+  --chth-paper-soft: #f4f4f5;
+  --chth-muted: #71717a;
+  --chth-line: rgba(161, 161, 170, 0.24);
+  --chth-accent: #d4d4d8;
+  --chth-accent-hover: #e4e4e7;
+  --chth-on-accent: #09090b;
+  --chth-success: #10b981;
+  --chth-warning: #f59e0b;
+  --chth-danger: #f43f5e;
+  --chth-telegram: #2ca5e0;
+  --chth-font-sans: ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+  --chth-font-mono: ui-monospace, SFMono-Regular, Menlo, monospace;
+  --chth-radius-md: 10px;
+  --chth-radius-lg: 14px;
+  --chth-space-12: 12px;
+  --chth-space-16: 16px;
+  --chth-space-20: 20px;
+}

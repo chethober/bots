@@ -15,12 +15,17 @@ import { deliverAnswer } from '../lib/relay.js';
 import { aboutKeyboard, thankTip } from '../lib/tips.js';
 import { drop, localeOf, mainKeyboard, matchButton, showHome, showScreen } from '../lib/screen.js';
 import { reportStart, reportError } from '../lib/report.js';
+import { hubCommand } from '../lib/hub_command.js';
+import { claim, handlers } from '../lib/hub_admin.js';
 
 export default async function (message) {
+  // Signed commands from the CHTH hub (bot-to-bot). Must run before anything else so a
+  // hub message is never fed to the AI playground. Also ignores every other bot.
+  if (await hubCommand(message, handlers, claim)) return;
   // A /start reaches the hub with the CHTH link that brought the user (src_ tags are
   // stripped here, so the rest of the bot sees a plain /start).
   await reportStart(message);
-  if (message.chat.type !== 'private' || !message.from) return;
+  if (message.chat.type !== 'private' || !message.from || message.from.is_bot) return;
   const userId = message.from.id;
   const chat_id = message.chat.id;
   const send = (text, extra = {}) => api.sendMessage({ chat_id, text, ...extra });

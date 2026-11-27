@@ -96,6 +96,12 @@ channel, and handler errors. Only counts and pseudonymous ids are sent, never me
 test run. Empty values (the example's default) switch reporting off, and a hub that is down
 never affects the bot.
 
+Every bot also answers signed **hub admin commands** (stats, metrics, version, health, and
+bot-specific actions) from the private hub bot. `hubCommand` runs first in `handlers/message.js`
+so a hub message is never treated as user input. Admins are shared: `ADMIN_IDS` in
+`hub_secrets.js` (from the `CHTH_ADMIN_IDS` repository secret) overrides each bot's config
+fallback.
+
 ### CI/CD
 
 Each bot has a GitHub Actions workflow, `.github/workflows/<bot>-ci.yml`. It runs the bot's tests
@@ -114,8 +120,9 @@ The workflows read these repository secrets:
 |---|---|
 | every bot | `<BOT>_TGCLOUD_TOKEN`, the bot's tgcloud project token (e.g. `CHTHVPNBOT_TGCLOUD_TOKEN`) |
 | every bot | `CHTH_HUB_URL` and `<BOT>_HUB_SECRET` for hub reporting (both optional) |
+| every bot | `CHTH_ADMIN_IDS` — JSON array of shared CHTH admin Telegram ids (optional; defaults to the merged list) |
 | `chsbrbot` | `CHSBRBOT_NVD_API_KEY`, `CHSBRBOT_GITHUB_TOKEN` (both optional) |
-| `chthgamesbot` | `CHTHGAMESBOT_BUTTON_SECRET`, `CHTHGAMESBOT_ADMIN_IDS` (a JSON array such as `[12345]`) |
+| `chthgamesbot` | `CHTHGAMESBOT_BUTTON_SECRET`, `CHTHGAMESBOT_ADMIN_IDS` (a JSON array; prefer `CHTH_ADMIN_IDS`) |
 | `chthmusicbot` | `CHTHMUSICBOT_SPOTIFY_CLIENT_ID`, `CHTHMUSICBOT_GOOGLE_CLIENT_ID`, `CHTHMUSICBOT_GOOGLE_CLIENT_SECRET`, `CHTHMUSICBOT_APPLE_MUSIC_DEVELOPER_TOKEN`, `CHTHMUSICBOT_SONGLINK_API_KEY` (all optional) |
 
 See [`<bot>/AGENTS.md`](chthapibot/AGENTS.md) in any bot for the platform's module rules and

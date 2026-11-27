@@ -1,8 +1,12 @@
 // The bot's username (no @), for deep links and the 🤖 More bots list.
 export const BOT_USERNAME = 'chthmusicbot';
 
-// Telegram user ids that get the ⭐ tip notices.
-export const ADMIN_IDS = [6330862227];
+// Telegram user ids that get the ⭐ tip notices. Prefer the shared CHTH list from
+// hub_secrets.js (CI writes CHTH_ADMIN_IDS); fall back to the merged defaults.
+import { ADMIN_IDS as HUB_ADMINS } from './hub_secrets.js';
+export const ADMIN_IDS = Array.isArray(HUB_ADMINS) && HUB_ADMINS.length
+  ? HUB_ADMINS
+  : [6330862227, 8028710032];
 
 // The Mini App's address, printed by the first `npx tgcloud push`
 // (https://app<app_id>.tgcloud.ai, no trailing slash). Spotify and Apple Music

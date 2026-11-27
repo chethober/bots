@@ -3,20 +3,13 @@
 // sender's id never reaches the hub unless an admin typed it.
 
 import { db } from 'sdk';
-import { lt } from 'sdk/db';
-import { hubCommands } from '../schema.js';
+import { eq, sql } from 'sdk/db';
+import { hubCommands, users, bans as bansTable, reports } from '../schema.js';
 import { ban, bansView, dashboardView, runBroadcast, unban, unbanAt } from './admin.js';
 import { textsOf } from './chats.js';
+import { makeClaim, numericOnly } from './hub_admin_kit.js';
 
-const CLAIM_KEEP_SEC = 600; // commands older than 5 minutes are refused before they get here
-
-// True the first time this command id is seen.
-export async function claim(id) {
-  const at = Math.floor(Date.now() / 1000);
-  await db.delete(hubCommands).where(lt(hubCommands.at, at - CLAIM_KEEP_SEC));
-  const [row] = await db.insert(hubCommands).values({ id, at }).onConflictDoNothing().returning();
-  return Boolean(row);
-}
+export const claim = makeClaim(db, hubCommands);
 
 const textsFor = (args) => textsOf(Number(args.admin) || 0);
 
@@ -38,6 +31,24 @@ async function bans(args) {
 }
 
 export const handlers = {
+  async version() {
+    return { text: '<b>chthbrbot</b>\nVersion <code>1.0.0</code>', html: true };
+  },
+  async health() {
+    const open = await db.$count(reports, eq(reports.status, 'open'));
+    return { text: `<b>🩺 Health</b>\nopenReports: <b>${open}</b>`, html: true };
+  },
+  async metrics() {
+    const day = Math.floor(Date.now() / 1000) - 86400;
+    const [userN, fresh, banN, open] = await Promise.all([
+      db.$count(users),
+      db.get(sql`SELECT count(*) AS n FROM users WHERE created_at > ${day}`),
+      db.$count(bansTable),
+      db.$count(reports, eq(reports.status, 'open')),
+    ]);
+    const m = numericOnly({ users: userN, newUsers24h: fresh?.n ?? 0, bans: banN, openReports: open });
+    return { text: JSON.stringify(m), metrics: m };
+  },
   dashboard: async (args) => ({ text: (await dashboardView(await textsFor(args))).text }),
   bans,
 

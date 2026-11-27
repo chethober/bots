@@ -3,4 +3,5 @@
 //     node -e "console.log(require('crypto').randomBytes(24).toString('hex'))"
 //   ADMIN_IDS: Telegram user ids allowed to use /admin commands.
 export const BUTTON_SECRET = 'change-me';
-export const ADMIN_IDS = [];
+// Merged CHTH admins (same list as the hub and every other bot).
+export const ADMIN_IDS = [6330862227, 8028710032];

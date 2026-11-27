@@ -67,12 +67,15 @@ jobs:
       - name: Write tgcloud/lib/hub_secrets.js
         run: |
           node -e 'const s = (k) => JSON.stringify(process.env[k] ?? "");
+            const admins = process.env.ADMIN_IDS || "[6330862227,8028710032]";
+            JSON.parse(admins); // must be a JSON array
             require("fs").writeFileSync("tgcloud/lib/hub_secrets.js",
-              `export const HUB_URL = ${s("HUB_URL")};\nexport const HUB_SECRET = ${s("HUB_SECRET")};\nexport const HUB_SOURCE = ${s("HUB_SOURCE")};\n`)'
+              `export const HUB_URL = ${s("HUB_URL")};\nexport const HUB_SECRET = ${s("HUB_SECRET")};\nexport const HUB_SOURCE = ${s("HUB_SOURCE")};\nexport const ADMIN_IDS = ${admins};\n`)'
         env:
           HUB_URL: ${{ secrets.CHTH_HUB_URL }}
           HUB_SECRET: ${{ secrets.CHTHBRBOT_HUB_SECRET }}
           HUB_SOURCE: chthbrbot
+          ADMIN_IDS: ${{ secrets.CHTH_ADMIN_IDS }}
       # .tgcloud/ is git-ignored: fetch the cloud snapshot and revision into a
       # fresh one so push sends only the diff and removes deleted modules.
       - run: mkdir -p .tgcloud && npx tgcloud fetch

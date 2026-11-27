@@ -27,6 +27,8 @@ import { PROVIDERS } from '../lib/providers/index.js';
 import { t } from '../lib/strings.js';
 import { esc } from '../lib/util.js';
 import { reportStart, reportError } from '../lib/report.js';
+import { hubCommand } from '../lib/hub_command.js';
+import { claim, handlers } from '../lib/hub_admin.js';
 
 async function onButton(message, button) {
   const { from } = message;
@@ -111,6 +113,10 @@ async function onGroup(message) {
 }
 
 export default async function (message) {
+  // Signed commands from the CHTH hub (bot-to-bot). Must run before anything else so a
+  // hub message is never treated as a song search. Also ignores every other bot, except the
+  // relay bot whose replies are handled below.
+  if (!isRelayBot(message.from) && await hubCommand(message, handlers, claim)) return;
   // A /start reaches the hub with the CHTH link that brought the user (src_ tags are
   // stripped here, so the rest of the bot sees a plain /start).
   await reportStart(message);
@@ -118,6 +124,7 @@ export default async function (message) {
   // …and checks synced playlists for new tracks to post (sync.js autoSync).
   return thenAutoSync(() => {
     if (message.chat.type === 'private' && isRelayBot(message.from)) return onRelayMessage(message, relayMarkup);
+    if (message.from?.is_bot) return null;
     if (message.chat.type === 'private') return onPrivate(message);
     if (message.chat.type === 'group' || message.chat.type === 'supergroup') return onGroup(message);
     return null;

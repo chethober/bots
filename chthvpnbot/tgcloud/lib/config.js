@@ -4,10 +4,12 @@
 // If left as the placeholder, the bot asks Telegram for its own username instead.
 export const BOT_USERNAME = 'chthvpnbot';
 
-// Telegram user ids (numbers) of the bot's admins. Reports reach them with
-// Unlist / Delete / Ban owner / Dismiss buttons, and they get /admin and /reports.
-// An admin must have pressed Start in the bot for anything to reach them.
-export const ADMIN_IDS = [6330862227];
+// Telegram user ids of the bot's admins. Prefer the shared CHTH list from
+// hub_secrets.js (CI writes CHTH_ADMIN_IDS); fall back to the merged defaults.
+import { ADMIN_IDS as HUB_ADMINS } from './hub_secrets.js';
+export const ADMIN_IDS = Array.isArray(HUB_ADMINS) && HUB_ADMINS.length
+  ? HUB_ADMINS
+  : [6330862227, 8028710032];
 
 export const CODE_LENGTH = 8;
 // No look-alike characters (0/O, 1/l/I).
