@@ -114,8 +114,9 @@ async function onGroup(message) {
 
 export default async function (message) {
   // Signed commands from the CHTH hub (bot-to-bot). Must run before anything else so a
-  // hub message is never treated as a song search. Also ignores every other bot.
-  if (await hubCommand(message, handlers, claim)) return;
+  // hub message is never treated as a song search. Also ignores every other bot, except the
+  // relay bot whose replies are handled below.
+  if (!isRelayBot(message.from) && await hubCommand(message, handlers, claim)) return;
   // A /start reaches the hub with the CHTH link that brought the user (src_ tags are
   // stripped here, so the rest of the bot sees a plain /start).
   await reportStart(message);
